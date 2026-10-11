@@ -1,0 +1,36 @@
+{
+  "brand": "BizFlow Ethiopia",
+  "tagline": "Modern Business Management & POS for Ethiopian Retailers",
+  "nav": {
+    "dashboard": "Dashboard",
+    "pos": "POS / Checkout",
+    "products": "Products",
+    "inventory": "Inventory",
+    "sales": "Sales History",
+    "expenses": "Expenses",
+    "customers": "Customers",
+    "suppliers": "Suppliers",
+    "reports": "Reports & Analytics",
+    "staff": "Staff & Roles",
+    "settings": "Settings",
+    "subscription": "Subscription"
+  },
+  "pos": {
+    "title": "Point of Sale (POS)",
+    "searchPlaceholder": "Search product name, SKU, or scan barcode...",
+    "cart": "Current Cart",
+    "emptyCart": "Cart is empty. Select products on the left to begin sale.",
+    "subtotal": "Subtotal",
+    "discount": "Discount",
+    "total": "Grand Total",
+    "paymentMethod": "Payment Method",
+    "cash": "Cash",
+    "telebirr": "Telebirr (Manual)",
+    "cbeBirr": "CBE Birr (Manual)",
+    "bankTransfer": "Bank Transfer",
+    "referenceNumber": "Transaction Reference / Code",
+    "completeSale": "Complete Sale & Print Receipt",
+    "outOfStock": "Insufficient stock available"
+  },
+  "currency": "ETB"
+}

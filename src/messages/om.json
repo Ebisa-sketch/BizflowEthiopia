@@ -1,0 +1,36 @@
+{
+  "brand": "BizFlow Itoophiyaa",
+  "tagline": "Sirna To'annoo Gurgurtaafi Qabeenya Daldaltoota Itoophiyaaf",
+  "nav": {
+    "dashboard": "Daashboordii",
+    "pos": "Gurgurtaa (POS)",
+    "products": "Meeshaalee",
+    "inventory": "Qabeenya Kuusaa",
+    "sales": "Seenaa Gurgurtaa",
+    "expenses": "Baasiiwwan",
+    "customers": "Maamiltoota",
+    "suppliers": "Dhiyeessitoota",
+    "reports": "Gabaasawwan",
+    "staff": "Hojjettoota",
+    "settings": "Qindaa'ina",
+    "subscription": "Kaffaltii Tajaajilaa"
+  },
+  "pos": {
+    "title": "Bakka Gurgurtaa (POS)",
+    "searchPlaceholder": "Maqaa meeshaa, SKU ykn baarkoodii barbaadi...",
+    "cart": "Gaarii Gurgurtaa",
+    "emptyCart": "Gaariin duwwaadha. Gurgurtaa eegaluuf meeshaa filadhaa.",
+    "subtotal": "Waliigala Duraa",
+    "discount": "Hir'ifama",
+    "total": "Waliigala Xumuraa",
+    "paymentMethod": "Mala Kaffaltii",
+    "cash": "Qarshii callaa (Cash)",
+    "telebirr": "Telebirr",
+    "cbeBirr": "CBE Birr",
+    "bankTransfer": "Dabarsa Baankii",
+    "referenceNumber": "Lakkoofsa Koodii Dabarsaa",
+    "completeSale": "Gurgurtaa Xumuri & Nagahee Maxxansi",
+    "outOfStock": "Kuusaan gahaa miti"
+  },
+  "currency": "ETB"
+}

@@ -1,0 +1,36 @@
+{
+  "brand": "ቢዝፍሎው ኢትዮጵያ",
+  "tagline": "ለኢትዮጵያ ነጋዴዎች ዘመናዊ የሽያጭና እቃ አስተዳደር ሲስተም",
+  "nav": {
+    "dashboard": "ዳሽቦርድ",
+    "pos": "የሽያጭ መመዝገቢያ (POS)",
+    "products": "እቃዎች",
+    "inventory": "ስቶክ / መጋዘን",
+    "sales": "የተሸጡ እቃዎች",
+    "expenses": "ወጪዎች",
+    "customers": "ደንበኞች",
+    "suppliers": "አቅራቢዎች",
+    "reports": "ሪፖርቶች",
+    "staff": "ሰራተኞች",
+    "settings": "ቅንብሮች",
+    "subscription": "ክፍያ / ሳብስክሪፕሽን"
+  },
+  "pos": {
+    "title": "የሽያጭ መመዝገቢያ (POS)",
+    "searchPlaceholder": "የእቃ ስም፣ SKU ወይም ባርኮድ ይፈልጉ...",
+    "cart": "የተመረጡ እቃዎች",
+    "emptyCart": "ጋሪው ባዶ ነው። ሽያጭ ለመጀመር እቃ ይምረጡ።",
+    "subtotal": "ድምር",
+    "discount": "ቅናሽ",
+    "total": "አጠቃላይ ክፍያ",
+    "paymentMethod": "የክፍያ ዘዴ",
+    "cash": "ጥሬ ገንዘብ (Cash)",
+    "telebirr": "ቴሌብር",
+    "cbeBirr": "ሲቢኢ ብር (CBE Birr)",
+    "bankTransfer": "የባንክ ዝውውር",
+    "referenceNumber": "የትራንዛክሽን ቁጥር / ኮድ",
+    "completeSale": "ሽያጩን አጠናቅቅ እና ደረሰኝ አትም",
+    "outOfStock": "በቂ ስቶክ የለም"
+  },
+  "currency": "ብር"
+}

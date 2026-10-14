@@ -21,6 +21,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useLanguage } from "@/lib/i18n/language-context";
+import useSWR from 'swr';
 
 interface AppSidebarProps {
   isOpen?: boolean;
@@ -29,7 +30,7 @@ interface AppSidebarProps {
 
 const navigation = [
   { key: "nav.dashboard", name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
-  { key: "nav.pos", name: "POS Checkout", href: "/sales/new", icon: ShoppingCart, highlight: true },
+  { key: "nav.pos", name: "POS Checkout", href: "/sales/new", icon: ShoppingCart },
   { key: "nav.sales", name: "Sales History", href: "/sales", icon: Receipt },
   { key: "nav.products", name: "Products", href: "/products", icon: Package },
   { key: "nav.inventory", name: "Inventory", href: "/inventory", icon: Layers },
@@ -41,8 +42,16 @@ const navigation = [
 ];
 
 export function AppSidebar({ isOpen = false, onClose }: AppSidebarProps) {
+  const [showPosInfo, setShowPosInfo] = React.useState(false);
+  
   const pathname = usePathname();
   const { t } = useLanguage();
+  const { data: sessionData, error: sessionError } = useSWR('/api/auth/me', (url) => fetch(url).then((res) => res.json()));
+  const user = sessionData?.user;
+  const userName = user?.name || '';
+  const nameParts = userName.split(' ');
+  const initials = nameParts.filter(Boolean).map((n: string) => n[0].toUpperCase()).join('').slice(0, 2);
+  const displayName = userName || 'User';
 
   const sidebarContent = (
     <div className="flex h-full flex-col bg-white">
@@ -100,20 +109,31 @@ export function AppSidebar({ isOpen = false, onClose }: AppSidebarProps) {
       {/* Navigation Links */}
       <nav className="flex-1 space-y-1 overflow-y-auto px-3 py-1">
         {navigation.map((item) => {
-          const isActive = pathname === item.href || pathname?.startsWith(`${item.href}/`);
+          const isPosCheckout = item.href === "/sales/new";
+          const isSalesHistory = item.href === "/sales";
+
+          const isActive = isPosCheckout
+            ? pathname === "/sales/new"
+            : isSalesHistory
+            ? pathname === "/sales" || (Boolean(pathname?.startsWith("/sales/")) && pathname !== "/sales/new")
+            : pathname === item.href || (item.href !== "/dashboard" && Boolean(pathname?.startsWith(`${item.href}/`)));
+
           const Icon = item.icon;
 
           return (
             <Link
               key={item.key}
               href={item.href}
-              onClick={onClose}
+              onClick={(e) => {
+                onClose?.();
+                if (isPosCheckout) {
+                  setShowPosInfo((prev) => !prev);
+                }
+              }}
               className={cn(
                 "group flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold transition-all duration-150",
                 isActive
                   ? "bg-[#101827] text-white shadow-xs"
-                  : item.highlight
-                  ? "text-[#0D9668] bg-[#DCEFE7]/40 hover:bg-[#DCEFE7] hover:text-[#097852] font-bold"
                   : "text-slate-600 hover:bg-slate-100 hover:text-slate-900"
               )}
             >
@@ -122,16 +142,30 @@ export function AppSidebar({ isOpen = false, onClose }: AppSidebarProps) {
                   "h-4.5 w-4.5 shrink-0 transition-colors",
                   isActive
                     ? "text-[#0D9668]"
-                    : item.highlight
-                    ? "text-[#0D9668]"
                     : "text-slate-400 group-hover:text-slate-700"
                 )}
               />
               <span className="truncate">{t(item.key, item.name)}</span>
+              {isPosCheckout && (
+                <span
+                  className={cn(
+                    "ml-auto text-[10px] font-bold px-1.5 py-0.5 rounded transition-colors uppercase tracking-wider",
+                    isActive
+                      ? "bg-emerald-500/20 text-emerald-300"
+                      : "bg-emerald-50 text-[#0D9668] border border-emerald-200/50 group-hover:bg-[#DCEFE7]"
+                  )}
+                >
+                  POS
+                </span>
+              )}
             </Link>
           );
         })}
       </nav>
+
+
+
+
 
       {/* User & Role Footer */}
       <div className="border-t border-slate-200 p-3">
@@ -141,14 +175,14 @@ export function AppSidebar({ isOpen = false, onClose }: AppSidebarProps) {
           title="View & Edit My Profile"
         >
           <div className="h-9 w-9 shrink-0 rounded-full bg-[#101827] flex items-center justify-center font-bold text-white text-xs group-hover:scale-105 transition-transform">
-            AK
+            {initials || 'U'}
           </div>
           <div className="flex-1 min-w-0">
             <p className="text-xs font-bold text-slate-900 group-hover:text-[#0D9668] transition-colors truncate">
-              Abebe Kebede
+              {displayName}
             </p>
             <p className="text-[11px] text-slate-500 truncate flex items-center gap-1">
-              <span className="font-semibold text-[#0D9668]">Owner</span> • My Profile
+              <span className="font-semibold text-[#0D9668]">{user?.role || 'User'}</span> • My Profile
             </p>
           </div>
         </Link>

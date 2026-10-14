@@ -82,35 +82,14 @@ const MILESTONES = [
   { year: "2027", event: "Target: 5,000 active businesses across Ethiopia" },
 ];
 
+import { MarketingNavbar } from "@/components/layout/marketing-navbar";
+import { MarketingFooter } from "@/components/layout/marketing-footer";
+
 export default function AboutPage() {
   return (
     <div className="min-h-screen bg-white">
-      {/* Navigation */}
-      <header className="sticky top-0 z-50 bg-white/95 backdrop-blur border-b border-slate-100">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex items-center justify-between h-16">
-          <Link href="/" className="flex items-center gap-2.5">
-            <div className="h-9 w-9 rounded-xl bg-[#101827] flex items-center justify-center font-bold text-white shadow-xs">
-              <span className="text-[#0D9668] font-black text-lg leading-none">B</span>
-              <span className="text-white font-black text-lg leading-none">F</span>
-            </div>
-            <span className="font-extrabold text-lg tracking-tight text-slate-900">
-              BizFlow <span className="text-[#0D9668]">Ethiopia</span>
-            </span>
-          </Link>
-          <nav className="hidden md:flex items-center gap-6 text-sm font-semibold text-slate-600">
-            <Link href="/" className="hover:text-slate-900 transition">Home</Link>
-            <Link href="/about" className="text-[#0D9668]">About</Link>
-            <Link href="/pricing" className="hover:text-slate-900 transition">Pricing</Link>
-            <Link href="/contact" className="hover:text-slate-900 transition">Contact</Link>
-          </nav>
-          <Link
-            href="/login"
-            className="rounded-xl bg-[#0D9668] hover:bg-[#097852] px-5 py-2 text-sm font-bold text-white shadow-sm transition"
-          >
-            Sign In
-          </Link>
-        </div>
-      </header>
+      {/* Unified Marketing Navbar */}
+      <MarketingNavbar currentPath="/about" />
 
       {/* Hero Section */}
       <section className="relative overflow-hidden bg-gradient-to-br from-[#101827] via-[#1e293b] to-[#0f172a] py-20 sm:py-28">
@@ -261,13 +240,8 @@ export default function AboutPage() {
         </div>
       </section>
 
-      {/* Footer */}
-      <footer className="bg-white border-t border-slate-200 py-8">
-        <div className="max-w-5xl mx-auto px-4 text-center text-xs text-slate-400">
-          <p>© 2026 BizFlow Ethiopia Ltd. All rights reserved.</p>
-          <p className="mt-1">Addis Ababa, Ethiopia 🇪🇹</p>
-        </div>
-      </footer>
+      {/* Unified Marketing Footer */}
+      <MarketingFooter />
     </div>
   );
 }

@@ -1,7 +1,11 @@
+"use client";
+
 import React from "react";
 import Link from "next/link";
-import { Check, Building2, ArrowRight } from "lucide-react";
+import { Check, ArrowRight } from "lucide-react";
 import { formatMoney } from "@/lib/money";
+import { MarketingNavbar } from "@/components/layout/marketing-navbar";
+import { MarketingFooter } from "@/components/layout/marketing-footer";
 
 const TIERS = [
   {
@@ -53,31 +57,21 @@ const TIERS = [
 
 export default function PricingPage() {
   return (
-    <div className="min-h-screen bg-slate-900 text-white selection:bg-blue-600 selection:text-white">
-      {/* Header */}
-      <nav className="border-b border-slate-800 bg-slate-950/80 backdrop-blur sticky top-0 z-50">
-        <div className="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between">
-          <Link href="/" className="flex items-center gap-3">
-            <div className="h-9 w-9 rounded-xl bg-blue-600 flex items-center justify-center font-bold">
-              <Building2 className="h-5 w-5 text-white" />
-            </div>
-            <span className="font-extrabold text-xl tracking-tight text-white">BizFlow Ethiopia</span>
-          </Link>
-          <Link
-            href="/dashboard"
-            className="text-xs font-semibold px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white transition"
-          >
-            Dashboard
-          </Link>
-        </div>
-      </nav>
+    <div className="min-h-screen bg-[#072623] text-white selection:bg-[#00D084] selection:text-[#051E1C]">
+      {/* Unified Marketing Navbar */}
+      <MarketingNavbar currentPath="/pricing" />
 
+      {/* Main Pricing Hero & Content */}
       <section className="py-20 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto text-center space-y-4">
-        <h1 className="text-4xl sm:text-5xl font-extrabold tracking-tight">
-          Transparent, Local Pricing in Ethiopian Birr (ETB)
+        <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-[#00D084]/15 border border-[#00D084]/30 text-xs font-bold text-[#00D084] uppercase tracking-wider mb-2">
+          TRANSPARENT PRICING
+        </div>
+
+        <h1 className="text-4xl sm:text-5xl font-black tracking-tight text-white leading-tight">
+          Simple, Local Pricing in Ethiopian Birr (ETB)
         </h1>
-        <p className="text-slate-400 max-w-2xl mx-auto text-base">
-          No hidden fees or dollar exchange complications. Pay monthly via Telebirr or CBE Birr.
+        <p className="text-emerald-100/70 max-w-2xl mx-auto text-base sm:text-lg">
+          No hidden fees or foreign currency complications. Pay monthly or annually via Telebirr or CBE Birr.
         </p>
 
         {/* Pricing Cards */}
@@ -85,56 +79,61 @@ export default function PricingPage() {
           {TIERS.map((tier) => (
             <div
               key={tier.name}
-              className={`rounded-2xl p-8 flex flex-col justify-between transition ${
+              className={`rounded-3xl p-8 flex flex-col justify-between transition-all duration-300 ${
                 tier.highlight
-                  ? "bg-slate-800/90 border-2 border-blue-500 shadow-2xl shadow-blue-500/20 relative"
-                  : "bg-slate-900 border border-slate-800"
+                  ? "bg-[#0A322E] border-2 border-[#00D084] shadow-2xl shadow-emerald-500/20 relative -translate-y-2"
+                  : "bg-[#06201E]/90 border border-[#0F3A36] hover:border-[#00D084]/40"
               }`}
             >
               {tier.popular && (
-                <span className="absolute -top-3 left-1/2 -translate-x-1/2 bg-blue-600 text-white text-[11px] font-bold uppercase tracking-wider px-3 py-1 rounded-full shadow-md">
+                <span className="absolute -top-3.5 left-1/2 -translate-x-1/2 bg-[#00D084] text-[#051E1C] text-[11px] font-black uppercase tracking-wider px-4 py-1 rounded-full shadow-lg">
                   Most Popular
                 </span>
               )}
 
               <div>
-                <h3 className="text-xl font-bold text-white">{tier.name}</h3>
-                <p className="text-xs text-slate-400 mt-2 min-h-10">{tier.description}</p>
+                <h3 className="text-2xl font-bold text-white">{tier.name}</h3>
+                <p className="text-xs text-emerald-100/70 mt-2 min-h-10 leading-relaxed">
+                  {tier.description}
+                </p>
 
-                <div className="mt-6 flex items-baseline gap-1">
-                  <span className="text-4xl font-extrabold text-white font-mono">
+                <div className="mt-6 flex items-baseline gap-1.5">
+                  <span className="text-4xl sm:text-5xl font-black text-white font-mono">
                     {formatMoney(tier.price)}
                   </span>
-                  <span className="text-slate-400 text-xs">/month</span>
+                  <span className="text-emerald-200/60 text-xs font-medium">/month</span>
                 </div>
 
-                <ul className="mt-8 space-y-3 text-xs text-slate-300">
+                <ul className="mt-8 space-y-3.5 text-xs text-emerald-100/90">
                   {tier.features.map((feature, idx) => (
                     <li key={idx} className="flex items-start gap-2.5">
-                      <Check className="h-4 w-4 text-emerald-400 shrink-0 mt-0.5" />
+                      <Check className="h-4 w-4 text-[#00D084] shrink-0 mt-0.5" />
                       <span>{feature}</span>
                     </li>
                   ))}
                 </ul>
               </div>
 
-              <div className="mt-8 pt-6 border-t border-slate-700/60">
+              <div className="mt-10 pt-6 border-t border-[#0F3A36]">
                 <Link
-                  href="/dashboard"
-                  className={`w-full py-3 rounded-xl font-bold text-xs flex items-center justify-center gap-2 transition ${
+                  href="/register"
+                  className={`w-full py-3.5 rounded-full font-bold text-sm flex items-center justify-center gap-2 transition-all duration-200 hover:-translate-y-0.5 ${
                     tier.highlight
-                      ? "bg-blue-600 hover:bg-blue-500 text-white shadow-lg shadow-blue-600/30"
-                      : "bg-slate-800 hover:bg-slate-700 text-slate-200"
+                      ? "bg-gradient-to-r from-[#00D084] to-[#059669] text-[#051E1C] shadow-lg shadow-emerald-500/30"
+                      : "bg-[#0D3833] hover:bg-[#0F423C] text-white border border-[#0F3A36]"
                   }`}
                 >
                   <span>Start with {tier.name}</span>
-                  <ArrowRight className="h-3.5 w-3.5" />
+                  <ArrowRight className="h-4 w-4" />
                 </Link>
               </div>
             </div>
           ))}
         </div>
       </section>
+
+      {/* Unified Marketing Footer */}
+      <MarketingFooter />
     </div>
   );
 }

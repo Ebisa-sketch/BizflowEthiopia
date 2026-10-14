@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
@@ -32,7 +32,7 @@ function RegisterBrandPanel() {
 
   return (
     <div
-      className="hidden lg:flex lg:w-[48%] xl:w-[50%] relative overflow-hidden flex-col justify-between"
+      className="hidden lg:flex lg:w-[48%] xl:w-[50%] relative overflow-hidden flex-col justify-between self-stretch"
       style={{
         background: "linear-gradient(145deg, #101827 0%, #0f172a 50%, #0c1425 100%)",
       }}
@@ -230,6 +230,11 @@ export default function RegisterPage() {
 
   const isSubmitting = useRef(false);
 
+  // Ensure the page starts at the correct scroll position when opened
+  useEffect(() => {
+    window.scrollTo({ top: 0, left: 0, behavior: "instant" as ScrollBehavior });
+  }, []);
+
   // Dynamic Password Evaluation matching server policy
   const requirements = checkRequirements(formData.password);
   const strength = calculateStrength(requirements, formData.password);
@@ -361,7 +366,7 @@ export default function RegisterPage() {
   };
 
   return (
-    <div className="min-h-screen flex flex-col lg:flex-row" style={{ background: "#F7F9FC" }}>
+    <div className="min-h-screen flex flex-col lg:flex-row overflow-x-hidden" style={{ background: "#F7F9FC" }}>
       {/* Left Brand Panel — stretches alongside form on desktop, hidden on mobile/tablet */}
       <RegisterBrandPanel />
 
@@ -462,7 +467,7 @@ export default function RegisterPage() {
                     placeholder="e.g. Almaz"
                     aria-invalid={!!fieldErrors.firstName}
                     aria-describedby={fieldErrors.firstName ? "first-name-error" : undefined}
-                    className="block w-full pl-10 pr-3.5 py-2.5 rounded-xl text-sm transition-all duration-150 outline-none"
+                    className="block w-full min-h-[44px] pl-10 pr-3.5 py-2.5 rounded-xl text-sm transition-all duration-150 outline-none"
                     style={{
                       background: "#FFFFFF",
                       border: fieldErrors.firstName
@@ -511,7 +516,7 @@ export default function RegisterPage() {
                     placeholder="e.g. Tadesse"
                     aria-invalid={!!fieldErrors.lastName}
                     aria-describedby={fieldErrors.lastName ? "last-name-error" : undefined}
-                    className="block w-full pl-10 pr-3.5 py-2.5 rounded-xl text-sm transition-all duration-150 outline-none"
+                    className="block w-full min-h-[44px] pl-10 pr-3.5 py-2.5 rounded-xl text-sm transition-all duration-150 outline-none"
                     style={{
                       background: "#FFFFFF",
                       border: fieldErrors.lastName
@@ -561,7 +566,7 @@ export default function RegisterPage() {
                   placeholder="almaz@yourbusiness.et"
                   aria-invalid={!!fieldErrors.email}
                   aria-describedby={fieldErrors.email ? "email-error" : undefined}
-                  className="block w-full pl-10 pr-3.5 py-2.5 rounded-xl text-sm transition-all duration-150 outline-none"
+                  className="block w-full min-h-[44px] pl-10 pr-3.5 py-2.5 rounded-xl text-sm transition-all duration-150 outline-none"
                   style={{
                     background: "#FFFFFF",
                     border: fieldErrors.email
@@ -614,7 +619,7 @@ export default function RegisterPage() {
                   placeholder="+251 911 234 567 or 0911234567"
                   aria-invalid={!!fieldErrors.phone}
                   aria-describedby={fieldErrors.phone ? "phone-error" : undefined}
-                  className="block w-full pl-10 pr-3.5 py-2.5 rounded-xl text-sm transition-all duration-150 outline-none"
+                  className="block w-full min-h-[44px] pl-10 pr-3.5 py-2.5 rounded-xl text-sm transition-all duration-150 outline-none"
                   style={{
                     background: "#FFFFFF",
                     border: fieldErrors.phone
@@ -667,7 +672,7 @@ export default function RegisterPage() {
                   placeholder="Create a secure password"
                   aria-invalid={!!fieldErrors.password}
                   aria-describedby={fieldErrors.password ? "password-error" : undefined}
-                  className="block w-full pl-10 pr-11 py-2.5 rounded-xl text-sm transition-all duration-150 outline-none"
+                  className="block w-full min-h-[44px] pl-10 pr-11 py-2.5 rounded-xl text-sm transition-all duration-150 outline-none"
                   style={{
                     background: "#FFFFFF",
                     border: fieldErrors.password
@@ -687,20 +692,28 @@ export default function RegisterPage() {
                 <button
                   type="button"
                   onClick={() => setShowPassword((v) => !v)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 p-1 rounded-md outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 cursor-pointer"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 p-1.5 rounded-md outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 cursor-pointer text-slate-400 hover:text-slate-600 transition-colors"
                   aria-label={showPassword ? "Hide password" : "Show password"}
+                  aria-controls="reg-password"
                 >
                   {showPassword ? (
-                    <EyeOff className="h-4 w-4" style={{ color: "#64748B" }} />
+                    <EyeOff className="h-4 w-4" style={{ color: "#64748B" }} aria-hidden="true" />
                   ) : (
-                    <Eye className="h-4 w-4" style={{ color: "#94a3b8" }} />
+                    <Eye className="h-4 w-4" style={{ color: "#94a3b8" }} aria-hidden="true" />
                   )}
                 </button>
               </div>
 
               {/* Password Strength Meter */}
               {formData.password.length > 0 && (
-                <div className="mt-2">
+                <div
+                  className="mt-2"
+                  role="meter"
+                  aria-valuenow={strength.score}
+                  aria-valuemin={0}
+                  aria-valuemax={4}
+                  aria-label={t("auth.strength", "Password strength")}
+                >
                   <div className="flex items-center justify-between mb-1">
                     <span className="text-[11px] text-slate-500 font-medium">
                       {t("auth.strength", "Strength")}:
@@ -728,7 +741,7 @@ export default function RegisterPage() {
               )}
 
               {/* Password Requirements Checklist (matching server policy: 8+ chars, number, letter) */}
-              <div className="mt-2 p-2.5 rounded-lg bg-slate-50 border border-slate-200/80">
+              <div className="mt-2 p-2.5 rounded-lg bg-slate-50 border border-slate-200/80" aria-live="polite">
                 <p className="text-[11px] font-semibold text-slate-600 mb-1">
                   {t("auth.passwordRequirements", "Password requirements:")}
                 </p>
@@ -803,7 +816,7 @@ export default function RegisterPage() {
                   placeholder="Repeat your password"
                   aria-invalid={!!fieldErrors.confirmPassword}
                   aria-describedby={fieldErrors.confirmPassword ? "confirm-password-error" : undefined}
-                  className="block w-full pl-10 pr-11 py-2.5 rounded-xl text-sm transition-all duration-150 outline-none"
+                  className="block w-full min-h-[44px] pl-10 pr-11 py-2.5 rounded-xl text-sm transition-all duration-150 outline-none"
                   style={{
                     background: "#FFFFFF",
                     border: fieldErrors.confirmPassword
@@ -823,13 +836,14 @@ export default function RegisterPage() {
                 <button
                   type="button"
                   onClick={() => setShowConfirmPassword((v) => !v)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 p-1 rounded-md outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 cursor-pointer"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 p-1.5 rounded-md outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 cursor-pointer text-slate-400 hover:text-slate-600 transition-colors"
                   aria-label={showConfirmPassword ? "Hide confirm password" : "Show confirm password"}
+                  aria-controls="reg-confirm-password"
                 >
                   {showConfirmPassword ? (
-                    <EyeOff className="h-4 w-4" style={{ color: "#64748B" }} />
+                    <EyeOff className="h-4 w-4" style={{ color: "#64748B" }} aria-hidden="true" />
                   ) : (
-                    <Eye className="h-4 w-4" style={{ color: "#94a3b8" }} />
+                    <Eye className="h-4 w-4" style={{ color: "#94a3b8" }} aria-hidden="true" />
                   )}
                 </button>
               </div>
@@ -839,18 +853,18 @@ export default function RegisterPage() {
                 <div className="mt-1 flex items-center gap-1.5 text-[11px]">
                   {formData.password === formData.confirmPassword ? (
                     <span className="text-emerald-700 flex items-center gap-1 font-medium">
-                      <Check className="h-3 w-3 text-emerald-600" /> {t("auth.passwordsMatch", "Passwords match")}
+                      <Check className="h-3 w-3 text-emerald-600" aria-hidden="true" /> {t("auth.passwordsMatch", "Passwords match")}
                     </span>
                   ) : (
                     <span className="text-amber-600 flex items-center gap-1">
-                      <span className="h-1.5 w-1.5 rounded-full bg-amber-500" /> {t("auth.passwordsDontMatch", "Passwords do not match yet")}
+                      <span className="h-1.5 w-1.5 rounded-full bg-amber-500" aria-hidden="true" /> {t("auth.passwordsDontMatch", "Passwords do not match yet")}
                     </span>
                   )}
                 </div>
               )}
 
               {fieldErrors.confirmPassword && (
-                <p id="confirm-password-error" className="mt-1 text-xs text-rose-500">
+                <p id="confirm-password-error" className="mt-1 text-xs text-rose-500" role="alert">
                   {fieldErrors.confirmPassword}
                 </p>
               )}
@@ -858,7 +872,7 @@ export default function RegisterPage() {
 
             {/* 6. Terms and Privacy Acceptance */}
             <div className="pt-1">
-              <label className="flex items-start gap-2.5 text-xs select-none cursor-pointer">
+              <label htmlFor="reg-terms-checkbox" className="flex items-start gap-2.5 text-xs select-none cursor-pointer">
                 <input
                   id="reg-terms-checkbox"
                   type="checkbox"
@@ -866,6 +880,7 @@ export default function RegisterPage() {
                   onChange={(e) => handleInputChange("termsAccepted", e.target.checked)}
                   className="mt-0.5 h-4 w-4 rounded border-slate-300 accent-emerald-600 cursor-pointer focus-visible:ring-2 focus-visible:ring-emerald-500"
                   aria-invalid={!!fieldErrors.termsAccepted}
+                  aria-describedby={fieldErrors.termsAccepted ? "terms-error" : undefined}
                 />
                 <span className="text-slate-600 leading-normal">
                   {t("auth.termsAgreement", "I agree to the")}{" "}
@@ -888,7 +903,7 @@ export default function RegisterPage() {
                 </span>
               </label>
               {fieldErrors.termsAccepted && (
-                <p className="mt-1 text-xs text-rose-500">
+                <p id="terms-error" className="mt-1 text-xs text-rose-500" role="alert">
                   {fieldErrors.termsAccepted}
                 </p>
               )}
@@ -897,8 +912,9 @@ export default function RegisterPage() {
             {/* 7. Primary Create Account Button */}
             <button
               type="submit"
+              id="register-submit-button"
               disabled={loading || success}
-              className="w-full mt-2 flex justify-center items-center gap-2 py-3 px-4 rounded-xl text-sm font-semibold text-white transition-all duration-200 outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-emerald-500 disabled:opacity-60 cursor-pointer min-h-[44px]"
+              className="w-full mt-2 flex justify-center items-center gap-2 py-3 px-4 rounded-xl text-sm font-semibold text-white transition-all duration-200 outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-emerald-500 disabled:opacity-60 cursor-pointer min-h-[44px] active:scale-[0.99]"
               style={{
                 background: loading
                   ? "#0D9668"
@@ -916,18 +932,18 @@ export default function RegisterPage() {
             >
               {loading ? (
                 <>
-                  <Loader2 className="h-4 w-4 animate-spin" />
+                  <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
                   <span>{t("auth.creatingAccount", "Creating account...")}</span>
                 </>
               ) : success ? (
                 <>
-                  <Check className="h-4 w-4" />
+                  <Check className="h-4 w-4" aria-hidden="true" />
                   <span>{t("auth.accountCreated", "Account Created!")}</span>
                 </>
               ) : (
                 <>
                   <span>{t("auth.createAccount", "Create Account")}</span>
-                  <ArrowRight className="h-4 w-4" />
+                  <ArrowRight className="h-4 w-4" aria-hidden="true" />
                 </>
               )}
             </button>

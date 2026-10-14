@@ -39,17 +39,30 @@ export default function ForgotPasswordPage() {
       return;
     }
 
-    isSubmitting.current = true;
-    setLoading(true);
-    setErrorMessage("");
-    setFieldError("");
+    try {
+      isSubmitting.current = true;
+      setLoading(true);
+      setErrorMessage("");
+      setFieldError("");
 
-    // Simulate recovery email dispatch with secure timing
-    setTimeout(() => {
-      setLoading(false);
+      const res = await fetch("/api/auth/forgot-password", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: trimmed }),
+      });
+
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || "Failed to submit recovery request");
+      }
+
       setSubmitted(true);
+    } catch (err: any) {
+      setErrorMessage(err.message || "Failed to send reset instructions");
+    } finally {
+      setLoading(false);
       isSubmitting.current = false;
-    }, 800);
+    }
   };
 
   return (

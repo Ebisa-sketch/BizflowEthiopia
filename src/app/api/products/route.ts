@@ -80,7 +80,7 @@ export async function POST(request: NextRequest) {
     });
 
     const body = await request.json();
-    const { name, sku, barcode, categoryId, sellingPrice, costPrice, quantityOnHand, reorderLevel } = body;
+    const { name, sku, barcode, categoryId, categoryName, sellingPrice, costPrice, quantityOnHand, reorderLevel } = body;
 
     if (!name || typeof name !== "string" || !name.trim()) {
       throw new AppError("Product name is required.", 400);
@@ -93,6 +93,22 @@ export async function POST(request: NextRequest) {
 
     if (price < 0 || cost < 0 || initialStock < 0) {
       throw new AppError("Prices and inventory must be non-negative values.", 400);
+    }
+
+    let finalCategoryId = categoryId || null;
+    if (!finalCategoryId && categoryName && typeof categoryName === "string" && categoryName.trim()) {
+      const trimmedCatName = categoryName.trim();
+      const existingCat = await prisma.category.findFirst({
+        where: { businessId, name: { equals: trimmedCatName, mode: "insensitive" } },
+      });
+      if (existingCat) {
+        finalCategoryId = existingCat.id;
+      } else {
+        const createdCat = await prisma.category.create({
+          data: { businessId, name: trimmedCatName },
+        });
+        finalCategoryId = createdCat.id;
+      }
     }
 
     // Verify SKU uniqueness within business
@@ -118,7 +134,7 @@ export async function POST(request: NextRequest) {
           name: name.trim(),
           sku: sku?.trim() || null,
           barcode: barcode?.trim() || null,
-          categoryId: categoryId || null,
+          categoryId: finalCategoryId,
           sellingPrice: price,
           costPrice: cost,
           quantityOnHand: initialStock,

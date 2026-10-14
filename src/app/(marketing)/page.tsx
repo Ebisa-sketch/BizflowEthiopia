@@ -2,956 +2,899 @@
 
 import React, { useState } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import {
-  Building2,
-  ShoppingCart,
-  Layers,
-  TrendingUp,
-  ShieldCheck,
-  CheckCircle2,
   ArrowRight,
-  Smartphone,
-  ChevronRight,
-  Package,
-  Receipt,
-  Users,
-  BarChart3,
+  CheckCircle2,
+  Play,
   Check,
-  Sparkles,
+  ShieldCheck,
+  Zap,
+  Lock,
   Banknote,
-  DollarSign,
-  AlertTriangle,
+  Package,
+  ShoppingCart,
+  FileText,
+  CreditCard,
+  BarChart3,
+  Users,
+  Building2,
+  RefreshCw,
+  Target,
+  Star,
+  Quote,
+  Headphones,
   Menu,
   X,
+  Cloud,
 } from "lucide-react";
-import { formatMoney } from "@/lib/money";
+import { MarketingNavbar } from "@/components/layout/marketing-navbar";
+import { MarketingFooter } from "@/components/layout/marketing-footer";
 
-export default function MarketingLandingPage() {
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [activeTab, setActiveTab] = useState<"pos" | "inventory" | "reports">("pos");
-
+/* ─────────────────────────────────────────────────────────────
+   02. HERO SECTION
+   Deep Forest Pine (#072623 to #051E1C) with Vibrant Emerald
+───────────────────────────────────────────────────────────── */
+function HeroSection() {
   return (
-    <div className="min-h-screen bg-[#F7F9FC] text-[#101827] antialiased selection:bg-[#0D9668] selection:text-white">
-      {/* 01. NAVIGATION BAR */}
-      <header className="sticky top-0 z-50 bg-white/90 backdrop-blur-md border-b border-slate-200/80 transition-all">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between">
-          {/* Logo */}
-          <Link href="/" className="flex items-center gap-3 group">
-            <div className="h-10 w-10 rounded-xl bg-[#101827] flex items-center justify-center font-bold text-white shadow-md shadow-slate-900/10 group-hover:scale-105 transition-transform duration-200">
-              <span className="text-[#0D9668] font-black text-xl leading-none">B</span>
-              <span className="text-white font-black text-xl leading-none">F</span>
+    <section id="home" className="relative overflow-hidden bg-gradient-to-b from-[#072623] via-[#062220] to-[#051E1C] text-white pt-12 pb-20 lg:pt-16 lg:pb-24">
+      {/* Ambient background glows */}
+      <div className="absolute inset-0 pointer-events-none opacity-30">
+        <div className="absolute top-1/4 left-1/3 -translate-x-1/2 w-[650px] h-[450px] bg-[#00D084]/15 rounded-full blur-[140px]" />
+        <div className="absolute top-0 right-10 w-[500px] h-[500px] bg-emerald-600/10 rounded-full blur-[130px]" />
+      </div>
+
+      <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-8 items-center">
+          {/* Left Text Content */}
+          <div className="lg:col-span-6 space-y-6 text-center lg:text-left z-10">
+            {/* Tag Badge */}
+            <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-[#00D084]/10 border border-[#00D084]/30 text-xs font-semibold text-emerald-300">
+              <span className="text-[#00D084]">•</span>
+              Built for Ethiopian Businesses
+              <span className="text-[#00D084]">•</span>
             </div>
-            <div className="flex flex-col">
-              <div className="flex items-center gap-1.5">
-                <span className="font-extrabold text-xl tracking-tight text-[#101827]">
-                  BizFlow
-                </span>
-                <span className="text-xs font-bold px-1.5 py-0.5 rounded-md bg-[#DCEFE7] text-[#0D9668] border border-[#0D9668]/20">
-                  Ethiopia
-                </span>
-              </div>
-              <span className="text-[10px] text-slate-500 font-medium -mt-1 tracking-wider uppercase">
-                Business Management SaaS
+
+            {/* Main Headline */}
+            <h1 className="text-4xl sm:text-5xl lg:text-[3.65rem] font-black tracking-tight text-white leading-[1.12]">
+              Run your business. <br />
+              <span className="text-[#00D084] drop-shadow-[0_0_25px_rgba(0,208,132,0.3)]">Know your numbers.</span> <br />
+              Grow with confidence.
+            </h1>
+
+            {/* Subtitle */}
+            <p className="text-base sm:text-lg text-emerald-100/80 max-w-xl mx-auto lg:mx-0 leading-relaxed font-normal">
+              BizFlow Ethiopia is a complete business management platform for retailers, wholesalers and small businesses. Manage your inventory, sales, expenses and get real-time insights — all in one place.
+            </p>
+
+            {/* CTAs */}
+            <div className="flex flex-col sm:flex-row items-center justify-center lg:justify-start gap-4 pt-2">
+              <Link
+                href="/register"
+                className="w-full sm:w-auto inline-flex items-center justify-center gap-2.5 px-8 py-3.5 rounded-full text-[#051E1C] font-black text-base bg-gradient-to-r from-[#00D084] to-[#059669] hover:from-[#00E591] hover:to-[#04885f] shadow-xl shadow-emerald-500/25 transition-all duration-200 hover:-translate-y-0.5 active:translate-y-0"
+              >
+                Start for Free
+                <ArrowRight className="h-4.5 w-4.5" />
+              </Link>
+
+              <button
+                type="button"
+                className="w-full sm:w-auto inline-flex items-center justify-center gap-2.5 px-6 py-3.5 rounded-full bg-white/5 border border-white/20 hover:border-white/40 hover:bg-white/10 text-white font-semibold text-base transition-all duration-200"
+              >
+                <div className="h-6 w-6 rounded-full bg-white/10 flex items-center justify-center">
+                  <Play className="h-3 w-3 text-white fill-white ml-0.5" />
+                </div>
+                Watch Demo
+              </button>
+            </div>
+
+            {/* Trust Highlights */}
+            <div className="flex flex-wrap items-center justify-center lg:justify-start gap-x-5 gap-y-2 pt-2 text-xs font-medium text-emerald-200/80">
+              <span className="flex items-center gap-1.5">
+                <Check className="h-3.5 w-3.5 text-[#00D084] stroke-[3]" /> No credit card required
+              </span>
+              <span className="hidden sm:inline text-emerald-800">|</span>
+              <span className="flex items-center gap-1.5">
+                <Check className="h-3.5 w-3.5 text-[#00D084] stroke-[3]" /> 30-day free trial
+              </span>
+              <span className="hidden sm:inline text-emerald-800">|</span>
+              <span className="flex items-center gap-1.5">
+                <Check className="h-3.5 w-3.5 text-[#00D084] stroke-[3]" /> Cancel anytime
               </span>
             </div>
-          </Link>
+          </div>
 
-          {/* Desktop Navigation Links */}
-          <nav className="hidden md:flex items-center gap-8 text-sm font-semibold text-slate-600">
-            <a href="#features" className="hover:text-[#0D9668] transition">
-              Features
-            </a>
-            <a href="#solutions" className="hover:text-[#0D9668] transition">
-              Solutions
-            </a>
-            <a href="#preview" className="hover:text-[#0D9668] transition">
-              Product Tour
-            </a>
-            <a href="#pricing" className="hover:text-[#0D9668] transition">
-              Pricing
-            </a>
-          </nav>
+          {/* Right Visual: Photorealistic 3D Laptop + Phone Showcase */}
+          <div className="lg:col-span-6 relative flex justify-center lg:justify-end">
+            <div className="relative w-full max-w-[580px]">
+              {/* Glow backdrop behind mockup */}
+              <div className="absolute -inset-4 bg-gradient-to-r from-[#00D084]/20 to-emerald-600/10 rounded-3xl blur-2xl -z-10" />
 
-          {/* Right Action Buttons */}
-          <div className="hidden md:flex items-center gap-4">
-            <Link
-              href="/login"
-              className="text-sm font-bold text-slate-700 hover:text-[#0D9668] px-3 py-2 transition"
+              {/* High-Resolution Device Showcase Frame */}
+              <div className="relative rounded-2xl overflow-hidden shadow-2xl shadow-black/80 border border-[#0F3A36] aspect-[16/10] bg-[#072623]">
+                <Image
+                  src="/images/hero_devices_mockup.jpg"
+                  alt="BizFlow Ethiopia software running on modern laptop and smartphone"
+                  fill
+                  className="object-cover"
+                  sizes="(max-width: 768px) 100vw, 580px"
+                  priority
+                />
+
+                {/* Subtle glass reflection overlay */}
+                <div className="absolute inset-0 bg-gradient-to-tr from-transparent via-white/[0.03] to-transparent pointer-events-none" />
+              </div>
+
+              {/* Floating Pill Badge: "Trusted by 1,000+ Ethiopian businesses" */}
+              <div className="absolute -bottom-4 right-4 sm:right-8 bg-white text-slate-900 px-5 py-2.5 rounded-full shadow-2xl border border-slate-100 flex items-center gap-3 z-20">
+                <div className="h-8 w-8 rounded-full bg-emerald-100 flex items-center justify-center shrink-0">
+                  <Users className="h-4 w-4 text-emerald-700" />
+                </div>
+                <div className="text-left">
+                  <p className="text-xs font-black text-slate-900 leading-tight">Trusted by 1,000+</p>
+                  <p className="text-[10px] text-slate-500 font-medium">Ethiopian businesses</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+/* ─────────────────────────────────────────────────────────────
+   03. WHY CHOOSE BIZFLOW ("Built for Ethiopian businesses")
+   Pure White Section with Emerald & Pine Accents
+───────────────────────────────────────────────────────────── */
+function WhyChooseSection() {
+  const reasons = [
+    {
+      icon: Banknote,
+      title: "Local Currency & Payments",
+      description: "Work with ETB, Telebirr and CBE payment records.",
+    },
+    {
+      icon: ShieldCheck,
+      title: "Multi-Tenant Security",
+      description: "Keep your business data safe and isolated.",
+    },
+    {
+      icon: Zap,
+      title: "Easy to Use",
+      description: "No technical skills required. Get started in minutes.",
+    },
+    {
+      icon: Lock,
+      title: "Reliable & Secure",
+      description: "Your data is protected with industry-standard security.",
+    },
+  ];
+
+  return (
+    <section id="why-choose" className="py-20 lg:py-24 bg-white">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-16 items-center">
+          {/* Left Text & 4 Features */}
+          <div className="lg:col-span-7 space-y-8">
+            <div>
+              <span className="text-xs font-bold uppercase tracking-wider text-[#0D9668] bg-[#E8F7F1] px-3.5 py-1.5 rounded-full border border-[#C3ECD8]">
+                WHY CHOOSE BIZFLOW
+              </span>
+              <h2 className="mt-3 text-3xl sm:text-4xl font-black text-[#072623] tracking-tight leading-tight">
+                Built for Ethiopian <br />
+                businesses
+              </h2>
+              <p className="mt-3 text-slate-600 text-base max-w-lg leading-relaxed">
+                We understand the unique needs of local businesses. That&apos;s why BizFlow is designed to be simple, reliable and affordable.
+              </p>
+            </div>
+
+            {/* 2x2 Feature Grid */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-7">
+              {reasons.map((item) => (
+                <div key={item.title} className="flex items-start gap-4">
+                  <div className="h-10 w-10 rounded-xl bg-[#E8F7F1] border border-[#C3ECD8] flex items-center justify-center shrink-0">
+                    <item.icon className="h-5 w-5 text-[#00D084]" />
+                  </div>
+                  <div>
+                    <h3 className="font-bold text-sm text-[#072623]">{item.title}</h3>
+                    <p className="text-xs text-slate-500 mt-1 leading-relaxed">
+                      {item.description}
+                    </p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Right Visual: Asymmetrical Emerald Curve Shape + Spice Store + Receipt */}
+          <div className="lg:col-span-5 relative flex flex-col items-center">
+            <div className="relative w-full max-w-[420px]">
+              {/* Vibrant Asymmetrical Emerald Curve Shape */}
+              <div className="absolute -top-4 -left-4 -right-4 -bottom-4 bg-gradient-to-br from-[#00D084] to-[#059669] rounded-[3rem] -rotate-2 opacity-95 -z-10 shadow-xl shadow-emerald-500/20" />
+
+              {/* Photo Frame Container */}
+              <div className="relative rounded-[2.5rem] overflow-hidden border-4 border-white shadow-2xl aspect-[4/3] bg-slate-100">
+                <Image
+                  src="/images/ethiopian_store_spices.jpg"
+                  alt="Authentic Ethiopian grocery and spice market"
+                  fill
+                  className="object-cover"
+                  sizes="(max-width: 768px) 100vw, 420px"
+                  priority
+                />
+              </div>
+
+              {/* Floating Payment Received Receipt Card */}
+              <div className="absolute -bottom-8 -right-3 sm:-right-6 w-60 sm:w-64 bg-white rounded-2xl border border-slate-200/80 shadow-2xl p-5 space-y-3.5 z-20">
+                <div className="text-center">
+                  <div className="h-9 w-9 mx-auto rounded-full bg-emerald-100 flex items-center justify-center mb-1.5">
+                    <CheckCircle2 className="h-5 w-5 text-emerald-600" />
+                  </div>
+                  <h4 className="text-xs font-bold text-slate-800">Payment Received</h4>
+                  <p className="text-lg font-black text-[#0D9668] font-mono mt-0.5">
+                    ETB 1,250.00
+                  </p>
+                  <p className="text-[10px] text-slate-400">Cash Payment</p>
+                </div>
+
+                <div className="border-t border-slate-100 pt-2.5 space-y-1.5 text-xs">
+                  <div className="flex justify-between text-slate-600">
+                    <span>Cash</span>
+                    <span className="font-mono font-medium">ETB 1,250.00</span>
+                  </div>
+                  <div className="flex justify-between text-slate-600">
+                    <span>Change</span>
+                    <span className="font-mono font-medium">ETB 0.00</span>
+                  </div>
+                  <div className="flex justify-between pt-1.5 border-t border-slate-100 font-bold text-slate-900">
+                    <span>Total</span>
+                    <span className="font-mono text-[#0D9668]">ETB 1,250.00</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Handwritten Script Annotation in bottom-right */}
+              <div className="absolute -bottom-16 right-2 text-right">
+                <span className="font-handwriting text-3xl sm:text-4xl text-[#072623] rotate-[-5deg] inline-block font-bold tracking-wide">
+                  Local. Simple. Powerful.
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+/* ─────────────────────────────────────────────────────────────
+   04. TRUSTED BY BUSINESSES (STATS STRIP)
+   "Real results from real businesses" with soft sage tint (#F0FAF5)
+───────────────────────────────────────────────────────────── */
+function StatsSection() {
+  const stats = [
+    { icon: Building2, value: "1,000+", label: "Active Businesses" },
+    { icon: RefreshCw, value: "15,000+", label: "Daily Transactions" },
+    { icon: Target, value: "99.9%", label: "System Uptime" },
+    { icon: Star, value: "4.8/5", label: "Customer Satisfaction" },
+  ];
+
+  return (
+    <section className="py-14 bg-[#F0FAF5] border-y border-emerald-100/80">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        {/* Section Header */}
+        <div className="mb-8">
+          <span className="inline-flex rounded-full bg-emerald-100 px-3.5 py-1 text-[11px] font-bold uppercase tracking-wider text-[#0D9668] border border-emerald-200">
+            TRUSTED BY BUSINESSES
+          </span>
+          <h2 className="mt-2 text-2xl sm:text-3xl font-black text-[#072623] tracking-tight">
+            Real results from real businesses
+          </h2>
+        </div>
+
+        {/* 4 Stats Grid */}
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-6 lg:gap-8">
+          {stats.map((item, idx) => (
+            <div
+              key={item.label}
+              className={`flex flex-col sm:flex-row items-center sm:items-start gap-4 p-4 rounded-xl ${
+                idx < 3 ? "lg:border-r border-emerald-200/60" : ""
+              }`}
             >
-              Sign In
-            </Link>
+              <div className="h-10 w-10 rounded-xl bg-white border border-emerald-100 shadow-xs flex items-center justify-center shrink-0">
+                <item.icon className="h-5 w-5 text-[#00D084]" />
+              </div>
+              <div className="text-center sm:text-left">
+                <p className="text-2xl sm:text-3xl font-black text-[#072623] tracking-tight font-sans">
+                  {item.value}
+                </p>
+                <p className="text-xs text-slate-600 font-medium mt-0.5">
+                  {item.label}
+                </p>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+/* ─────────────────────────────────────────────────────────────
+   05. OUR SOLUTIONS ("Everything you need to manage your business")
+   Pure White Section + Smiling Ethiopian shopkeeper with tablet
+───────────────────────────────────────────────────────────── */
+function SolutionsSection() {
+  const solutions = [
+    {
+      icon: Package,
+      title: "Inventory Management",
+      description: "Track stock, set alerts, reduce losses.",
+    },
+    {
+      icon: ShoppingCart,
+      title: "Point of Sale (POS)",
+      description: "Fast and simple checkout for your customers.",
+    },
+    {
+      icon: FileText,
+      title: "Sales & Invoices",
+      description: "Create invoices, manage sales and refunds.",
+    },
+    {
+      icon: CreditCard,
+      title: "Expense Tracking",
+      description: "Record and categorize business expenses.",
+    },
+    {
+      icon: BarChart3,
+      title: "Reports & Analytics",
+      description: "Real-time insights into your business performance.",
+    },
+    {
+      icon: Users,
+      title: "Multi-User & Permissions",
+      description: "Manage staff and control access levels.",
+    },
+  ];
+
+  return (
+    <section id="solutions" className="py-20 lg:py-24 bg-white">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-16 items-center">
+          {/* Left: Heading & 6 Cards */}
+          <div className="lg:col-span-7 space-y-8">
+            <div>
+              <span className="text-xs font-bold uppercase tracking-wider text-[#0D9668] bg-[#E8F7F1] px-3.5 py-1.5 rounded-full border border-[#C3ECD8]">
+                OUR SOLUTIONS
+              </span>
+              <h2 className="mt-4 text-3xl sm:text-4xl font-black text-[#072623] tracking-tight leading-tight">
+                Everything you need to <br />
+                manage your business
+              </h2>
+              <p className="mt-3 text-slate-600 text-base max-w-lg leading-relaxed">
+                From sales to inventory, expenses to reports — BizFlow gives you the tools to run your business more efficiently and profitably.
+              </p>
+            </div>
+
+            {/* 6 Solution Cards Grid */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              {solutions.map((item) => (
+                <div
+                  key={item.title}
+                  className="flex items-start gap-3.5 p-3.5 rounded-2xl border border-slate-100 hover:border-emerald-300 hover:bg-[#F0FAF5] transition-all duration-200 group"
+                >
+                  <div className="h-10 w-10 rounded-xl bg-[#E8F7F1] border border-[#C3ECD8] flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform">
+                    <item.icon className="h-5 w-5 text-[#00D084]" />
+                  </div>
+                  <div>
+                    <h3 className="font-bold text-sm text-[#072623] group-hover:text-emerald-700 transition-colors">
+                      {item.title}
+                    </h3>
+                    <p className="text-xs text-slate-500 mt-0.5 leading-relaxed">
+                      {item.description}
+                    </p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Right: Ethiopian Store Owner Photo with Tablet */}
+          <div className="lg:col-span-5 relative flex flex-col items-center">
+            {/* Cursive Handwriting Annotation with Curved Arrow */}
+            <div className="self-end mb-2 mr-6 text-right">
+              <span className="font-handwriting text-2xl sm:text-3xl text-[#072623] rotate-[-3deg] inline-block font-bold">
+                More than software, <br />
+                we&apos;re your business partner.
+              </span>
+              {/* Curved SVG arrow */}
+              <div className="w-14 h-8 ml-auto -mt-1 text-[#00D084]">
+                <svg viewBox="0 0 60 30" fill="none" className="w-full h-full stroke-current stroke-2">
+                  <path d="M 10 5 Q 35 2 45 22" strokeLinecap="round" strokeDasharray="3 3" />
+                  <polyline points="40,22 45,24 48,17" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+              </div>
+            </div>
+
+            {/* Photo Container with Organic Emerald Backdrop */}
+            <div className="relative w-full max-w-[380px]">
+              {/* Vibrant Emerald Curved Shape Behind */}
+              <div className="absolute -inset-3 bg-gradient-to-tr from-[#00D084] to-[#059669] rounded-[3rem] rotate-2 opacity-95 -z-10 shadow-xl shadow-emerald-500/20" />
+
+              {/* Photo Frame */}
+              <div className="relative rounded-[2.5rem] overflow-hidden shadow-2xl aspect-[3/4] bg-slate-900 border-4 border-white">
+                <Image
+                  src="/images/store_owner_tablet.jpg"
+                  alt="Smiling Ethiopian business owner managing store with BizFlow on tablet"
+                  fill
+                  className="object-cover object-top"
+                  sizes="(max-width: 768px) 100vw, 380px"
+                  priority
+                />
+              </div>
+
+              {/* Floating Pill Card: "Manage your store anytime, anywhere" */}
+              <div className="absolute -bottom-4 left-1/2 -translate-x-1/2 w-[90%] bg-white rounded-full py-2.5 px-4 shadow-xl border border-slate-100 flex items-center justify-center gap-2.5 z-20">
+                <Cloud className="h-4 w-4 text-[#00D084]" />
+                <span className="text-xs font-bold text-slate-800 whitespace-nowrap">
+                  Manage your store anytime, anywhere
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+/* ─────────────────────────────────────────────────────────────
+   06. PRODUCT TOUR (Deep Forest Pine Section #072623)
+   Interactive SaaS Workflow Showcase with zero blue clash
+───────────────────────────────────────────────────────────── */
+function ProductTourSection() {
+  const [activeStep, setActiveStep] = useState(0);
+
+  const steps = [
+    {
+      num: "01",
+      icon: Package,
+      title: "Add Products",
+      badge: "Catalog Setup",
+      description: "Create your product catalog, categories, barcodes, and purchase prices.",
+      highlight: "Barcode scanning & low-stock alerts",
+      preview: {
+        title: "Product Catalog Management",
+        subtitle: "Easily add items with prices in ETB, batch tracking, and categories.",
+        stats: [
+          { label: "Total Catalog Items", value: "1,420 items" },
+          { label: "Low Stock Alert", value: "4 items" },
+          { label: "Active Categories", value: "18 categories" },
+        ],
+        sampleItems: [
+          { name: "Wheat Flour (50kg)", category: "Grains & Flour", price: "ETB 3,850", stock: "45 in stock", status: "In Stock" },
+          { name: "Pure Sunflower Oil (5L)", category: "Cooking Oil", price: "ETB 1,250", stock: "12 in stock", status: "In Stock" },
+          { name: "Ethiopian Coffee Beans (1kg)", category: "Beverages", price: "ETB 650", stock: "3 in stock", status: "Low Stock" },
+        ],
+      },
+    },
+    {
+      num: "02",
+      icon: ShoppingCart,
+      title: "Record Sales",
+      badge: "Point of Sale",
+      description: "Use the fast POS register for quick checkout with Cash, Telebirr, or CBE Birr.",
+      highlight: "Instant receipt printing & split payments",
+      preview: {
+        title: "Point of Sale (POS) Checkout",
+        subtitle: "High-speed touchscreen register with barcode support and split payments.",
+        stats: [
+          { label: "Today's POS Sales", value: "ETB 24,850" },
+          { label: "Transactions", value: "84 orders" },
+          { label: "Telebirr Share", value: "68% cashless" },
+        ],
+        sampleItems: [
+          { name: "Sale #BF-9041 (Customer: Abebe K.)", category: "Cash Payment", price: "ETB 1,250", stock: "Completed", status: "Paid" },
+          { name: "Sale #BF-9042 (Customer: Mekdes T.)", category: "Telebirr (Ref: TB-8821)", price: "ETB 3,450", stock: "Completed", status: "Paid" },
+          { name: "Sale #BF-9043 (Customer: Walk-in)", category: "CBE Birr", price: "ETB 890", stock: "Completed", status: "Paid" },
+        ],
+      },
+    },
+    {
+      num: "03",
+      icon: RefreshCw,
+      title: "Update Stock",
+      badge: "Real-time Sync",
+      description: "Inventory auto-deducts instantly with every sale and tracks loss reasons.",
+      highlight: "Automatic stock ledger & audit trail",
+      preview: {
+        title: "Automated Inventory & Ledger",
+        subtitle: "Zero manual counting needed. Stock updates in real time with mandatory adjustment reasons.",
+        stats: [
+          { label: "Inventory Valuation", value: "ETB 348,200" },
+          { label: "Stock Accuracy", value: "99.8%" },
+          { label: "Reorder Triggered", value: "2 suppliers" },
+        ],
+        sampleItems: [
+          { name: "Auto Deduct: Sale #BF-9042", category: "Automatic Sale Deduction", price: "-2 items", stock: "Ledger updated", status: "Auto" },
+          { name: "Restock: Sugar (25kg x 20 bags)", category: "Purchase Order #PO-104", price: "+20 items", stock: "Ledger updated", status: "Restock" },
+          { name: "Stock Adjustment (Flour damaged)", category: "Spillage / Damaged Stock", price: "-1 item", stock: "Audited", status: "Audited" },
+        ],
+      },
+    },
+    {
+      num: "04",
+      icon: BarChart3,
+      title: "View Reports",
+      badge: "Analytics & P&L",
+      description: "Get real-time gross profit, daily sales summaries, and tax compliance data.",
+      highlight: "Export to Excel, PDF & accounting ready",
+      preview: {
+        title: "Executive Reports & Profit Analytics",
+        subtitle: "Know your exact profit margins, best-selling goods, and staff performance.",
+        stats: [
+          { label: "Net Gross Margin", value: "32.4%" },
+          { label: "Top Selling Item", value: "Cooking Oil 5L" },
+          { label: "Weekly Growth", value: "+18.5% YoY" },
+        ],
+        sampleItems: [
+          { name: "Daily P&L Statement (Today)", category: "Sales ETB 24,850 · Cost ETB 16,400", price: "ETB 8,450 Net", stock: "Profit margin 34%", status: "Profitable" },
+          { name: "Expense Breakdown (Rent & Staff)", category: "Operating overheads", price: "ETB 3,200", stock: "Categorized", status: "Expense" },
+          { name: "Tax Summary Report (VAT / TOT)", category: "Monthly tax reconciliation", price: "Export Ready", stock: "PDF & Excel", status: "Ready" },
+        ],
+      },
+    },
+  ];
+
+  const current = steps[activeStep];
+
+  return (
+    <section id="product-tour" className="py-20 lg:py-28 bg-[#072623] text-white relative overflow-hidden">
+      {/* Ambient background glows */}
+      <div className="absolute top-1/4 left-1/4 w-[600px] h-[600px] bg-[#00D084]/10 rounded-full blur-[140px] pointer-events-none" />
+      <div className="absolute bottom-10 right-10 w-[500px] h-[500px] bg-emerald-600/10 rounded-full blur-[140px] pointer-events-none" />
+
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
+        {/* Section Header */}
+        <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-6 mb-12 sm:mb-16">
+          <div className="space-y-4 max-w-2xl">
+            <span className="text-xs font-bold uppercase tracking-wider text-[#00D084] bg-[#00D084]/10 px-3.5 py-1.5 rounded-full border border-[#00D084]/30 inline-block">
+              PRODUCT TOUR
+            </span>
+            <h2 className="text-3xl sm:text-4xl lg:text-5xl font-black text-white tracking-tight leading-[1.12]">
+              From product to profit <br />
+              in just a few steps
+            </h2>
+            <p className="text-emerald-100/80 text-sm sm:text-base leading-relaxed">
+              See how BizFlow helps you manage your daily operations seamlessly from start to finish.
+            </p>
+          </div>
+
+          <div>
             <Link
-              href="/dashboard"
-              className="inline-flex items-center gap-2 rounded-xl bg-[#0D9668] hover:bg-[#097852] px-5 py-2.5 text-sm font-bold text-white shadow-md shadow-[#0D9668]/25 transition-all duration-200 hover:-translate-y-0.5 active:translate-y-0"
+              href="/register"
+              className="inline-flex items-center gap-2 px-7 py-3.5 rounded-full text-[#051E1C] font-bold text-sm bg-gradient-to-r from-[#00D084] to-[#059669] hover:from-[#00E591] hover:to-[#04885f] shadow-xl shadow-emerald-500/25 transition-all duration-200 hover:-translate-y-0.5"
             >
-              <span>Get Started</span>
+              <span>Explore Full Tour</span>
               <ArrowRight className="h-4 w-4" />
             </Link>
           </div>
-
-          {/* Mobile menu toggle */}
-          <button
-            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-            className="md:hidden p-2 rounded-lg text-slate-600 hover:bg-slate-100"
-            aria-label="Toggle navigation menu"
-          >
-            {mobileMenuOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
-          </button>
         </div>
 
-        {/* Mobile dropdown menu */}
-        {mobileMenuOpen && (
-          <div className="md:hidden border-b border-slate-200 bg-white px-4 pt-2 pb-6 space-y-3 shadow-xl">
-            <a
-              href="#features"
-              onClick={() => setMobileMenuOpen(false)}
-              className="block py-2 text-base font-semibold text-slate-700"
-            >
-              Features
-            </a>
-            <a
-              href="#solutions"
-              onClick={() => setMobileMenuOpen(false)}
-              className="block py-2 text-base font-semibold text-slate-700"
-            >
-              Solutions
-            </a>
-            <a
-              href="#preview"
-              onClick={() => setMobileMenuOpen(false)}
-              className="block py-2 text-base font-semibold text-slate-700"
-            >
-              Product Tour
-            </a>
-            <a
-              href="#pricing"
-              onClick={() => setMobileMenuOpen(false)}
-              className="block py-2 text-base font-semibold text-slate-700"
-            >
-              Pricing
-            </a>
-            <div className="pt-4 border-t border-slate-100 flex flex-col gap-2.5">
-              <Link
-                href="/login"
-                className="w-full text-center py-2.5 text-sm font-bold text-slate-800 border border-slate-300 rounded-xl"
-              >
-                Sign In
-              </Link>
-              <Link
-                href="/dashboard"
-                className="w-full text-center py-2.5 text-sm font-bold text-white bg-[#0D9668] rounded-xl shadow-md"
-              >
-                Get Started
-              </Link>
-            </div>
-          </div>
-        )}
-      </header>
-
-      {/* 02. HERO SECTION */}
-      <section className="relative pt-12 pb-20 lg:pt-20 lg:pb-32 overflow-hidden">
-        {/* Subtle decorative background gradient */}
-        <div className="absolute inset-0 pointer-events-none -z-10 flex justify-center">
-          <div className="w-[850px] h-[550px] bg-gradient-to-tr from-[#DCEFE7]/60 via-[#E0E7FF]/30 to-transparent rounded-full blur-3xl opacity-70 transform -translate-y-24" />
-        </div>
-
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-8 items-center">
-            {/* Left Column: Headline and Call to Actions (6 Cols) */}
-            <div className="lg:col-span-6 space-y-6 text-center lg:text-left">
-              <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-white border border-slate-200 shadow-xs text-xs font-bold text-[#101827]">
-                <span className="h-2 w-2 rounded-full bg-[#0D9668] animate-pulse" />
-                <span>Designed for Retailers & Wholesalers in Ethiopia</span>
-              </div>
-
-              <h1 className="text-4xl sm:text-5xl lg:text-[3.5rem] font-black tracking-tight text-[#101827] leading-[1.12]">
-                Run your business. <br />
-                <span className="text-[#0D9668]">Know your numbers.</span> <br />
-                Grow with confidence.
-              </h1>
-
-              <p className="text-base sm:text-lg text-slate-600 max-w-xl mx-auto lg:mx-0 font-normal leading-relaxed">
-                Manage products, inventory, sales, expenses, and business performance from one simple platform built for growing businesses in Ethiopia.
-              </p>
-
-              <div className="flex flex-col sm:flex-row items-center justify-center lg:justify-start gap-3.5 pt-2">
-                <Link
-                  href="/dashboard"
-                  className="w-full sm:w-auto inline-flex items-center justify-center gap-2.5 px-7 py-3.5 rounded-xl bg-[#0D9668] hover:bg-[#097852] text-white font-bold text-base shadow-lg shadow-[#0D9668]/30 transition-all duration-200 hover:-translate-y-0.5 active:translate-y-0"
-                >
-                  <span>Start for Free</span>
-                  <ArrowRight className="h-4 w-4" />
-                </Link>
-
-                <Link
-                  href="/sales/new"
-                  className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-6 py-3.5 rounded-xl bg-white border border-slate-300 hover:border-slate-400 hover:bg-slate-50 text-slate-800 font-bold text-base shadow-xs transition"
-                >
-                  <ShoppingCart className="h-4 w-4 text-[#0D9668]" />
-                  <span>Try Live POS Terminal</span>
-                </Link>
-              </div>
-
-              {/* Local payments trust indicators */}
-              <div className="pt-4 flex items-center justify-center lg:justify-start gap-4 text-xs font-semibold text-slate-500">
-                <span className="flex items-center gap-1.5">
-                  <CheckCircle2 className="h-4 w-4 text-[#0D9668]" /> Ethiopian Birr (ETB)
-                </span>
-                <span className="flex items-center gap-1.5">
-                  <CheckCircle2 className="h-4 w-4 text-[#0D9668]" /> Telebirr & CBE Ready
-                </span>
-                <span className="flex items-center gap-1.5">
-                  <CheckCircle2 className="h-4 w-4 text-[#0D9668]" /> Installable PWA
-                </span>
-              </div>
-            </div>
-
-            {/* Right Column: Realistic Floating Dashboard Preview Mockup (6 Cols) */}
-            <div className="lg:col-span-6 relative">
-              <div className="relative rounded-2xl bg-[#101827] p-4 sm:p-5 shadow-2xl shadow-slate-900/30 border border-slate-800 text-white transition-all duration-300 hover:shadow-slate-900/40">
-                {/* Mockup Window Titlebar */}
-                <div className="flex items-center justify-between pb-3.5 mb-3.5 border-b border-slate-800">
-                  <div className="flex items-center gap-2">
-                    <span className="h-3 w-3 rounded-full bg-rose-500/80" />
-                    <span className="h-3 w-3 rounded-full bg-amber-500/80" />
-                    <span className="h-3 w-3 rounded-full bg-emerald-500/80" />
-                    <span className="ml-2 text-xs font-mono text-slate-400 hidden sm:inline">
-                      bizflow.et/dashboard — Addis Mini Mart (Bole)
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <span className="text-[11px] font-bold text-[#0D9668] bg-[#0D9668]/10 px-2 py-0.5 rounded-full border border-[#0D9668]/30">
-                      Live Store Data
-                    </span>
-                  </div>
-                </div>
-
-                {/* Dashboard KPI Grid in Mockup */}
-                <div className="grid grid-cols-2 gap-3 mb-4">
-                  <div className="bg-slate-900/90 rounded-xl p-3 border border-slate-800/80">
-                    <span className="text-[11px] font-medium text-slate-400 block">Today's Sales</span>
-                    <span className="text-lg sm:text-xl font-bold font-mono text-white mt-0.5 block">
-                      {formatMoney(18450)}
-                    </span>
-                    <span className="text-[10px] text-[#0D9668] font-semibold flex items-center gap-1 mt-1">
-                      <TrendingUp className="h-3 w-3" /> +14.2% vs yesterday
-                    </span>
-                  </div>
-
-                  <div className="bg-slate-900/90 rounded-xl p-3 border border-slate-800/80">
-                    <span className="text-[11px] font-medium text-slate-400 block">Gross Profit (Est.)</span>
-                    <span className="text-lg sm:text-xl font-bold font-mono text-[#0D9668] mt-0.5 block">
-                      {formatMoney(5230)}
-                    </span>
-                    <span className="text-[10px] text-slate-400 font-medium block mt-1">
-                      28.3% margin on COGS
-                    </span>
-                  </div>
-                </div>
-
-                {/* Simulated Real-Time POS Cart & Checkout Strip */}
-                <div className="bg-slate-900/80 rounded-xl p-3.5 border border-slate-800 mb-4 space-y-2.5">
-                  <div className="flex items-center justify-between text-xs">
-                    <span className="font-bold text-slate-200 flex items-center gap-1.5">
-                      <ShoppingCart className="h-3.5 w-3.5 text-[#0D9668]" />
-                      Active Checkout (Invoice #BF-948210)
-                    </span>
-                    <span className="text-[11px] font-mono text-[#0D9668] bg-[#0D9668]/15 px-2 py-0.5 rounded">
-                      Telebirr Verified
-                    </span>
-                  </div>
-
-                  <div className="space-y-1.5 text-[11px] font-mono text-slate-300">
-                    <div className="flex justify-between py-0.5 border-b border-slate-800">
-                      <span>Magna Teff 5kg Bag × 1</span>
-                      <span className="text-white font-bold">ETB 850.00</span>
-                    </div>
-                    <div className="flex justify-between py-0.5 border-b border-slate-800">
-                      <span>Ambo Mineral Water (500ml) × 2</span>
-                      <span className="text-white font-bold">ETB 70.00</span>
-                    </div>
-                  </div>
-
-                  <div className="flex justify-between items-center text-xs pt-1">
-                    <span className="text-slate-400">Total Paid:</span>
-                    <span className="text-base font-extrabold text-white font-mono">
-                      ETB 920.00
-                    </span>
-                  </div>
-                </div>
-
-                {/* Stock Movement Mini Ledger in Mockup */}
-                <div className="bg-slate-900/60 rounded-xl p-3 border border-slate-800/80">
-                  <div className="flex items-center justify-between text-[11px] text-slate-400 font-medium mb-2">
-                    <span className="flex items-center gap-1">
-                      <AlertTriangle className="h-3 w-3 text-amber-400" /> Low Stock Alerts
-                    </span>
-                    <span className="text-[#0D9668] text-[10px] font-bold">Auto-Reorder Level</span>
-                  </div>
-                  <div className="flex items-center justify-between text-xs">
-                    <div>
-                      <p className="font-semibold text-slate-200">Sunflower Cooking Oil 3L</p>
-                      <p className="text-[10px] text-slate-500 font-mono">SKU: PAN-002</p>
-                    </div>
-                    <div className="text-right font-mono">
-                      <span className="text-xs font-bold text-amber-400 bg-amber-400/10 px-2 py-0.5 rounded">
-                        8 left
-                      </span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Floating accent badge */}
-              <div className="hidden sm:flex absolute -bottom-5 -left-5 bg-white border border-slate-200 p-3.5 rounded-xl shadow-xl items-center gap-3">
-                <div className="h-9 w-9 rounded-lg bg-[#DCEFE7] text-[#0D9668] flex items-center justify-center font-bold">
-                  <ShieldCheck className="h-5 w-5" />
-                </div>
-                <div>
-                  <p className="text-xs font-bold text-[#101827]">Multi-Tenant Safe</p>
-                  <p className="text-[10px] text-slate-500">Zero cross-tenant data leaks</p>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* 03. TRUST AND BENEFITS STRIP */}
-      <section className="bg-white border-y border-slate-200/90 py-12">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
-            <div className="flex items-start gap-4">
-              <div className="h-11 w-11 rounded-xl bg-[#DCEFE7] text-[#0D9668] flex items-center justify-center shrink-0">
-                <Layers className="h-5 w-5" />
-              </div>
-              <div>
-                <h3 className="font-bold text-slate-900 text-sm">Inventory Visibility</h3>
-                <p className="text-xs text-slate-600 mt-1 leading-relaxed">
-                  Always know what is on the shelf and in the backroom. Prevent stockouts and unexplained stock loss.
-                </p>
-              </div>
-            </div>
-
-            <div className="flex items-start gap-4">
-              <div className="h-11 w-11 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center shrink-0">
-                <ShoppingCart className="h-5 w-5" />
-              </div>
-              <div>
-                <h3 className="font-bold text-slate-900 text-sm">Faster Sales Tracking</h3>
-                <p className="text-xs text-slate-600 mt-1 leading-relaxed">
-                  Barcode search, rapid cart additions, and instant receipts printed in seconds for waiting customers.
-                </p>
-              </div>
-            </div>
-
-            <div className="flex items-start gap-4">
-              <div className="h-11 w-11 rounded-xl bg-purple-50 text-purple-600 flex items-center justify-center shrink-0">
-                <Receipt className="h-5 w-5" />
-              </div>
-              <div>
-                <h3 className="font-bold text-slate-900 text-sm">Clear Expense Records</h3>
-                <p className="text-xs text-slate-600 mt-1 leading-relaxed">
-                  Log shop rent, electricity, fiber internet, and transport so operational overhead never eats your profit.
-                </p>
-              </div>
-            </div>
-
-            <div className="flex items-start gap-4">
-              <div className="h-11 w-11 rounded-xl bg-emerald-50 text-emerald-700 flex items-center justify-center shrink-0">
-                <BarChart3 className="h-5 w-5" />
-              </div>
-              <div>
-                <h3 className="font-bold text-slate-900 text-sm">Reports in One Place</h3>
-                <p className="text-xs text-slate-600 mt-1 leading-relaxed">
-                  Estimated Gross Profit calculated from snapshotted cost of goods sold. Export clear CSV summaries anytime.
-                </p>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* 04. FEATURES SHOWCASE (Alternating Text and Previews) */}
-      <section id="features" className="py-20 lg:py-28 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-24">
-        {/* Section Heading */}
-        <div className="text-center max-w-3xl mx-auto space-y-3">
-          <span className="text-xs font-bold uppercase tracking-wider text-[#0D9668] bg-[#DCEFE7] px-3 py-1 rounded-full">
-            Core Modules
-          </span>
-          <h2 className="text-3xl sm:text-4xl font-extrabold text-[#101827] tracking-tight">
-            Built for the Daily Realities of Ethiopian Commerce
-          </h2>
-          <p className="text-slate-600 text-base">
-            From busy counter checkout in Merkato or Bole to high-volume wholesale distribution, BizFlow keeps every transaction accountable.
-          </p>
-        </div>
-
-        {/* Feature 1: Smart Inventory */}
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 items-center">
-          <div className="lg:col-span-6 space-y-4">
-            <div className="inline-flex items-center gap-2 text-xs font-bold text-[#0D9668] bg-[#DCEFE7] px-2.5 py-1 rounded-md">
-              <Package className="h-3.5 w-3.5" />
-              <span>Smart Inventory Management</span>
-            </div>
-            <h3 className="text-2xl sm:text-3xl font-extrabold text-[#101827] tracking-tight">
-              Know what is in stock before shelves run dry
-            </h3>
-            <p className="text-slate-600 text-sm sm:text-base leading-relaxed">
-              Paper notebooks lead to shrinkage and forgotten stock. BizFlow maintains an immutable stock ledger for every receipt, sale, return, and damage adjustment.
-            </p>
-            <ul className="space-y-2.5 pt-2 text-sm text-slate-700">
-              <li className="flex items-center gap-2.5">
-                <Check className="h-4 w-4 text-[#0D9668] shrink-0" />
-                <span>Mandatory reason codes for every manual inventory adjustment</span>
-              </li>
-              <li className="flex items-center gap-2.5">
-                <Check className="h-4 w-4 text-[#0D9668] shrink-0" />
-                <span>Automatic low-stock threshold notifications for fast reordering</span>
-              </li>
-              <li className="flex items-center gap-2.5">
-                <Check className="h-4 w-4 text-[#0D9668] shrink-0" />
-                <span>Prevents negative stock by default during busy cashier rushes</span>
-              </li>
-            </ul>
-          </div>
-
-          <div className="lg:col-span-6 bg-white p-6 rounded-2xl border border-slate-200 shadow-lg">
-            <div className="flex items-center justify-between pb-3 border-b border-slate-100 mb-3">
-              <span className="font-bold text-xs text-slate-800">Stock Movement Ledger</span>
-              <span className="text-[11px] text-slate-400 font-mono">Real-Time Trace</span>
-            </div>
-            <div className="space-y-2.5 text-xs font-mono">
-              <div className="p-2.5 rounded-lg bg-emerald-50/70 border border-emerald-100 flex justify-between items-center">
-                <div>
-                  <span className="font-semibold text-slate-900 block font-sans">Ambo Mineral Water (500ml)</span>
-                  <span className="text-[10px] text-slate-500 font-sans">Delivery PO-883</span>
-                </div>
-                <span className="text-emerald-700 font-bold font-mono">+150 units</span>
-              </div>
-              <div className="p-2.5 rounded-lg bg-blue-50/70 border border-blue-100 flex justify-between items-center">
-                <div>
-                  <span className="font-semibold text-slate-900 block font-sans">Magna Teff 5kg Bag</span>
-                  <span className="text-[10px] text-slate-500 font-sans">Sale #BF-948209</span>
-                </div>
-                <span className="text-blue-700 font-bold font-mono">-1 unit</span>
-              </div>
-              <div className="p-2.5 rounded-lg bg-amber-50/70 border border-amber-100 flex justify-between items-center">
-                <div>
-                  <span className="font-semibold text-slate-900 block font-sans">Sunflower Cooking Oil 3L</span>
-                  <span className="text-[10px] text-slate-500 font-sans">Reason: Broken in storage</span>
-                </div>
-                <span className="text-amber-700 font-bold font-mono">-1 unit</span>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Feature 2: Sales & Payments */}
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 items-center">
-          <div className="lg:col-span-6 order-2 lg:order-1 bg-white p-6 rounded-2xl border border-slate-200 shadow-lg">
-            <div className="flex items-center justify-between pb-3 border-b border-slate-100 mb-4">
-              <span className="font-bold text-xs text-slate-800">Ethiopian Payment Recording</span>
-              <span className="text-[11px] text-[#0D9668] font-bold">Manual Reference Guard</span>
-            </div>
-            <div className="grid grid-cols-2 gap-3 mb-4">
-              <div className="p-3 rounded-xl border border-[#0D9668] bg-[#DCEFE7]/30 text-center">
-                <Smartphone className="h-5 w-5 text-[#0D9668] mx-auto mb-1" />
-                <span className="font-bold text-xs text-[#101827]">Telebirr</span>
-                <span className="text-[10px] text-slate-500 block">Code: TL-893021</span>
-              </div>
-              <div className="p-3 rounded-xl border border-purple-200 bg-purple-50/40 text-center">
-                <Banknote className="h-5 w-5 text-purple-600 mx-auto mb-1" />
-                <span className="font-bold text-xs text-[#101827]">CBE Birr</span>
-                <span className="text-[10px] text-slate-500 block">Ref: CBE-481920</span>
-              </div>
-            </div>
-            <div className="bg-slate-50 rounded-xl p-3 border border-slate-200 text-xs space-y-1">
-              <div className="flex justify-between text-slate-500">
-                <span>Cash Received:</span>
-                <span className="font-mono font-semibold">ETB 1,000.00</span>
-              </div>
-              <div className="flex justify-between text-slate-500">
-                <span>Sale Subtotal:</span>
-                <span className="font-mono font-semibold">ETB 850.00</span>
-              </div>
-              <div className="flex justify-between text-[#0D9668] font-bold pt-1 border-t border-slate-200">
-                <span>Change to Return:</span>
-                <span className="font-mono">ETB 150.00</span>
-              </div>
-            </div>
-          </div>
-
-          <div className="lg:col-span-6 order-1 lg:order-2 space-y-4">
-            <div className="inline-flex items-center gap-2 text-xs font-bold text-blue-600 bg-blue-50 px-2.5 py-1 rounded-md">
-              <ShoppingCart className="h-3.5 w-3.5" />
-              <span>Sales Management & POS</span>
-            </div>
-            <h3 className="text-2xl sm:text-3xl font-extrabold text-[#101827] tracking-tight">
-              Fast counter checkout with Telebirr, CBE & Cash
-            </h3>
-            <p className="text-slate-600 text-sm sm:text-base leading-relaxed">
-              Customers don't like waiting in queues. Cashiers can complete sales in three clicks, apply authorized discounts, capture Telebirr or CBE confirmation codes, and hand over a clean receipt.
-            </p>
-            <ul className="space-y-2.5 pt-2 text-sm text-slate-700">
-              <li className="flex items-center gap-2.5">
-                <Check className="h-4 w-4 text-[#0D9668] shrink-0" />
-                <span>Price & cost snapshots at checkout prevent past reports from distorting</span>
-              </li>
-              <li className="flex items-center gap-2.5">
-                <Check className="h-4 w-4 text-[#0D9668] shrink-0" />
-                <span>Idempotent transactions eliminate double sales if a button is clicked twice</span>
-              </li>
-              <li className="flex items-center gap-2.5">
-                <Check className="h-4 w-4 text-[#0D9668] shrink-0" />
-                <span>Thermal receipt printing and mobile-friendly digital layout</span>
-              </li>
-            </ul>
-          </div>
-        </div>
-
-        {/* Feature 3: Gross Profit & Reports */}
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 items-center">
-          <div className="lg:col-span-6 space-y-4">
-            <div className="inline-flex items-center gap-2 text-xs font-bold text-purple-600 bg-purple-50 px-2.5 py-1 rounded-md">
-              <TrendingUp className="h-3.5 w-3.5" />
-              <span>Financial Truth & Insights</span>
-            </div>
-            <h3 className="text-2xl sm:text-3xl font-extrabold text-[#101827] tracking-tight">
-              True Estimated Gross Profit, not guesswork
-            </h3>
-            <p className="text-slate-600 text-sm sm:text-base leading-relaxed">
-              Revenue alone does not mean your shop is profitable. BizFlow accurately subtracts your cost of goods sold (COGS) to calculate your true gross profit, and clearly reports operational expenses separately.
-            </p>
-            <ul className="space-y-2.5 pt-2 text-sm text-slate-700">
-              <li className="flex items-center gap-2.5">
-                <Check className="h-4 w-4 text-[#0D9668] shrink-0" />
-                <span>Automated Gross Margin percentage tracking across product categories</span>
-              </li>
-              <li className="flex items-center gap-2.5">
-                <Check className="h-4 w-4 text-[#0D9668] shrink-0" />
-                <span>Categorized shop overhead (rent, electricity, delivery logistics)</span>
-              </li>
-              <li className="flex items-center gap-2.5">
-                <Check className="h-4 w-4 text-[#0D9668] shrink-0" />
-                <span>One-click CSV statements ready for your accountant or tax records</span>
-              </li>
-            </ul>
-          </div>
-
-          <div className="lg:col-span-6 bg-white p-6 rounded-2xl border border-slate-200 shadow-lg">
-            <div className="flex items-center justify-between pb-3 border-b border-slate-100 mb-4">
-              <span className="font-bold text-xs text-slate-800">Monthly P&L Snapshot</span>
-              <span className="text-[11px] text-slate-400 font-mono">Currency: ETB</span>
-            </div>
-            <div className="space-y-3 font-mono text-xs">
-              <div className="flex justify-between items-center py-1 border-b border-slate-100">
-                <span className="font-sans text-slate-600">Total Revenue:</span>
-                <span className="font-bold text-slate-900">{formatMoney(184500)}</span>
-              </div>
-              <div className="flex justify-between items-center py-1 border-b border-slate-100 text-slate-500">
-                <span className="font-sans text-slate-600">Cost of Goods Sold (COGS):</span>
-                <span className="font-bold">-{formatMoney(132000)}</span>
-              </div>
-              <div className="flex justify-between items-center py-1.5 bg-[#DCEFE7]/40 px-3 rounded-lg text-[#0D9668] font-bold">
-                <span className="font-sans">Estimated Gross Profit:</span>
-                <span>{formatMoney(52500)} (28.4%)</span>
-              </div>
-              <div className="flex justify-between items-center py-1 border-b border-slate-100 text-rose-600">
-                <span className="font-sans text-slate-600">Operating Expenses:</span>
-                <span className="font-bold">-{formatMoney(14250)}</span>
-              </div>
-              <div className="flex justify-between items-center py-2 bg-slate-900 text-white px-3 rounded-lg font-bold">
-                <span className="font-sans">Estimated Net Operational:</span>
-                <span className="text-emerald-400">{formatMoney(38250)}</span>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* 05. INTERACTIVE PRODUCT PREVIEW */}
-      <section id="preview" className="bg-[#101827] text-white py-20 lg:py-28">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-12">
-          <div className="text-center max-w-2xl mx-auto space-y-3">
-            <span className="text-xs font-bold uppercase tracking-wider text-[#0D9668] bg-[#0D9668]/15 px-3 py-1 rounded-full border border-[#0D9668]/30">
-              Interactive Product Tour
-            </span>
-            <h2 className="text-3xl sm:text-4xl font-extrabold tracking-tight">
-              Designed for Speed. Engineered for Control.
-            </h2>
-            <p className="text-slate-400 text-sm sm:text-base">
-              Experience the core workflows your shop will use every day.
-            </p>
-
-            {/* Interactive Tab Selector */}
-            <div className="inline-flex p-1 rounded-xl bg-slate-800/90 border border-slate-700/80 mt-4">
+        {/* 4 Stepped Workflow Cards */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+          {steps.map((step, index) => {
+            const isActive = activeStep === index;
+            return (
               <button
-                onClick={() => setActiveTab("pos")}
-                className={`px-4 py-2 rounded-lg text-xs font-bold transition ${
-                  activeTab === "pos"
-                    ? "bg-[#0D9668] text-white shadow-md"
-                    : "text-slate-400 hover:text-white"
+                key={step.num}
+                type="button"
+                onClick={() => setActiveStep(index)}
+                className={`relative text-left p-6 rounded-2xl transition-all duration-300 flex flex-col justify-between group cursor-pointer ${
+                  isActive
+                    ? "bg-[#0A322E] border-2 border-[#00D084] shadow-xl shadow-emerald-500/15 -translate-y-1"
+                    : "bg-[#06201E]/80 border border-[#0F3A36] hover:border-[#00D084]/40 hover:bg-[#0A322E]/60"
                 }`}
               >
-                1. POS Checkout
-              </button>
-              <button
-                onClick={() => setActiveTab("inventory")}
-                className={`px-4 py-2 rounded-lg text-xs font-bold transition ${
-                  activeTab === "inventory"
-                    ? "bg-[#0D9668] text-white shadow-md"
-                    : "text-slate-400 hover:text-white"
-                }`}
-              >
-                2. Stock Control
-              </button>
-              <button
-                onClick={() => setActiveTab("reports")}
-                className={`px-4 py-2 rounded-lg text-xs font-bold transition ${
-                  activeTab === "reports"
-                    ? "bg-[#0D9668] text-white shadow-md"
-                    : "text-slate-400 hover:text-white"
-                }`}
-              >
-                3. Profit Statements
-              </button>
-            </div>
-          </div>
-
-          {/* Interactive Screen Display */}
-          <div className="bg-slate-900 rounded-2xl border border-slate-800 p-6 max-w-4xl mx-auto shadow-2xl">
-            {activeTab === "pos" && (
-              <div className="space-y-4">
-                <div className="flex items-center justify-between pb-3 border-b border-slate-800">
-                  <div className="flex items-center gap-2">
-                    <ShoppingCart className="h-4 w-4 text-[#0D9668]" />
-                    <span className="font-bold text-sm">POS Counter Mode — Speed Checkout</span>
-                  </div>
-                  <Link
-                    href="/sales/new"
-                    className="text-xs text-[#0D9668] font-bold hover:underline flex items-center gap-1"
-                  >
-                    Open Live Terminal <ArrowRight className="h-3 w-3" />
-                  </Link>
-                </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <div className="bg-slate-800/70 p-3 rounded-xl border border-slate-700/60 flex justify-between items-center">
-                      <div>
-                        <p className="font-semibold text-xs text-white">Ambo Mineral Water (500ml)</p>
-                        <p className="text-[10px] text-slate-400 font-mono">BEV-001 • 150 on hand</p>
-                      </div>
-                      <span className="font-bold text-xs text-[#0D9668] font-mono">ETB 35.00</span>
-                    </div>
-                    <div className="bg-slate-800/70 p-3 rounded-xl border border-slate-700/60 flex justify-between items-center">
-                      <div>
-                        <p className="font-semibold text-xs text-white">Magna Teff 5kg Bag</p>
-                        <p className="text-[10px] text-slate-400 font-mono">PAN-001 • 40 on hand</p>
-                      </div>
-                      <span className="font-bold text-xs text-[#0D9668] font-mono">ETB 850.00</span>
-                    </div>
-                  </div>
-                  <div className="bg-slate-950 p-4 rounded-xl border border-slate-800 flex flex-col justify-between">
-                    <div>
-                      <span className="text-xs font-bold text-slate-400 block mb-2">Cart Summary</span>
-                      <div className="text-xs space-y-1 font-mono">
-                        <div className="flex justify-between text-slate-300">
-                          <span>Subtotal:</span>
-                          <span>ETB 920.00</span>
-                        </div>
-                        <div className="flex justify-between text-slate-300">
-                          <span>Discount:</span>
-                          <span className="text-emerald-400">ETB 0.00</span>
-                        </div>
-                        <div className="flex justify-between text-white font-bold text-sm pt-1 border-t border-slate-800">
-                          <span>Grand Total:</span>
-                          <span className="text-[#0D9668]">ETB 920.00</span>
-                        </div>
-                      </div>
-                    </div>
-                    <Link
-                      href="/sales/new"
-                      className="mt-4 w-full py-2.5 bg-[#0D9668] text-white font-bold text-xs rounded-lg text-center shadow-md hover:bg-[#097852] transition"
+                <div>
+                  {/* Top Row: Icon + Step Badge */}
+                  <div className="flex items-center justify-between mb-5">
+                    <div
+                      className={`h-12 w-12 rounded-xl flex items-center justify-center transition-all ${
+                        isActive
+                          ? "bg-gradient-to-br from-[#00D084] to-[#059669] text-[#051E1C] shadow-lg shadow-emerald-500/30 scale-105"
+                          : "bg-[#0D3833] text-[#00D084] group-hover:bg-[#0F423C]"
+                      }`}
                     >
-                      Complete Checkout
-                    </Link>
+                      <step.icon className="h-6 w-6" />
+                    </div>
+                    <span
+                      className={`text-xs font-mono font-bold px-2.5 py-1 rounded-full ${
+                        isActive
+                          ? "bg-[#00D084]/20 text-[#00D084] border border-[#00D084]/40"
+                          : "bg-[#0D3833] text-emerald-200/60"
+                      }`}
+                    >
+                      Step {step.num}
+                    </span>
                   </div>
-                </div>
-              </div>
-            )}
 
-            {activeTab === "inventory" && (
-              <div className="space-y-4">
-                <div className="flex items-center justify-between pb-3 border-b border-slate-800">
-                  <span className="font-bold text-sm flex items-center gap-2">
-                    <Layers className="h-4 w-4 text-[#0D9668]" /> Stock Ledger with Mandatory Reason Codes
-                  </span>
-                  <Link
-                    href="/inventory"
-                    className="text-xs text-[#0D9668] font-bold hover:underline flex items-center gap-1"
+                  {/* Title & Description */}
+                  <h3
+                    className={`text-lg font-bold transition-colors ${
+                      isActive ? "text-[#00D084]" : "text-white group-hover:text-emerald-100"
+                    }`}
                   >
-                    View Inventory <ArrowRight className="h-3 w-3" />
-                  </Link>
+                    {step.title}
+                  </h3>
+                  <p className="text-xs text-emerald-100/70 mt-2 leading-relaxed font-normal">
+                    {step.description}
+                  </p>
                 </div>
-                <div className="p-4 bg-slate-800/50 rounded-xl border border-slate-700/60 text-xs font-mono space-y-2">
-                  <div className="flex justify-between text-slate-300 border-b border-slate-700 pb-2">
-                    <span>Receipt: 25L Sunflower Oil</span>
-                    <span className="text-emerald-400 font-bold">+25 units (Delivery PO-883)</span>
-                  </div>
-                  <div className="flex justify-between text-slate-300 border-b border-slate-700 pb-2">
-                    <span>Adjustment: Ambo Water Bottle</span>
-                    <span className="text-amber-400 font-bold">-1 unit (Glass broken in storage)</span>
-                  </div>
-                  <div className="flex justify-between text-slate-300">
-                    <span>POS Deduction: Magna Teff</span>
-                    <span className="text-blue-400 font-bold">-1 unit (Invoice #BF-948209)</span>
-                  </div>
-                </div>
-              </div>
-            )}
 
-            {activeTab === "reports" && (
-              <div className="space-y-4">
-                <div className="flex items-center justify-between pb-3 border-b border-slate-800">
-                  <span className="font-bold text-sm flex items-center gap-2">
-                    <BarChart3 className="h-4 w-4 text-[#0D9668]" /> Cost-Snapshotted Gross Margins
+                {/* Bottom Highlight Tag */}
+                <div className="pt-5 mt-5 border-t border-[#0F3A36] flex items-center justify-between">
+                  <span className="text-[11px] font-semibold text-[#00D084]/90 truncate">
+                    {step.badge}
                   </span>
-                  <Link
-                    href="/reports"
-                    className="text-xs text-[#0D9668] font-bold hover:underline flex items-center gap-1"
-                  >
-                    View Reports <ArrowRight className="h-3 w-3" />
-                  </Link>
+                  <div
+                    className={`h-2 w-2 rounded-full transition-all ${
+                      isActive ? "bg-[#00D084] ring-4 ring-[#00D084]/20" : "bg-[#0D3833]"
+                    }`}
+                  />
                 </div>
-                <div className="grid grid-cols-3 gap-3 text-center">
-                  <div className="p-3 rounded-xl bg-slate-800/60 border border-slate-700">
-                    <span className="text-[10px] text-slate-400 block">Gross Sales</span>
-                    <span className="text-base font-bold font-mono text-white mt-1 block">ETB 184.5k</span>
-                  </div>
-                  <div className="p-3 rounded-xl bg-slate-800/60 border border-slate-700">
-                    <span className="text-[10px] text-slate-400 block">COGS Costs</span>
-                    <span className="text-base font-bold font-mono text-slate-300 mt-1 block">ETB 132.0k</span>
-                  </div>
-                  <div className="p-3 rounded-xl bg-[#0D9668]/20 border border-[#0D9668]/40">
-                    <span className="text-[10px] text-[#0D9668] font-bold block">Gross Profit</span>
-                    <span className="text-base font-bold font-mono text-[#0D9668] mt-1 block">ETB 52.5k</span>
-                  </div>
-                </div>
+              </button>
+            );
+          })}
+        </div>
+
+        {/* Live Interactive Step Preview Screen */}
+        <div className="mt-8 rounded-3xl bg-[#06201E] border border-[#0F3A36] p-6 sm:p-8 lg:p-10 shadow-2xl relative overflow-hidden">
+          {/* Top Status Bar */}
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6 border-b border-[#0F3A36]">
+            <div>
+              <div className="flex items-center gap-2 text-xs font-bold text-[#00D084] mb-1">
+                <span className="h-2 w-2 rounded-full bg-[#00D084] animate-pulse" />
+                <span>Step {current.num} Workflow Preview</span>
               </div>
-            )}
+              <h4 className="text-xl sm:text-2xl font-bold text-white tracking-tight">
+                {current.preview.title}
+              </h4>
+              <p className="text-xs sm:text-sm text-emerald-100/70 mt-0.5">
+                {current.preview.subtitle}
+              </p>
+            </div>
+
+            {/* Quick action button for the step */}
+            <div className="shrink-0 flex items-center gap-3">
+              <span className="hidden sm:inline-block text-xs font-medium text-emerald-200/60">
+                Click any step above to explore
+              </span>
+              <Link
+                href="/register"
+                className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-[#00D084]/10 hover:bg-[#00D084]/20 text-[#00D084] border border-[#00D084]/30 text-xs font-bold transition"
+              >
+                <span>Try this feature</span>
+                <ArrowRight className="h-3.5 w-3.5" />
+              </Link>
+            </div>
+          </div>
+
+          {/* 3 Metric Mini Cards for this Step */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-6">
+            {current.preview.stats.map((st) => (
+              <div key={st.label} className="bg-[#0A322E] border border-[#0F3A36] rounded-xl p-4">
+                <span className="text-xs text-emerald-200/60 block font-medium">{st.label}</span>
+                <span className="text-lg sm:text-xl font-bold font-mono text-white block mt-1">
+                  {st.value}
+                </span>
+              </div>
+            ))}
+          </div>
+
+          {/* Sample Table / Workflow Rows */}
+          <div className="mt-6 rounded-2xl bg-[#082825] border border-[#0F3A36] overflow-hidden">
+            <div className="px-4 py-3 bg-[#0A322E] border-b border-[#0F3A36] flex items-center justify-between text-xs font-bold text-emerald-100/90">
+              <span>Item / Activity Record</span>
+              <span className="hidden sm:inline">Details / Method</span>
+              <span>Amount / Stock</span>
+              <span>Status</span>
+            </div>
+            <div className="divide-y divide-[#0F3A36] text-xs">
+              {current.preview.sampleItems.map((item, i) => (
+                <div key={i} className="px-4 py-3 flex items-center justify-between gap-3 text-slate-200">
+                  <span className="font-semibold text-white flex-1 truncate">{item.name}</span>
+                  <span className="hidden sm:inline text-emerald-200/60 flex-1 truncate">{item.category}</span>
+                  <span className="font-mono text-[#00D084] font-bold">{item.price}</span>
+                  <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-[#00D084]/15 text-[#00D084] border border-[#00D084]/25">
+                    {item.status}
+                  </span>
+                </div>
+              ))}
+            </div>
           </div>
         </div>
-      </section>
+      </div>
+    </section>
+  );
+}
 
-      {/* 06. PRICING SECTION */}
-      <section id="pricing" className="py-20 lg:py-28 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-12">
-        <div className="text-center max-w-2xl mx-auto space-y-3">
-          <span className="text-xs font-bold uppercase tracking-wider text-[#0D9668] bg-[#DCEFE7] px-3 py-1 rounded-full">
-            Transparent Pricing
+/* ─────────────────────────────────────────────────────────────
+   07. TESTIMONIALS ("Trusted by business owners across Ethiopia")
+   Pure White Section with 3 Customer Cards
+───────────────────────────────────────────────────────────── */
+function TestimonialsSection() {
+  const testimonials = [
+    {
+      quote:
+        "BizFlow has made our store management so much easier. I can now track everything from my phone.",
+      name: "Mekdes Tadesse",
+      role: "Retail Shop Owner, Addis Ababa",
+      image: "/images/avatar_mekdes.jpg",
+    },
+    {
+      quote:
+        "The reports help me make better decisions. Our sales have increased since we started using BizFlow.",
+      name: "Getachew Alemu",
+      role: "Wholesaler, Dire Dawa",
+      image: "/images/avatar_getachew.jpg",
+    },
+    {
+      quote:
+        "Simple, fast and reliable. I highly recommend it to any business owner in Ethiopia.",
+      name: "Selamawit Bekele",
+      role: "Mini Mart Owner, Bahir Dar",
+      image: "/images/avatar_selamawit.jpg",
+    },
+  ];
+
+  return (
+    <section className="py-20 lg:py-24 bg-white">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        {/* Section Header */}
+        <div className="mb-12">
+          <span className="text-xs font-bold uppercase tracking-wider text-[#0D9668] bg-[#E8F7F1] px-3.5 py-1.5 rounded-full border border-[#C3ECD8]">
+            WHAT OUR CUSTOMERS SAY
           </span>
-          <h2 className="text-3xl sm:text-4xl font-extrabold text-[#101827] tracking-tight">
-            Predictable Plans in Ethiopian Birr (ETB)
+          <h2 className="mt-3 text-3xl sm:text-4xl font-black text-[#072623] tracking-tight">
+            Trusted by business owners across Ethiopia
           </h2>
-          <p className="text-slate-600 text-sm sm:text-base">
-            No foreign exchange surprises. Pay monthly or annually via Telebirr or CBE Birr.
-          </p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 items-stretch pt-4">
-          {/* Starter Plan */}
-          <div className="bg-white rounded-2xl border border-slate-200 p-8 flex flex-col justify-between shadow-xs hover:shadow-md transition">
-            <div>
-              <h3 className="text-xl font-bold text-[#101827]">Starter</h3>
-              <p className="text-xs text-slate-500 mt-1 min-h-8">
-                Best for small independent neighborhood kiosks and single-counter shops.
-              </p>
-              <div className="mt-6 flex items-baseline gap-1">
-                <span className="text-4xl font-black text-[#101827] font-mono">
-                  {formatMoney(499)}
-                </span>
-                <span className="text-xs text-slate-500">/month</span>
-              </div>
-
-              <ul className="mt-8 space-y-3 text-xs text-slate-700">
-                <li className="flex items-center gap-2">
-                  <Check className="h-4 w-4 text-[#0D9668]" /> 1 Business account
-                </li>
-                <li className="flex items-center gap-2">
-                  <Check className="h-4 w-4 text-[#0D9668]" /> Up to 2 Staff accounts (Owner + Cashier)
-                </li>
-                <li className="flex items-center gap-2">
-                  <Check className="h-4 w-4 text-[#0D9668]" /> POS Sales & Receipt printing
-                </li>
-                <li className="flex items-center gap-2">
-                  <Check className="h-4 w-4 text-[#0D9668]" /> Stock ledger & low-stock alerts
-                </li>
-                <li className="flex items-center gap-2">
-                  <Check className="h-4 w-4 text-[#0D9668]" /> Daily sales report
-                </li>
-              </ul>
-            </div>
-
-            <div className="mt-8 pt-6 border-t border-slate-100">
-              <Link
-                href="/dashboard"
-                className="w-full py-3 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold text-xs flex items-center justify-center transition"
-              >
-                Choose Starter
-              </Link>
-            </div>
-          </div>
-
-          {/* Business Plan (Recommended) */}
-          <div className="bg-white rounded-2xl border-2 border-[#0D9668] p-8 flex flex-col justify-between shadow-xl shadow-[#0D9668]/10 relative">
-            <span className="absolute -top-3 left-1/2 -translate-x-1/2 bg-[#0D9668] text-white text-[11px] font-bold uppercase tracking-wider px-3 py-1 rounded-full shadow-md">
-              Most Popular
-            </span>
-
-            <div>
-              <h3 className="text-xl font-bold text-[#101827]">Business</h3>
-              <p className="text-xs text-slate-500 mt-1 min-h-8">
-                The complete operating system for retail shops, supermarkets, and pharmacies.
-              </p>
-              <div className="mt-6 flex items-baseline gap-1">
-                <span className="text-4xl font-black text-[#101827] font-mono">
-                  {formatMoney(999)}
-                </span>
-                <span className="text-xs text-slate-500">/month</span>
-              </div>
-
-              <ul className="mt-8 space-y-3 text-xs text-slate-700">
-                <li className="flex items-center gap-2">
-                  <Check className="h-4 w-4 text-[#0D9668]" /> Up to 5 Staff accounts (Managers, Cashiers)
-                </li>
-                <li className="flex items-center gap-2">
-                  <Check className="h-4 w-4 text-[#0D9668]" /> Stock adjustments with mandatory reasons
-                </li>
-                <li className="flex items-center gap-2">
-                  <Check className="h-4 w-4 text-[#0D9668]" /> Expense tracking & categorization
-                </li>
-                <li className="flex items-center gap-2">
-                  <Check className="h-4 w-4 text-[#0D9668]" /> True Estimated Gross Profit statements
-                </li>
-                <li className="flex items-center gap-2">
-                  <Check className="h-4 w-4 text-[#0D9668]" /> CSV export for business accounting
-                </li>
-                <li className="flex items-center gap-2">
-                  <Check className="h-4 w-4 text-[#0D9668]" /> Priority local phone & Telegram support
-                </li>
-              </ul>
-            </div>
-
-            <div className="mt-8 pt-6 border-t border-slate-100">
-              <Link
-                href="/dashboard"
-                className="w-full py-3 rounded-xl bg-[#0D9668] hover:bg-[#097852] text-white font-bold text-xs flex items-center justify-center shadow-md shadow-[#0D9668]/30 transition"
-              >
-                Choose Business Plan
-              </Link>
-            </div>
-          </div>
-
-          {/* Pro Plan */}
-          <div className="bg-white rounded-2xl border border-slate-200 p-8 flex flex-col justify-between shadow-xs hover:shadow-md transition">
-            <div>
-              <h3 className="text-xl font-bold text-[#101827]">Pro</h3>
-              <p className="text-xs text-slate-500 mt-1 min-h-8">
-                For high-volume wholesalers, multi-counter stores, and expanding operations.
-              </p>
-              <div className="mt-6 flex items-baseline gap-1">
-                <span className="text-4xl font-black text-[#101827] font-mono">
-                  {formatMoney(1999)}
-                </span>
-                <span className="text-xs text-slate-500">/month</span>
-              </div>
-
-              <ul className="mt-8 space-y-3 text-xs text-slate-700">
-                <li className="flex items-center gap-2">
-                  <Check className="h-4 w-4 text-[#0D9668]" /> Unlimited staff accounts & custom roles
-                </li>
-                <li className="flex items-center gap-2">
-                  <Check className="h-4 w-4 text-[#0D9668]" /> Multi-counter simultaneous POS terminals
-                </li>
-                <li className="flex items-center gap-2">
-                  <Check className="h-4 w-4 text-[#0D9668]" /> Full immutable security audit logs
-                </li>
-                <li className="flex items-center gap-2">
-                  <Check className="h-4 w-4 text-[#0D9668]" /> Onboarding assistance & inventory migration
-                </li>
-                <li className="flex items-center gap-2">
-                  <Check className="h-4 w-4 text-[#0D9668]" /> Dedicated account manager
-                </li>
-              </ul>
-            </div>
-
-            <div className="mt-8 pt-6 border-t border-slate-100">
-              <Link
-                href="/dashboard"
-                className="w-full py-3 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold text-xs flex items-center justify-center transition"
-              >
-                Choose Pro Plan
-              </Link>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* 07. FINAL CALL TO ACTION (Deep Navy with Emerald Accents) */}
-      <section className="bg-[#101827] text-white py-20 relative overflow-hidden">
-        <div className="absolute inset-0 pointer-events-none -z-10 flex justify-end">
-          <div className="w-[600px] h-[400px] bg-[#0D9668]/15 rounded-full blur-3xl opacity-60" />
-        </div>
-
-        <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 text-center space-y-6">
-          <h2 className="text-3xl sm:text-4xl font-black tracking-tight text-white leading-tight">
-            Your business deserves better visibility.
-          </h2>
-          <p className="text-slate-300 max-w-xl mx-auto text-base">
-            Bring your daily business operations together with BizFlow. Start today and manage sales, stock, and profits from one unified dashboard.
-          </p>
-          <div className="pt-2">
-            <Link
-              href="/dashboard"
-              className="inline-flex items-center gap-2.5 px-8 py-4 rounded-xl bg-[#0D9668] hover:bg-[#097852] font-bold text-base text-white shadow-xl shadow-[#0D9668]/30 transition-all duration-200 hover:-translate-y-0.5 active:translate-y-0"
+        {/* 3 Testimonials Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 lg:gap-8">
+          {testimonials.map((t) => (
+            <div
+              key={t.name}
+              className="bg-white rounded-3xl border border-slate-200/80 p-6 sm:p-7 shadow-xs hover:shadow-xl transition-all duration-300 flex flex-col justify-between"
             >
-              <span>Get Started Today</span>
-              <ArrowRight className="h-5 w-5" />
-            </Link>
-          </div>
-          <p className="text-xs text-slate-400">
-            No long-term lock-in • Local Ethiopian support • Setup in minutes
-          </p>
-        </div>
-      </section>
-
-      {/* 08. FOOTER */}
-      <footer className="bg-slate-950 text-slate-400 py-12 border-t border-slate-900 text-xs">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex flex-col sm:flex-row items-center justify-between gap-6 pb-8 border-b border-slate-900">
-            <div className="flex items-center gap-3">
-              <div className="h-8 w-8 rounded-lg bg-[#0D9668] flex items-center justify-center font-bold text-white">
-                BF
+              <div>
+                {/* Quotation mark */}
+                <Quote className="h-7 w-7 text-[#00D084]/40 mb-4 rotate-180" />
+                <p className="text-sm text-slate-700 leading-relaxed font-normal">
+                  &ldquo;{t.quote}&rdquo;
+                </p>
               </div>
-              <span className="font-extrabold text-base text-white">BizFlow Ethiopia</span>
+
+              {/* Author Row */}
+              <div className="flex items-center gap-3.5 mt-8 pt-5 border-t border-slate-100">
+                <div className="relative h-11 w-11 rounded-full overflow-hidden border-2 border-emerald-500/20 shrink-0">
+                  <Image
+                    src={t.image}
+                    alt={t.name}
+                    fill
+                    className="object-cover"
+                    sizes="44px"
+                  />
+                </div>
+                <div>
+                  <p className="text-sm font-bold text-slate-900">{t.name}</p>
+                  <p className="text-xs text-slate-500">{t.role}</p>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+/* ─────────────────────────────────────────────────────────────
+   08. FINAL CTA BANNER
+   Deep Forest Pine (#072623) & Vibrant Emerald Card
+───────────────────────────────────────────────────────────── */
+function FinalCTASection() {
+  return (
+    <section className="relative bg-gradient-to-b from-white via-[#F0FAF5] to-[#072623] pt-12 pb-14 overflow-hidden">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-[#062421] via-[#0A332C] to-[#062421] p-8 sm:p-12 lg:p-14 border border-[#00D084]/30 shadow-2xl shadow-emerald-950/40 text-white">
+          {/* Ambient Corner Glows & Radial Gradients */}
+          <div className="absolute -top-24 -right-24 w-96 h-96 bg-[#00D084]/20 rounded-full blur-3xl pointer-events-none" />
+          <div className="absolute -bottom-24 -left-24 w-96 h-96 bg-emerald-600/15 rounded-full blur-3xl pointer-events-none" />
+
+          {/* Decorative Subtle Background Pattern */}
+          <div className="absolute inset-0 opacity-[0.04] pointer-events-none" style={{ backgroundImage: "radial-gradient(#00D084 1px, transparent 1px)", backgroundSize: "24px 24px" }} />
+
+          <div className="relative z-10 flex flex-col lg:flex-row items-center justify-between gap-8 lg:gap-12">
+            {/* Left Content */}
+            <div className="space-y-4 max-w-2xl text-center lg:text-left">
+              {/* Badge */}
+              <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-[#00D084]/15 border border-[#00D084]/30 text-xs font-bold text-[#00D084] uppercase tracking-wider">
+                <span className="h-2 w-2 rounded-full bg-[#00D084] animate-pulse" />
+                READY TO GET STARTED?
+              </div>
+
+              {/* Headline */}
+              <h2 className="text-3xl sm:text-4xl lg:text-[2.75rem] font-black text-white tracking-tight leading-[1.15]">
+                Join thousands of Ethiopian <br className="hidden sm:inline" />
+                businesses growing with BizFlow.
+              </h2>
+
+              {/* Subtitle */}
+              <p className="text-sm sm:text-base text-emerald-100/80 max-w-xl font-normal leading-relaxed">
+                Start your 30-day free trial today. No credit card required.
+              </p>
+
+              {/* Trust Checkmarks Row */}
+              <div className="flex flex-wrap items-center justify-center lg:justify-start gap-4 pt-1 text-xs text-emerald-100/80 font-medium">
+                <span className="flex items-center gap-1.5">
+                  <Check className="h-3.5 w-3.5 text-[#00D084] stroke-[3]" /> Instant Setup
+                </span>
+                <span className="text-emerald-700 hidden sm:inline">•</span>
+                <span className="flex items-center gap-1.5">
+                  <Check className="h-3.5 w-3.5 text-[#00D084] stroke-[3]" /> Telebirr &amp; CBE Ready
+                </span>
+                <span className="text-emerald-700 hidden sm:inline">•</span>
+                <span className="flex items-center gap-1.5">
+                  <Check className="h-3.5 w-3.5 text-[#00D084] stroke-[3]" /> Cancel Anytime
+                </span>
+              </div>
             </div>
 
-            <div className="flex items-center gap-6 font-medium">
-              <a href="#features" className="hover:text-white transition">Features</a>
-              <a href="#preview" className="hover:text-white transition">Product Tour</a>
-              <a href="#pricing" className="hover:text-white transition">Pricing</a>
-              <Link href="/login" className="hover:text-white transition">Sign In</Link>
-            </div>
-          </div>
+            {/* Right Actions */}
+            <div className="flex flex-col items-center lg:items-end gap-3.5 shrink-0 w-full sm:w-auto">
+              <Link
+                href="/register"
+                className="w-full sm:w-auto inline-flex items-center justify-center gap-3 px-9 py-4 rounded-full text-[#051E1C] font-black text-base bg-gradient-to-r from-[#00D084] to-[#059669] hover:from-[#00E591] hover:to-[#04885f] shadow-xl shadow-emerald-500/30 transition-all duration-200 hover:-translate-y-0.5 active:translate-y-0 text-center"
+              >
+                <span>Start for Free</span>
+                <ArrowRight className="h-5 w-5" />
+              </Link>
 
-          <div className="pt-8 flex flex-col sm:flex-row items-center justify-between gap-4 text-slate-500">
-            <p>© {new Date().getFullYear()} BizFlow Ethiopia. All rights reserved.</p>
-            <p className="flex items-center gap-2">
-              <span>Made with pride for Ethiopian Businesses</span> 🇪🇹
-            </p>
+              <Link
+                href="/contact"
+                className="inline-flex items-center gap-2 text-xs font-semibold text-emerald-300 hover:text-white transition py-1"
+              >
+                <Headphones className="h-4 w-4 text-[#00D084]" />
+                <span>Need help? Contact us</span>
+              </Link>
+            </div>
           </div>
         </div>
-      </footer>
+      </div>
+    </section>
+  );
+}
+
+/* ─────────────────────────────────────────────────────────────
+   MAIN PAGE COMPONENT
+───────────────────────────────────────────────────────────── */
+export default function MarketingLandingPage() {
+  return (
+    <div className="min-h-screen bg-white text-[#072623] antialiased selection:bg-[#00D084] selection:text-[#051E1C] font-sans">
+      <MarketingNavbar currentPath="/" />
+      <HeroSection />
+      <WhyChooseSection />
+      <StatsSection />
+      <SolutionsSection />
+      <ProductTourSection />
+      <TestimonialsSection />
+      <FinalCTASection />
+      <MarketingFooter />
     </div>
   );
 }

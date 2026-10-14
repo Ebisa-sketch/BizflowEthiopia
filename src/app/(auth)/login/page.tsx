@@ -17,9 +17,6 @@ import {
   Users,
   TrendingUp,
   ShoppingCart,
-  Shield,
-  ChevronDown,
-  ChevronUp,
 } from "lucide-react";
 import { useLanguage } from "@/lib/i18n/language-context";
 import { LanguageSwitcher } from "@/components/layout/language-switcher";
@@ -168,8 +165,6 @@ function LoginFormContent() {
   const [loading, setLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
   const [fieldErrors, setFieldErrors] = useState<{ email?: string; password?: string }>({});
-  const [showDevAccounts, setShowDevAccounts] = useState(false);
-
   const isSubmitting = useRef(false);
 
   const validateFields = (): boolean => {
@@ -234,13 +229,6 @@ function LoginFormContent() {
       setLoading(false);
       isSubmitting.current = false;
     }
-  };
-
-  const fillDemo = (demoEmail: string, demoPass: string) => {
-    setEmail(demoEmail);
-    setPassword(demoPass);
-    setErrorMessage("");
-    setFieldErrors({});
   };
 
   return (
@@ -476,58 +464,6 @@ function LoginFormContent() {
             )}
           </button>
         </form>
-
-        {/* Collapsible Demo accounts — development only, never exposed in production */}
-        {process.env.NODE_ENV !== "production" && (
-          <div className="mt-6 pt-4 border-t border-slate-200/80">
-            <button
-              type="button"
-              onClick={() => setShowDevAccounts((prev) => !prev)}
-              className="w-full flex items-center justify-between text-left text-xs font-medium text-slate-500 hover:text-slate-800 transition-colors py-1 cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 rounded"
-              aria-expanded={showDevAccounts}
-              aria-controls="dev-test-accounts-panel"
-            >
-              <span className="flex items-center gap-1.5">
-                <Shield className="h-3.5 w-3.5 text-emerald-600" />
-                <span>Developer Quick Accounts (Local Dev)</span>
-              </span>
-              <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-slate-100 text-slate-600 flex items-center gap-1">
-                {showDevAccounts ? (
-                  <>
-                    Hide <ChevronUp className="h-3 w-3" />
-                  </>
-                ) : (
-                  <>
-                    Show <ChevronDown className="h-3 w-3" />
-                  </>
-                )}
-              </span>
-            </button>
-
-            {showDevAccounts && (
-              <div id="dev-test-accounts-panel" className="mt-3 grid grid-cols-2 gap-2 animate-fade-in">
-                {[
-                  { label: "Abebe Kebede", sublabel: "Owner", email: "owner@addismart.et", pass: "Owner@123456" },
-                  { label: "Tigist Haile", sublabel: "Cashier", email: "cashier@addismart.et", pass: "Cashier@123456" },
-                ].map((demo) => (
-                  <button
-                    key={demo.email}
-                    type="button"
-                    onClick={() => fillDemo(demo.email, demo.pass)}
-                    className="p-2.5 rounded-xl text-left transition-all duration-150 outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 cursor-pointer bg-white border border-slate-200 hover:border-emerald-600 hover:bg-emerald-50/20"
-                  >
-                    <div className="text-xs font-semibold text-slate-900">
-                      {demo.label}
-                    </div>
-                    <div className="text-[10px] mt-0.5 text-slate-500 truncate">
-                      {demo.sublabel} · {demo.email}
-                    </div>
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
-        )}
 
         {/* Register link */}
         <p className="mt-7 text-center text-sm" style={{ color: "#64748B" }}>

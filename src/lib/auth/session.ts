@@ -67,9 +67,17 @@ export async function requireTenant(options?: {
         userId: session.userId,
       },
     },
-    include: {
-      business: true,
-      user: true,
+    select: {
+      businessId: true,
+      role: true,
+      status: true,
+      business: {
+        select: {
+          name: true,
+          currency: true,
+          status: true,
+        },
+      },
     },
   });
 

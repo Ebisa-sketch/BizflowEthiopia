@@ -11,6 +11,9 @@ import {
   Banknote,
   Building,
   Zap,
+  X,
+  Printer,
+  CheckCircle2,
 } from "lucide-react";
 import { formatMoney } from "@/lib/money";
 
@@ -92,7 +95,9 @@ const BILLING_HISTORY = [
 ];
 
 export default function SubscriptionPage() {
-  const [selectedPlan, setSelectedPlan] = useState("BUSINESS");
+  const [selectedPlan, setSelectedPlan] = useState<string | null>(null);
+  const [activeReceipt, setActiveReceipt] = useState<(typeof BILLING_HISTORY)[0] | null>(null);
+  const [isUpgradeModalOpen, setIsUpgradeModalOpen] = useState(false);
 
   return (
     <div className="space-y-6">
@@ -119,13 +124,13 @@ export default function SubscriptionPage() {
             Business Tier <span className="text-[#0D9668] font-mono text-xl">(ETB 999 / mo)</span>
           </h2>
           <p className="text-xs text-slate-400 max-w-lg">
-            Active for <span className="text-white font-semibold">Addis Mini Mart</span>. Covers up to 5 staff accounts, full stock movement ledgers, and gross profit analytics.
+            Active for your store. Covers up to 5 staff accounts, full stock movement ledgers, and gross profit analytics.
           </p>
         </div>
 
         <div className="flex items-center gap-3">
           <button
-            onClick={() => alert("Please contact support at +251 911 234567 or via Telegram @BizFlowSupport to upgrade plan.")}
+            onClick={() => setIsUpgradeModalOpen(true)}
             className="px-5 py-2.5 rounded-xl bg-[#0D9668] hover:bg-[#097852] font-bold text-xs text-white shadow-md shadow-[#0D9668]/30 transition"
           >
             Change Plan
@@ -174,7 +179,10 @@ export default function SubscriptionPage() {
             <div className="mt-6 pt-4 border-t border-slate-100">
               <button
                 disabled={plan.current}
-                onClick={() => setSelectedPlan(plan.id)}
+                onClick={() => {
+                  setSelectedPlan(plan.id);
+                  setIsUpgradeModalOpen(true);
+                }}
                 className={`w-full py-2.5 rounded-xl text-xs font-bold transition ${
                   plan.current
                     ? "bg-[#DCEFE7] text-[#0D9668] cursor-default font-extrabold"
@@ -210,7 +218,7 @@ export default function SubscriptionPage() {
               <strong className="font-mono text-slate-900">+251 911 234567</strong>.
             </p>
             <p className="text-slate-500 text-[11px]">
-              Include your Business Name or TIN as the transaction reference.
+              Include your Business Name as the transaction reference note.
             </p>
           </div>
 
@@ -275,10 +283,10 @@ export default function SubscriptionPage() {
                   </td>
                   <td className="py-3.5 px-4 text-right font-sans">
                     <button
-                      onClick={() => alert(`Downloading receipt for ${item.id}`)}
+                      onClick={() => setActiveReceipt(item)}
                       className="inline-flex items-center gap-1 text-slate-600 hover:text-[#0D9668] transition font-semibold"
                     >
-                      <Download className="h-3.5 w-3.5" /> Receipt
+                      <Download className="h-3.5 w-3.5" /> View
                     </button>
                   </td>
                 </tr>
@@ -287,6 +295,108 @@ export default function SubscriptionPage() {
           </table>
         </div>
       </div>
+
+      {/* Plan Upgrade / Change Modal */}
+      {isUpgradeModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-xs p-4">
+          <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl border border-slate-200 space-y-4 animate-in fade-in zoom-in-95">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+              <h3 className="font-bold text-slate-900 text-base">Plan Subscription Upgrade</h3>
+              <button
+                onClick={() => setIsUpgradeModalOpen(false)}
+                className="text-slate-400 hover:text-slate-600"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            <div className="space-y-3 text-xs text-slate-600">
+              <p>
+                To upgrade or renew your plan, send your payment via Telebirr or CBE Birr with your store name as reference.
+              </p>
+              <div className="p-3 bg-slate-50 rounded-xl space-y-1 font-mono text-slate-800">
+                <p><strong>Telebirr Code:</strong> 928100</p>
+                <p><strong>CBE Account:</strong> 1000 3849 20194</p>
+                <p><strong>Support Hotline:</strong> +251 911 234567</p>
+              </div>
+              <p className="text-[11px] text-slate-500">
+                Our Addis Ababa support team will confirm and activate your tier within 1 hour.
+              </p>
+            </div>
+
+            <div className="pt-2 flex justify-end">
+              <button
+                onClick={() => setIsUpgradeModalOpen(false)}
+                className="px-4 py-2 rounded-xl bg-blue-600 text-white font-semibold text-xs hover:bg-blue-700"
+              >
+                Understood
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Receipt Modal */}
+      {activeReceipt && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-xs p-4">
+          <div className="w-full max-w-sm rounded-2xl bg-white p-6 shadow-2xl border border-slate-200 space-y-4 animate-in fade-in zoom-in-95 font-mono text-xs">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-100 font-sans">
+              <h3 className="font-bold text-slate-900 text-sm">Subscription Receipt</h3>
+              <button
+                onClick={() => setActiveReceipt(null)}
+                className="text-slate-400 hover:text-slate-600"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            <div className="text-center space-y-1 py-2 font-sans">
+              <h4 className="font-bold text-slate-900">BizFlow Ethiopia SaaS</h4>
+              <p className="text-slate-500 text-[11px]">Invoice #{activeReceipt.id}</p>
+              <p className="text-slate-400 text-[10px]">Addis Ababa, Ethiopia</p>
+            </div>
+
+            <div className="space-y-1.5 border-t border-b border-dashed border-slate-200 py-3 text-slate-700">
+              <div className="flex justify-between">
+                <span>Date:</span>
+                <span>{activeReceipt.date}</span>
+              </div>
+              <div className="flex justify-between">
+                <span>Plan:</span>
+                <span>{activeReceipt.plan}</span>
+              </div>
+              <div className="flex justify-between">
+                <span>Method:</span>
+                <span>{activeReceipt.method}</span>
+              </div>
+              <div className="flex justify-between">
+                <span>Reference:</span>
+                <span>{activeReceipt.ref}</span>
+              </div>
+              <div className="flex justify-between font-bold text-slate-900 pt-1 border-t border-slate-200">
+                <span>Total Amount:</span>
+                <span>{formatMoney(activeReceipt.amount)}</span>
+              </div>
+            </div>
+
+            <div className="flex items-center justify-between pt-2 font-sans">
+              <button
+                onClick={() => setActiveReceipt(null)}
+                className="px-3 py-1.5 rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50 text-xs font-semibold"
+              >
+                Close
+              </button>
+              <button
+                onClick={() => window.print()}
+                className="inline-flex items-center gap-1.5 px-4 py-1.5 rounded-lg bg-blue-600 text-white text-xs font-semibold hover:bg-blue-700"
+              >
+                <Printer className="h-3.5 w-3.5" />
+                Print
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

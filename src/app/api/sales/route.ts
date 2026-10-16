@@ -3,6 +3,8 @@ import { requireTenant } from "@/lib/auth/session";
 import { prisma } from "@/lib/db/prisma";
 import { handleApiError, AppError } from "@/lib/errors";
 import { createPosSale, CreatePosSaleInput } from "@/lib/sales/pos-service";
+import { hasPermission } from "@/lib/permissions";
+import { verifyManagerDiscountGrant } from "@/lib/sales/manager-authorization";
 
 export async function GET(request: NextRequest) {
   try {
@@ -88,6 +90,17 @@ export async function POST(request: NextRequest) {
     const idempotencyHeader = request.headers.get("idempotency-key");
     const idempotencyKey = idempotencyHeader || body.idempotencyKey;
 
+    let managerApprovalUserId: string | undefined;
+    if (Number(body.discountTotal) > 0 && !hasPermission(role, "sales:discount")) {
+      if (typeof body.managerApprovalToken !== "string") {
+        throw new AppError("A manager must approve this discount.", 403);
+      }
+      managerApprovalUserId = verifyManagerDiscountGrant(body.managerApprovalToken, {
+        businessId,
+        cashierId: userId,
+      });
+    }
+
     const saleInput: CreatePosSaleInput = {
       businessId,
       cashierId: userId,
@@ -98,6 +111,7 @@ export async function POST(request: NextRequest) {
       customerName: body.customerName,
       payment: body.payment,
       idempotencyKey,
+      managerApprovalUserId,
     };
 
     const receipt = await createPosSale(saleInput);

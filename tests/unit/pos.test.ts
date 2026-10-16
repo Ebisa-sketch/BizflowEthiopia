@@ -16,6 +16,7 @@ vi.mock("@/lib/db/prisma", () => {
   const mockCreateStockMovement = vi.fn();
   const mockCreatePayment = vi.fn();
   const mockCreateAuditLog = vi.fn();
+  const mockFindUniqueMembership = vi.fn();
 
   const mockTransaction = vi.fn(async (cb) => {
     return cb({
@@ -45,6 +46,7 @@ vi.mock("@/lib/db/prisma", () => {
     prisma: {
       business: { findUnique: mockFindUniqueBusiness },
       user: { findUnique: mockFindUniqueCashier },
+      membership: { findUnique: mockFindUniqueMembership },
       product: { findMany: mockFindManyProducts, findUnique: mockFindUniqueProduct, update: mockUpdateProduct },
       sale: { create: mockCreateSale },
       $transaction: mockTransaction,
@@ -96,6 +98,11 @@ describe("POS Checkout Service & Validation Engine", () => {
     vi.clearAllMocks();
     (prisma.business.findUnique as any).mockResolvedValue(mockBusiness);
     (prisma.user.findUnique as any).mockResolvedValue(mockCashier);
+    (prisma.membership.findUnique as any).mockResolvedValue({
+      role: "MANAGER",
+      status: "ACTIVE",
+      user: { accountStatus: "ACTIVE" },
+    });
     (prisma.product.findMany as any).mockImplementation(({ where }: any) => {
       if (where?.id?.in) {
         return sampleProducts.filter((p) => where.id.in.includes(p.id));
@@ -204,6 +211,59 @@ describe("POS Checkout Service & Validation Engine", () => {
     const receipt = await createPosSale(input);
     expect(receipt.discountTotal).toBe(10);
     expect(receipt.grandTotal).toBe(60);
+  });
+
+  it("allows cashier discounts only with a current active manager membership", async () => {
+    const input: CreatePosSaleInput = {
+      businessId: "biz-test-1",
+      cashierId: "usr-cashier-1",
+      role: "CASHIER",
+      managerApprovalUserId: "usr-manager-1",
+      items: [{ productId: "prod-1", quantity: 2 }],
+      discountTotal: 10,
+      payment: {
+        paymentMethod: PaymentMethod.CASH,
+        tendered: 60,
+      },
+    };
+
+    const receipt = await createPosSale(input);
+
+    expect(receipt.discountTotal).toBe(10);
+    expect(prisma.membership.findUnique).toHaveBeenCalledWith({
+      where: {
+        businessId_userId: {
+          businessId: "biz-test-1",
+          userId: "usr-manager-1",
+        },
+      },
+      select: {
+        role: true,
+        status: true,
+        user: { select: { accountStatus: true } },
+      },
+    });
+  });
+
+  it("rejects delegated discounts when the approving manager is inactive", async () => {
+    (prisma.membership.findUnique as any).mockResolvedValue({
+      role: "MANAGER",
+      status: "SUSPENDED",
+      user: { accountStatus: "ACTIVE" },
+    });
+    const input: CreatePosSaleInput = {
+      businessId: "biz-test-1",
+      cashierId: "usr-cashier-1",
+      role: "CASHIER",
+      managerApprovalUserId: "usr-manager-1",
+      items: [{ productId: "prod-1", quantity: 1 }],
+      discountTotal: 10,
+      payment: { paymentMethod: PaymentMethod.CASH, tendered: 25 },
+    };
+
+    await expect(createPosSale(input)).rejects.toThrow(
+      /approving manager no longer has permission/
+    );
   });
 
   it("rejects electronic payment (Telebirr) when transaction reference code is missing", async () => {

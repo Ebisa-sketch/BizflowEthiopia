@@ -1,7 +1,9 @@
 "use client";
 
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState } from "react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
+import useSWR from "swr";
 import {
   Plus,
   Search,
@@ -18,6 +20,8 @@ import {
   ChevronRight,
 } from "lucide-react";
 import { formatMoney } from "@/lib/money";
+import { TableSkeleton } from "@/components/ui/skeleton";
+import { DataLoadError } from "@/components/ui/data-load-error";
 
 interface SaleItem {
   id: string;
@@ -53,47 +57,35 @@ interface Sale {
 }
 
 export default function SalesHistoryPage() {
-  const [sales, setSales] = useState<Sale[]>([]);
-  const [loading, setLoading] = useState(true);
+  const searchParams = useSearchParams();
+  // Pagination & Search
+  const [searchTerm, setSearchTerm] = useState(() => searchParams.get("search") || "");
+  const [page, setPage] = useState(1);
+  const limit = 20;
+
+  const params = new URLSearchParams();
+  if (searchTerm.trim()) params.set("search", searchTerm.trim());
+  params.set("page", page.toString());
+  params.set("limit", limit.toString());
+
+  const swrKey = `/api/sales?${params.toString()}`;
+  const { data, error: swrError, isLoading, mutate } = useSWR(swrKey, {
+    revalidateOnFocus: false,
+    dedupingInterval: 30000,
+    keepPreviousData: true,
+  });
+
+  const sales: Sale[] = data?.sales || [];
+  const totalCount = data?.totalCount || 0;
+  const loading = isLoading && !data;
   const [error, setError] = useState<string | null>(null);
 
-  // Pagination & Search
-  const [searchTerm, setSearchTerm] = useState("");
-  const [page, setPage] = useState(1);
-  const [totalCount, setTotalCount] = useState(0);
-  const limit = 20;
+  const fetchSales = async () => {
+    await mutate();
+  };
 
   // Selected Sale for Receipt Modal
   const [selectedSale, setSelectedSale] = useState<Sale | null>(null);
-
-  const fetchSales = useCallback(async () => {
-    try {
-      setLoading(true);
-      setError(null);
-      const params = new URLSearchParams();
-      if (searchTerm.trim()) params.set("search", searchTerm.trim());
-      params.set("page", page.toString());
-      params.set("limit", limit.toString());
-
-      const res = await fetch(`/api/sales?${params.toString()}`);
-      const data = await res.json();
-
-      if (!res.ok) {
-        throw new Error(data.error || "Failed to load sales transactions");
-      }
-
-      setSales(data.sales || []);
-      setTotalCount(data.totalCount || 0);
-    } catch (err: any) {
-      setError(err.message || "Failed to fetch sales history");
-    } finally {
-      setLoading(false);
-    }
-  }, [searchTerm, page]);
-
-  useEffect(() => {
-    fetchSales();
-  }, [fetchSales]);
 
   const totalPages = Math.max(1, Math.ceil(totalCount / limit));
 
@@ -118,6 +110,7 @@ export default function SalesHistoryPage() {
 
   return (
     <div className="space-y-6">
+      <DataLoadError error={swrError} onRetry={mutate} />
       {/* Page Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
@@ -178,9 +171,8 @@ export default function SalesHistoryPage() {
       {/* Transactions Table */}
       <div className="bg-white rounded-2xl border border-slate-200/90 shadow-xs overflow-hidden">
         {loading && sales.length === 0 ? (
-          <div className="p-12 text-center text-slate-500 space-y-3">
-            <RefreshCw className="h-6 w-6 animate-spin mx-auto text-blue-600" />
-            <p className="text-sm">Loading transactions from database...</p>
+          <div className="p-4">
+            <TableSkeleton rows={6} cols={7} hasFilters={false} />
           </div>
         ) : sales.length === 0 ? (
           <div className="p-12 text-center text-slate-500 space-y-3">

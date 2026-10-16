@@ -1,6 +1,8 @@
 "use client";
 
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState } from "react";
+import { useSearchParams } from "next/navigation";
+import useSWR from "swr";
 import {
   Plus,
   Search,
@@ -18,6 +20,8 @@ import {
   Layers,
 } from "lucide-react";
 import { formatMoney } from "@/lib/money";
+import { TableSkeleton } from "@/components/ui/skeleton";
+import { DataLoadError } from "@/components/ui/data-load-error";
 
 interface Product {
   id: string;
@@ -39,16 +43,33 @@ interface Category {
 }
 
 export default function ProductsPage() {
-  const [products, setProducts] = useState<Product[]>([]);
-  const [categories, setCategories] = useState<Category[]>([]);
-  const [loading, setLoading] = useState(true);
+  const searchParams = useSearchParams();
+  // Filters
+  const [searchTerm, setSearchTerm] = useState(() => searchParams.get("search") || "");
+  const [selectedCategory, setSelectedCategory] = useState("ALL");
+  const [statusFilter, setStatusFilter] = useState<"ACTIVE" | "ARCHIVED" | "ALL">("ACTIVE");
+
+  const queryParams = new URLSearchParams();
+  if (searchTerm.trim()) queryParams.set("search", searchTerm.trim());
+  if (selectedCategory && selectedCategory !== "ALL") queryParams.set("category", selectedCategory);
+  if (statusFilter !== "ACTIVE") queryParams.set("status", statusFilter);
+
+  const swrKey = `/api/products?${queryParams.toString()}`;
+  const { data, error: swrError, isLoading, mutate } = useSWR(swrKey, {
+    revalidateOnFocus: false,
+    dedupingInterval: 30000,
+    keepPreviousData: true,
+  });
+
+  const products: Product[] = data?.products || [];
+  const categories: Category[] = data?.categories || [];
+  const loading = isLoading && !data;
   const [error, setError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
-  // Filters
-  const [searchTerm, setSearchTerm] = useState("");
-  const [selectedCategory, setSelectedCategory] = useState("ALL");
-  const [statusFilter, setStatusFilter] = useState<"ACTIVE" | "ARCHIVED" | "ALL">("ACTIVE");
+  const fetchProducts = async () => {
+    await mutate();
+  };
 
   // Modals state
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
@@ -65,38 +86,6 @@ export default function ProductsPage() {
   const [formSellingPrice, setFormSellingPrice] = useState("");
   const [formInitialStock, setFormInitialStock] = useState("0");
   const [formReorderLevel, setFormReorderLevel] = useState("5");
-
-  // Fetch products
-  const fetchProducts = useCallback(async () => {
-    try {
-      setLoading(true);
-      setError(null);
-      const params = new URLSearchParams();
-      if (searchTerm.trim()) params.set("search", searchTerm.trim());
-      if (selectedCategory && selectedCategory !== "ALL") params.set("category", selectedCategory);
-      if (statusFilter !== "ACTIVE") params.set("status", statusFilter);
-
-      const res = await fetch(`/api/products?${params.toString()}`);
-      const data = await res.json();
-
-      if (!res.ok) {
-        throw new Error(data.error || "Failed to load products");
-      }
-
-      setProducts(data.products || []);
-      if (data.categories) {
-        setCategories(data.categories);
-      }
-    } catch (err: any) {
-      setError(err.message || "Failed to fetch products");
-    } finally {
-      setLoading(false);
-    }
-  }, [searchTerm, selectedCategory, statusFilter]);
-
-  useEffect(() => {
-    fetchProducts();
-  }, [fetchProducts]);
 
   const showToast = (msg: string) => {
     setSuccessMessage(msg);
@@ -266,6 +255,7 @@ export default function ProductsPage() {
 
   return (
     <div className="space-y-6">
+      <DataLoadError error={swrError} onRetry={mutate} />
       {/* Toast Notification */}
       {successMessage && (
         <div className="fixed top-5 right-5 z-50 flex items-center gap-2 rounded-xl bg-emerald-600 px-4 py-3 text-sm font-medium text-white shadow-lg animate-in fade-in slide-in-from-top-4">
@@ -360,9 +350,8 @@ export default function ProductsPage() {
       {/* Products Table */}
       <div className="bg-white rounded-2xl border border-slate-200/90 shadow-xs overflow-hidden">
         {loading && products.length === 0 ? (
-          <div className="p-12 text-center text-slate-500 space-y-3">
-            <RefreshCw className="h-6 w-6 animate-spin mx-auto text-blue-600" />
-            <p className="text-sm">Loading catalog items from database...</p>
+          <div className="p-4">
+            <TableSkeleton rows={6} cols={6} hasFilters={false} />
           </div>
         ) : products.length === 0 ? (
           <div className="p-12 text-center text-slate-500 space-y-3">

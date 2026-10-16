@@ -1,6 +1,7 @@
 "use client";
 
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState } from "react";
+import useSWR from "swr";
 import {
   Plus,
   Search,
@@ -16,6 +17,8 @@ import {
   DollarSign,
 } from "lucide-react";
 import { formatMoney } from "@/lib/money";
+import { TableSkeleton } from "@/components/ui/skeleton";
+import { DataLoadError } from "@/components/ui/data-load-error";
 
 interface Expense {
   id: string;
@@ -39,16 +42,31 @@ const COMMON_CATEGORIES = [
 ];
 
 export default function ExpensesPage() {
-  const [expenses, setExpenses] = useState<Expense[]>([]);
-  const [monthlyTotal, setMonthlyTotal] = useState<number>(0);
-  const [totalAmount, setTotalAmount] = useState<number>(0);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [successMessage, setSuccessMessage] = useState<string | null>(null);
-
   // Filters
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("ALL");
+
+  const params = new URLSearchParams();
+  if (searchTerm.trim()) params.set("search", searchTerm.trim());
+  if (selectedCategory && selectedCategory !== "ALL") params.set("category", selectedCategory);
+
+  const swrKey = `/api/expenses?${params.toString()}`;
+  const { data, error: swrError, isLoading, mutate } = useSWR(swrKey, {
+    revalidateOnFocus: false,
+    dedupingInterval: 30000,
+    keepPreviousData: true,
+  });
+
+  const expenses: Expense[] = data?.expenses || [];
+  const monthlyTotal: number = data?.monthlyTotal || 0;
+  const totalAmount: number = data?.totalAmount || 0;
+  const loading = isLoading && !data;
+  const [error, setError] = useState<string | null>(null);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
+
+  const fetchExpenses = async () => {
+    await mutate();
+  };
 
   // Modal State
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -60,35 +78,6 @@ export default function ExpensesPage() {
   const [formAmount, setFormAmount] = useState("");
   const [formDescription, setFormDescription] = useState("");
   const [formDate, setFormDate] = useState(() => new Date().toISOString().split("T")[0]);
-
-  const fetchExpenses = useCallback(async () => {
-    try {
-      setLoading(true);
-      setError(null);
-      const params = new URLSearchParams();
-      if (searchTerm.trim()) params.set("search", searchTerm.trim());
-      if (selectedCategory && selectedCategory !== "ALL") params.set("category", selectedCategory);
-
-      const res = await fetch(`/api/expenses?${params.toString()}`);
-      const data = await res.json();
-
-      if (!res.ok) {
-        throw new Error(data.error || "Failed to load expenses");
-      }
-
-      setExpenses(data.expenses || []);
-      setMonthlyTotal(data.monthlyTotal || 0);
-      setTotalAmount(data.totalAmount || 0);
-    } catch (err: any) {
-      setError(err.message || "Failed to fetch expenses");
-    } finally {
-      setLoading(false);
-    }
-  }, [searchTerm, selectedCategory]);
-
-  useEffect(() => {
-    fetchExpenses();
-  }, [fetchExpenses]);
 
   const showToast = (msg: string) => {
     setSuccessMessage(msg);
@@ -172,6 +161,7 @@ export default function ExpensesPage() {
 
   return (
     <div className="space-y-6">
+      <DataLoadError error={swrError} onRetry={mutate} />
       {/* Toast Notification */}
       {successMessage && (
         <div className="fixed top-5 right-5 z-50 flex items-center gap-2 rounded-xl bg-emerald-600 px-4 py-3 text-sm font-medium text-white shadow-lg animate-in fade-in slide-in-from-top-4">
@@ -284,9 +274,8 @@ export default function ExpensesPage() {
       {/* Expense Table */}
       <div className="bg-white rounded-2xl border border-slate-200/90 shadow-xs overflow-hidden">
         {loading && expenses.length === 0 ? (
-          <div className="p-12 text-center text-slate-500 space-y-3">
-            <RefreshCw className="h-6 w-6 animate-spin mx-auto text-blue-600" />
-            <p className="text-sm">Loading expense history...</p>
+          <div className="p-4">
+            <TableSkeleton rows={6} cols={5} hasFilters={false} />
           </div>
         ) : expenses.length === 0 ? (
           <div className="p-12 text-center text-slate-500 space-y-3">

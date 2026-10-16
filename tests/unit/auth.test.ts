@@ -1,6 +1,8 @@
 import { describe, it, expect } from "vitest";
+import jwt from "jsonwebtoken";
 import { hashPassword, verifyPassword, signToken, verifyToken } from "@/lib/auth";
 import { scopeToTenant } from "@/lib/tenant";
+import { env } from "@/lib/env";
 
 describe("Authentication & Token Service", () => {
   it("hashes password and verifies match correctly", async () => {
@@ -36,6 +38,15 @@ describe("Authentication & Token Service", () => {
     expect(decoded?.email).toBe(payload.email);
     expect(decoded?.businessId).toBe(payload.businessId);
     expect(decoded?.role).toBe(payload.role);
+
+    const claims = jwt.decode(token);
+    expect(claims).toMatchObject({
+      iat: expect.any(Number),
+      exp: expect.any(Number),
+    });
+    if (claims && typeof claims !== "string" && claims.exp && claims.iat) {
+      expect(claims.exp - claims.iat).toBe(durationInSeconds(env.JWT_EXPIRES_IN));
+    }
   });
 
   it("returns null for malformed or tampered JWT tokens", () => {
@@ -43,6 +54,23 @@ describe("Authentication & Token Service", () => {
     const decoded = verifyToken(invalidToken);
     expect(decoded).toBeNull();
   });
+
+  function durationInSeconds(duration: string): number {
+    const match = duration.match(/^(\d+)([smhdwy])$/);
+    if (!match) throw new Error(`Unsupported test duration: ${duration}`);
+
+    const amount = Number(match[1]);
+    const unitSeconds: Record<string, number> = {
+      s: 1,
+      m: 60,
+      h: 60 * 60,
+      d: 24 * 60 * 60,
+      w: 7 * 24 * 60 * 60,
+      y: 365 * 24 * 60 * 60,
+    };
+
+    return amount * unitSeconds[match[2]];
+  }
 });
 
 describe("Multi-tenant Query Scoping", () => {

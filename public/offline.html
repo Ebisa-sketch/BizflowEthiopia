@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Offline - BizFlow Ethiopia</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+    body {
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+      background-color: #0F172A;
+      color: #F8FAFC;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      padding: 1.5rem;
+      text-align: center;
+    }
+    .card {
+      background: #1E293B;
+      border: 1px solid #334155;
+      border-radius: 1.25rem;
+      padding: 2.5rem 2rem;
+      max-width: 440px;
+      width: 100%;
+      box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.4), 0 8px 10px -6px rgba(0, 0, 0, 0.3);
+    }
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      background: rgba(239, 68, 68, 0.15);
+      border: 1px solid rgba(239, 68, 68, 0.3);
+      color: #FCA5A5;
+      font-size: 0.8rem;
+      font-weight: 700;
+      padding: 0.35rem 0.75rem;
+      border-radius: 9999px;
+      margin-bottom: 1.5rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+    .pulse-dot {
+      width: 8px;
+      height: 8px;
+      background-color: #EF4444;
+      border-radius: 50%;
+      animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+    }
+    @keyframes pulse {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.4; transform: scale(0.85); }
+    }
+    .logo-container {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 64px;
+      height: 64px;
+      background: #0B1120;
+      border: 2px solid #0D9668;
+      border-radius: 1rem;
+      margin-bottom: 1.25rem;
+      font-size: 1.5rem;
+      font-weight: 900;
+      box-shadow: 0 10px 15px -3px rgba(13, 150, 104, 0.2);
+    }
+    .logo-b { color: #0D9668; }
+    .logo-f { color: #FFFFFF; }
+    h1 {
+      font-size: 1.5rem;
+      font-weight: 800;
+      color: #FFFFFF;
+      margin-bottom: 0.75rem;
+    }
+    p {
+      font-size: 0.925rem;
+      color: #94A3B8;
+      line-height: 1.55;
+      margin-bottom: 1.5rem;
+    }
+    .notice {
+      background: #0F172A;
+      border-radius: 0.75rem;
+      padding: 0.875rem 1rem;
+      font-size: 0.825rem;
+      color: #CBD5E1;
+      border-left: 3px solid #0D9668;
+      text-align: left;
+      margin-bottom: 1.75rem;
+    }
+    .retry-btn {
+      background: #0D9668;
+      color: #FFFFFF;
+      border: none;
+      border-radius: 0.75rem;
+      padding: 0.875rem 1.75rem;
+      font-size: 0.95rem;
+      font-weight: 700;
+      cursor: pointer;
+      width: 100%;
+      transition: background-color 0.2s, transform 0.1s;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5rem;
+    }
+    .retry-btn:hover {
+      background: #0B7A54;
+    }
+    .retry-btn:active {
+      transform: scale(0.98);
+    }
+    .status-text {
+      margin-top: 1rem;
+      font-size: 0.8rem;
+      color: #64748B;
+    }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <div class="logo-container">
+      <span class="logo-b">B</span><span class="logo-f">F</span>
+    </div>
+
+    <div>
+      <div class="badge">
+        <span class="pulse-dot"></span>
+        <span>Offline Mode</span>
+      </div>
+    </div>
+
+    <h1>No Internet Connection</h1>
+
+    <p>
+      BizFlow Ethiopia requires an active internet connection to securely record transactions, update stock inventory, and authenticate financial records.
+    </p>
+
+    <div class="notice">
+      <strong>Security & Integrity Notice:</strong><br />
+      To protect tenant financial isolation and prevent double-spending, live sales and inventory mutations are disabled while offline.
+    </div>
+
+    <button id="retry-btn" class="retry-btn" onclick="checkConnection()">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/>
+      </svg>
+      Retry Connection
+    </button>
+
+    <div id="status-text" class="status-text">
+      Waiting for network connection...
+    </div>
+  </div>
+
+  <script>
+    function checkConnection() {
+      const statusEl = document.getElementById('status-text');
+      const btn = document.getElementById('retry-btn');
+      statusEl.textContent = 'Checking connection...';
+      btn.disabled = true;
+
+      fetch('/', { method: 'HEAD', cache: 'no-store' })
+        .then(() => {
+          statusEl.textContent = 'Connection restored! Reloading...';
+          window.location.reload();
+        })
+        .catch(() => {
+          statusEl.textContent = 'Still offline. Please check your Wi-Fi, Ethernet, or Mobile Data.';
+          btn.disabled = false;
+        });
+    }
+
+    window.addEventListener('online', () => {
+      document.getElementById('status-text').textContent = 'Network detected! Reconnecting...';
+      setTimeout(() => {
+        window.location.reload();
+      }, 1000);
+    });
+  </script>
+</body>
+</html>

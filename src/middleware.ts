@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
+import { isValidEdgeSessionToken } from "@/lib/auth/edge-session";
 
 export const SESSION_COOKIE_NAME = "bizflow_session";
 
@@ -7,6 +8,7 @@ export const SESSION_COOKIE_NAME = "bizflow_session";
 const PROTECTED_PREFIXES = [
   "/dashboard",
   "/sales",
+  "/customers",
   "/products",
   "/inventory",
   "/expenses",
@@ -19,10 +21,23 @@ const PROTECTED_PREFIXES = [
 // Auth routes where already-authenticated users should be redirected to dashboard
 const AUTH_ROUTES = ["/login", "/register"];
 
-export function middleware(request: NextRequest) {
+export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
+
+  // Immediately bypass service worker, offline fallback, and manifest
+  if (
+    pathname === "/sw.js" ||
+    pathname === "/offline.html" ||
+    pathname === "/manifest.webmanifest"
+  ) {
+    return NextResponse.next();
+  }
+
   const sessionCookie = request.cookies.get(SESSION_COOKIE_NAME)?.value;
-  const isAuthenticated = Boolean(sessionCookie && sessionCookie.length > 20);
+  const isAuthenticated = await isValidEdgeSessionToken(
+    sessionCookie,
+    process.env.JWT_SECRET
+  );
 
   // Check protected routes
   const isProtected = PROTECTED_PREFIXES.some(
@@ -31,7 +46,10 @@ export function middleware(request: NextRequest) {
 
   if (isProtected && !isAuthenticated) {
     const loginUrl = new URL("/login", request.url);
-    loginUrl.searchParams.set("callbackUrl", pathname);
+    loginUrl.searchParams.set(
+      "callbackUrl",
+      `${pathname}${request.nextUrl.search}`
+    );
     return NextResponse.redirect(loginUrl);
   }
 
@@ -54,9 +72,10 @@ export const config = {
      * - _next/static (static files)
      * - _next/image (image optimization files)
      * - favicon.ico (favicon file)
+     * - PWA files (sw.js, offline.html, manifest)
      * - public files (images, icons)
      * - api routes
      */
-    "/((?!_next/static|_next/image|favicon.ico|api/|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
+    "/((?!_next/static|_next/image|favicon.ico|sw\\.js|offline\\.html|manifest\\.webmanifest|api/|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
   ],
 };

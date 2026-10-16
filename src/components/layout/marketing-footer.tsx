@@ -30,7 +30,7 @@ export function MarketingFooter() {
               { icon: "f", href: "#", label: "Facebook" },
               { icon: "𝕏", href: "#", label: "X / Twitter" },
               { icon: "▶", href: "#", label: "YouTube" },
-              { icon: "in", href: "#", label: "LinkedIn" },
+              { icon: "in", href: "https://www.linkedin.com/in/ebisa-abulu/", label: "LinkedIn" },
             ].map((s) => (
               <a
                 key={s.label}

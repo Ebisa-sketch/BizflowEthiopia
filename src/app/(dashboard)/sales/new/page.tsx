@@ -28,6 +28,9 @@ import {
   Loader2,
   Check,
   Percent,
+  BookOpen,
+  KeyRound,
+  ShieldCheck,
 } from "lucide-react";
 import { formatMoney, roundMoney } from "@/lib/money";
 
@@ -116,13 +119,27 @@ export default function PosCheckoutPage() {
   const [recentCustomers, setRecentCustomers] = useState<string[]>(["Walk-in Customer"]);
   const [newCustomerModalOpen, setNewCustomerModalOpen] = useState(false);
   const [newCustomerInput, setNewCustomerInput] = useState("");
+  const [newCustomerPhone, setNewCustomerPhone] = useState("");
 
-  // Payment State
-  const [paymentMethod, setPaymentMethod] = useState<"CASH" | "TELEBIRR" | "CBE_BIRR" | "BANK_TRANSFER">("CASH");
+  // Payment State (Cash, Telebirr, CBE Birr, Bank, or Store Credit / Idda)
+  const [paymentMethod, setPaymentMethod] = useState<"CASH" | "TELEBIRR" | "CBE_BIRR" | "BANK_TRANSFER" | "OTHER">("CASH");
   const [cashTendered, setCashTendered] = useState<number>(0);
   const [paymentRef, setPaymentRef] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
+
+  // Hardware Barcode Scanner State
+  const [scanFeedback, setScanFeedback] = useState<string | null>(null);
+
+  // Short-lived, server-verified manager approval for cashier discounts
+  const [managerAuthorizationModalOpen, setManagerAuthorizationModalOpen] = useState(false);
+  const [managerEmail, setManagerEmail] = useState("");
+  const [managerPassword, setManagerPassword] = useState("");
+  const [managerAuthorizationError, setManagerAuthorizationError] = useState<string | null>(null);
+  const [isManagerApproved, setIsManagerApproved] = useState(false);
+  const [managerApprovalToken, setManagerApprovalToken] = useState<string | null>(null);
+  const [isVerifyingManager, setIsVerifyingManager] = useState(false);
+  const [pendingActionAfterApproval, setPendingActionAfterApproval] = useState<(() => void) | null>(null);
 
   // Modals & Drafts State
   const [clearConfirmOpen, setClearConfirmOpen] = useState(false);
@@ -133,8 +150,8 @@ export default function PosCheckoutPage() {
 
   const searchInputRef = useRef<HTMLInputElement>(null);
 
-  // Check discount permission
-  const canApplyDiscount = userRole === "OWNER" || userRole === "MANAGER";
+  // Check discount permission (Owner, Manager, or server-approved manager grant)
+  const canApplyDiscount = userRole === "OWNER" || userRole === "MANAGER" || isManagerApproved;
 
   // Load session & live catalog
   useEffect(() => {
@@ -230,6 +247,83 @@ export default function PosCheckoutPage() {
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [cart, completedReceipt]);
 
+  // Web Audio API Synthesizer for instant POS scan feedback
+  const playBeepSound = useCallback(() => {
+    try {
+      const AudioCtx = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
+      if (!AudioCtx) return;
+      const ctx = new AudioCtx();
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = "sine";
+      osc.frequency.setValueAtTime(880, ctx.currentTime); // 880Hz pleasant confirmation tone
+      gain.gain.setValueAtTime(0.08, ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.12);
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start();
+      osc.stop(ctx.currentTime + 0.12);
+    } catch {
+      // Audio autoplay restrictions or headless environment
+    }
+  }, []);
+
+  // Hardware Barcode Scanner Wedge Listener (Global Rapid Keystroke Buffer)
+  useEffect(() => {
+    let barcodeBuffer = "";
+    let lastKeyTime = Date.now();
+
+    const handleBarcodeScan = (e: KeyboardEvent) => {
+      // Don't interfere if user is explicitly typing into text inputs, unless it's a barcode burst
+      const target = e.target as HTMLElement | null;
+      const isInput =
+        target &&
+        (target.tagName === "INPUT" || target.tagName === "TEXTAREA" || target.tagName === "SELECT") &&
+        target.id !== "global-pos-barcode-trap";
+
+      const currentTime = Date.now();
+      const diff = currentTime - lastKeyTime;
+      lastKeyTime = currentTime;
+
+      // Reset buffer if delay between keystrokes is too long (> 80ms is normal human typing)
+      if (diff > 80) {
+        barcodeBuffer = "";
+      }
+
+      if (e.key === "Enter") {
+        const scannedCode = barcodeBuffer.trim();
+        if (scannedCode.length >= 3) {
+          e.preventDefault();
+          // Find matching item in inventory
+          const matched = products.find(
+            (p) =>
+              (p.barcode && p.barcode.toLowerCase() === scannedCode.toLowerCase()) ||
+              (p.sku && p.sku.toLowerCase() === scannedCode.toLowerCase())
+          );
+
+          if (matched) {
+            addToCart(matched);
+            playBeepSound();
+            setScanFeedback(`✓ Scanned: ${matched.name} (${formatMoney(matched.price)})`);
+            setTimeout(() => setScanFeedback(null), 2500);
+          } else {
+            setScanFeedback(`⚠️ Item not found for barcode: "${scannedCode}"`);
+            setTimeout(() => setScanFeedback(null), 3000);
+          }
+          barcodeBuffer = "";
+          return;
+        }
+        barcodeBuffer = "";
+      } else if (e.key.length === 1 && !e.ctrlKey && !e.metaKey && !e.altKey) {
+        // Collect characters
+        barcodeBuffer += e.key;
+      }
+    };
+
+    window.addEventListener("keydown", handleBarcodeScan);
+    return () => window.removeEventListener("keydown", handleBarcodeScan);
+  }, [products, playBeepSound]);
+
   // Exact Decimal Calculations
   const subtotal = roundMoney(
     cart.reduce((sum, item) => sum + roundMoney(item.price * item.quantity), 0)
@@ -310,6 +404,63 @@ export default function PosCheckoutPage() {
     setCart((prev) => prev.filter((item) => item.id !== id));
   };
 
+  const requestManagerAuth = (action: () => void, renewApproval = false) => {
+    if (
+      userRole === "OWNER" ||
+      userRole === "MANAGER" ||
+      (isManagerApproved && !renewApproval)
+    ) {
+      action();
+      return;
+    }
+    setManagerAuthorizationError(null);
+    setManagerEmail("");
+    setManagerPassword("");
+    setPendingActionAfterApproval(() => action);
+    setManagerAuthorizationModalOpen(true);
+  };
+
+  const verifyManagerCredentials = async () => {
+    if (!managerEmail.trim() || !managerPassword) {
+      setManagerAuthorizationError("Enter the manager's email and password.");
+      return;
+    }
+
+    try {
+      setIsVerifyingManager(true);
+      setManagerAuthorizationError(null);
+      const response = await fetch("/api/sales/authorize-discount", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email: managerEmail.trim(),
+          password: managerPassword,
+        }),
+      });
+      const data = await response.json();
+      if (!response.ok || !data.success || !data.authorizationToken) {
+        throw new Error(data.error || "Manager authorization failed.");
+      }
+
+      setManagerApprovalToken(data.authorizationToken);
+      setIsManagerApproved(true);
+      setManagerPassword("");
+      setManagerAuthorizationModalOpen(false);
+      setManagerAuthorizationError(null);
+      if (pendingActionAfterApproval) {
+        pendingActionAfterApproval();
+        setPendingActionAfterApproval(null);
+      }
+    } catch (error) {
+      setManagerPassword("");
+      setManagerAuthorizationError(
+        error instanceof Error ? error.message : "Manager authorization failed."
+      );
+    } finally {
+      setIsVerifyingManager(false);
+    }
+  };
+
   const clearCart = () => {
     setCart([]);
     setDiscount(0);
@@ -381,13 +532,16 @@ export default function PosCheckoutPage() {
     setCheckoutModalOpen(true);
   };
 
-  // Add new customer
+  // Add new customer with optional phone number
   const handleAddNewCustomer = () => {
     const trimmed = newCustomerInput.trim();
     if (!trimmed) return;
-    setRecentCustomers((prev) => [trimmed, ...prev.filter((c) => c !== trimmed)]);
-    setCustomerName(trimmed);
+    const phone = newCustomerPhone.trim();
+    const formatted = phone ? `${trimmed} (${phone})` : trimmed;
+    setRecentCustomers((prev) => [formatted, ...prev.filter((c) => c !== formatted)]);
+    setCustomerName(formatted);
     setNewCustomerInput("");
+    setNewCustomerPhone("");
     setNewCustomerModalOpen(false);
   };
 
@@ -400,7 +554,13 @@ export default function PosCheckoutPage() {
       return;
     }
 
-    if (paymentMethod !== "CASH" && (!paymentRef || paymentRef.trim().length < 3)) {
+    // Special validation for Store Credit (Idda / ዕዳ)
+    if (paymentMethod === "OTHER") {
+      if (customerName === "Walk-in Customer") {
+        setSubmitError("Store Credit (Idda / ዕዳ) requires a registered customer name & phone. Please select or add a named customer.");
+        return;
+      }
+    } else if (paymentMethod !== "CASH" && (!paymentRef || paymentRef.trim().length < 3)) {
       setSubmitError(`A valid transaction confirmation reference is required for ${paymentMethod}.`);
       return;
     }
@@ -411,6 +571,13 @@ export default function PosCheckoutPage() {
 
       // Generate a unique client idempotency key per checkout attempt
       const idempotencyKey = `pos_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
+
+      const effectiveRef =
+        paymentMethod === "CASH"
+          ? null
+          : paymentMethod === "OTHER"
+          ? paymentRef.trim() || `IDDA: Store Credit - ${customerName}`
+          : paymentRef.trim();
 
       const payload = {
         items: cart.map((item) => ({
@@ -423,9 +590,10 @@ export default function PosCheckoutPage() {
         payment: {
           paymentMethod,
           amount: grandTotal,
-          reference: paymentMethod === "CASH" ? null : paymentRef.trim(),
+          reference: effectiveRef,
           tendered: paymentMethod === "CASH" ? cashTendered : grandTotal,
         },
+        managerApprovalToken,
         idempotencyKey,
       };
 
@@ -458,10 +626,16 @@ export default function PosCheckoutPage() {
       setCheckoutModalOpen(false);
       setCart([]);
       setDiscount(0);
+      setManagerApprovalToken(null);
+      setIsManagerApproved(false);
       setPaymentRef("");
       setCustomerName("Walk-in Customer");
     } catch (err: any) {
       setSubmitError(err.message || "An unexpected error occurred during checkout.");
+      if (err.message?.includes("Manager approval is invalid or expired")) {
+        setManagerApprovalToken(null);
+        setIsManagerApproved(false);
+      }
     } finally {
       setIsSubmitting(false);
     }
@@ -786,11 +960,27 @@ export default function PosCheckoutPage() {
                 <div className="flex items-center justify-between gap-2">
                   <div className="flex items-center gap-1.5 text-slate-600">
                     <span>Discount (ETB):</span>
-                    {!canApplyDiscount && (
-                      <span className="text-[10px] text-amber-600 font-semibold bg-amber-50 px-1.5 py-0.2 rounded border border-amber-200">
-                        Manager Required
-                      </span>
-                    )}
+                    {!canApplyDiscount ? (
+                      <button
+                        type="button"
+                        onClick={() => requestManagerAuth(() => {})}
+                        className="text-[10px] text-amber-700 hover:text-amber-900 font-bold bg-amber-50 hover:bg-amber-100 px-1.5 py-0.5 rounded border border-amber-300 flex items-center gap-1 cursor-pointer transition"
+                        title="Request approval from an active business manager"
+                      >
+                        <KeyRound className="h-2.5 w-2.5" />
+                        <span>Manager Approval</span>
+                      </button>
+                    ) : isManagerApproved ? (
+                      <button
+                        type="button"
+                        onClick={() => requestManagerAuth(() => {}, true)}
+                        className="text-[10px] text-emerald-700 font-bold bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-300 flex items-center gap-1"
+                        title="Request fresh manager approval"
+                      >
+                        <ShieldCheck className="h-2.5 w-2.5" />
+                        <span>Approved · renew</span>
+                      </button>
+                    ) : null}
                   </div>
                   <input
                     type="number"
@@ -941,6 +1131,27 @@ export default function PosCheckoutPage() {
                   <Building className="h-4 w-4 text-amber-600" />
                   <span>Bank Transfer</span>
                 </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setPaymentMethod("OTHER");
+                    if (!paymentRef) {
+                      setPaymentRef(`IDDA: Store Credit - ${customerName}`);
+                    }
+                  }}
+                  className={`p-3 rounded-xl border text-xs font-bold flex items-center gap-2 transition col-span-2 ${
+                    paymentMethod === "OTHER"
+                      ? "border-orange-600 bg-orange-50 text-orange-950 ring-2 ring-orange-500/20"
+                      : "border-slate-200 hover:bg-slate-50 text-slate-700"
+                  }`}
+                >
+                  <BookOpen className="h-4 w-4 text-orange-600 shrink-0" />
+                  <div className="text-left">
+                    <span className="font-bold">Store Credit (ዕዳ / Idda)</span>
+                    <span className="block text-[10px] text-orange-700 font-normal">Customer balance ledger • Settle later</span>
+                  </div>
+                </button>
               </div>
             </div>
 
@@ -981,6 +1192,37 @@ export default function PosCheckoutPage() {
                   <span className="text-xl font-black text-emerald-700 font-mono">
                     {formatMoney(cashChange)}
                   </span>
+                </div>
+              </div>
+            ) : paymentMethod === "OTHER" ? (
+              <div className="space-y-2.5 bg-orange-50/60 p-3.5 rounded-xl border border-orange-200">
+                <div className="flex items-start gap-2">
+                  <BookOpen className="h-4 w-4 text-orange-600 shrink-0 mt-0.5" />
+                  <div>
+                    <h4 className="font-bold text-slate-900 text-xs">Customer Credit Ledger (*Idda*)</h4>
+                    <p className="text-slate-600 text-[11px] mt-0.5 leading-tight">
+                      This transaction of <strong>{formatMoney(grandTotal)}</strong> will be credited to <strong>{customerName}</strong>.
+                    </p>
+                    {customerName === "Walk-in Customer" && (
+                      <p className="text-red-600 text-xs font-bold mt-1.5 flex items-center gap-1">
+                        <AlertTriangle className="h-3.5 w-3.5 shrink-0" />
+                        <span>Cannot issue credit to anonymous "Walk-in Customer". Select or register a customer first.</span>
+                      </p>
+                    )}
+                  </div>
+                </div>
+
+                <div>
+                  <label className="text-[11px] font-bold text-slate-700 block mb-1">
+                    Credit Memo / Terms (Optional)
+                  </label>
+                  <input
+                    type="text"
+                    placeholder={`e.g. Due within 15 days, authorized by shop owner`}
+                    value={paymentRef}
+                    onChange={(e) => setPaymentRef(e.target.value)}
+                    className="w-full text-xs rounded-lg border border-slate-300 p-2 text-slate-900 bg-white focus:outline-none focus:ring-1 focus:ring-orange-500"
+                  />
                 </div>
               </div>
             ) : (
@@ -1117,10 +1359,15 @@ export default function PosCheckoutPage() {
 
                 <div className="pt-1 text-[10px] text-slate-600 text-left border-t border-slate-100">
                   <div>
-                    Payment: <span className="font-bold">{completedReceipt.payment.method}</span>
+                    Payment:{" "}
+                    <span className="font-bold">
+                      {completedReceipt.payment.method === "OTHER" && completedReceipt.payment.reference?.includes("IDDA")
+                        ? "Store Credit (ዕዳ / Idda)"
+                        : completedReceipt.payment.method}
+                    </span>
                   </div>
                   {completedReceipt.payment.reference && (
-                    <div>Ref / Txn: {completedReceipt.payment.reference}</div>
+                    <div className="text-slate-600">Ref / Note: {completedReceipt.payment.reference}</div>
                   )}
                   {completedReceipt.payment.method === "CASH" && (
                     <div className="flex justify-between pt-0.5">
@@ -1275,17 +1522,32 @@ export default function PosCheckoutPage() {
               </button>
             </div>
 
-            <div className="space-y-2">
-              <label className="text-xs font-bold text-slate-700">Customer Name or Shop</label>
-              <input
-                type="text"
-                placeholder="e.g. Alazar Trading, Genet B."
-                value={newCustomerInput}
-                onChange={(e) => setNewCustomerInput(e.target.value)}
-                onKeyDown={(e) => e.key === "Enter" && handleAddNewCustomer()}
-                autoFocus
-                className="w-full text-sm rounded-lg border border-slate-300 p-2 text-slate-900"
-              />
+            <div className="space-y-3">
+              <div>
+                <label className="text-xs font-bold text-slate-700 block mb-1">Customer Name or Shop *</label>
+                <input
+                  type="text"
+                  placeholder="e.g. Alazar Trading, Genet B."
+                  value={newCustomerInput}
+                  onChange={(e) => setNewCustomerInput(e.target.value)}
+                  onKeyDown={(e) => e.key === "Enter" && handleAddNewCustomer()}
+                  autoFocus
+                  className="w-full text-sm rounded-lg border border-slate-300 p-2 text-slate-900"
+                />
+              </div>
+
+              <div>
+                <label className="text-xs font-bold text-slate-700 block mb-1">Phone Number (For Idda/Credit Tracking)</label>
+                <input
+                  type="tel"
+                  placeholder="e.g. 0911223344 or 0712345678"
+                  value={newCustomerPhone}
+                  onChange={(e) => setNewCustomerPhone(e.target.value)}
+                  onKeyDown={(e) => e.key === "Enter" && handleAddNewCustomer()}
+                  className="w-full text-sm rounded-lg border border-slate-300 p-2 text-slate-900 font-mono"
+                />
+              </div>
+
               <p className="text-[11px] text-slate-400">
                 This customer will be linked to the current sale without losing any items in your cart.
               </p>
@@ -1306,6 +1568,112 @@ export default function PosCheckoutPage() {
               </button>
             </div>
           </div>
+        </div>
+      )}
+
+      {/* MODAL 6: Manager Discount Authorization Modal */}
+      {managerAuthorizationModalOpen && (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl max-w-sm w-full shadow-2xl border border-slate-200 p-5 space-y-4 animate-in fade-in zoom-in-95 duration-150">
+            <div className="flex items-center justify-between pb-2 border-b border-slate-100">
+              <div className="flex items-center gap-2">
+                <div className="h-8 w-8 rounded-lg bg-amber-100 text-amber-700 flex items-center justify-center">
+                  <KeyRound className="h-4 w-4" />
+                </div>
+                <div>
+                  <h3 className="font-bold text-slate-900 text-base">Manager Authorization</h3>
+                  <p className="text-[11px] text-slate-500">Supervisor approval required</p>
+                </div>
+              </div>
+              <button
+                onClick={() => {
+                  setManagerAuthorizationModalOpen(false);
+                  setManagerAuthorizationError(null);
+                  setManagerPassword("");
+                  setPendingActionAfterApproval(null);
+                }}
+                className="p-1 rounded-lg hover:bg-slate-100 text-slate-400"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            <p className="text-xs text-slate-600">
+              An active Owner or Manager must verify their business account to approve discounts. Approval expires after five minutes.
+            </p>
+
+            <div className="space-y-2">
+              <label className="text-xs font-bold text-slate-700 block">Manager email</label>
+              <input
+                type="email"
+                autoComplete="username"
+                value={managerEmail}
+                onChange={(e) => {
+                  setManagerEmail(e.target.value);
+                  setManagerAuthorizationError(null);
+                }}
+                placeholder="manager@business.com"
+                className="w-full rounded-xl border border-slate-300 p-3 text-sm text-slate-900 bg-slate-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-600"
+              />
+              <label className="text-xs font-bold text-slate-700 block">Manager password</label>
+              <input
+                type="password"
+                autoComplete="current-password"
+                autoFocus
+                value={managerPassword}
+                onChange={(e) => {
+                  setManagerPassword(e.target.value);
+                  setManagerAuthorizationError(null);
+                }}
+                onKeyDown={(e) => e.key === "Enter" && void verifyManagerCredentials()}
+                placeholder="Manager password"
+                className="w-full rounded-xl border border-slate-300 p-3 text-sm text-slate-900 bg-slate-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-600"
+              />
+
+              {managerAuthorizationError && (
+                <p className="text-xs text-red-600 font-bold text-center mt-1">
+                  {managerAuthorizationError}
+                </p>
+              )}
+            </div>
+
+            <div className="flex gap-2 pt-2">
+              <button
+                type="button"
+                onClick={() => {
+                  setManagerAuthorizationModalOpen(false);
+                  setManagerAuthorizationError(null);
+                  setManagerPassword("");
+                  setPendingActionAfterApproval(null);
+                }}
+                className="flex-1 py-2 rounded-lg border border-slate-300 text-xs font-bold text-slate-700 hover:bg-slate-50"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={() => void verifyManagerCredentials()}
+                disabled={isVerifyingManager}
+                className="flex-1 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-xs font-bold text-white shadow-xs disabled:cursor-wait disabled:opacity-60"
+              >
+                {isVerifyingManager ? "Verifying…" : "Verify & Authorize"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Floating Barcode Scanner Confirmation Banner */}
+      {scanFeedback && (
+        <div
+          role="status"
+          aria-live="polite"
+          className="fixed bottom-20 left-1/2 -translate-x-1/2 md:translate-x-0 md:left-auto md:bottom-8 md:right-8 z-50 bg-[#0F172A] text-white px-4 py-3 rounded-2xl shadow-2xl border border-[#0D9668] flex items-center gap-3 animate-in fade-in slide-in-from-bottom-4 duration-150"
+        >
+          <div className="h-7 w-7 rounded-lg bg-[#0D9668] text-white flex items-center justify-center shrink-0">
+            <Barcode className="h-4 w-4" />
+          </div>
+          <span className="text-xs font-bold">{scanFeedback}</span>
         </div>
       )}
     </div>

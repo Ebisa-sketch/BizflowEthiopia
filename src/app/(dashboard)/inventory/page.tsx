@@ -1,6 +1,7 @@
 "use client";
 
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState } from "react";
+import useSWR from "swr";
 import {
   Plus,
   History,
@@ -16,6 +17,8 @@ import {
   RotateCcw,
   SlidersHorizontal,
 } from "lucide-react";
+import { TableSkeleton } from "@/components/ui/skeleton";
+import { DataLoadError } from "@/components/ui/data-load-error";
 
 interface StockMovement {
   id: string;
@@ -38,15 +41,44 @@ interface ProductOption {
 }
 
 export default function InventoryPage() {
-  const [movements, setMovements] = useState<StockMovement[]>([]);
-  const [products, setProducts] = useState<ProductOption[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [successMessage, setSuccessMessage] = useState<string | null>(null);
-
   // Filters
   const [typeFilter, setTypeFilter] = useState("ALL");
   const [productFilter, setProductFilter] = useState("ALL");
+
+  const params = new URLSearchParams();
+  if (typeFilter !== "ALL") params.set("type", typeFilter);
+  if (productFilter !== "ALL") params.set("productId", productFilter);
+
+  const swrKey = `/api/inventory?${params.toString()}`;
+  const { data: movementsData, error: swrError, isLoading, mutate } = useSWR(swrKey, {
+    revalidateOnFocus: false,
+    dedupingInterval: 30000,
+    keepPreviousData: true,
+  });
+
+  const { data: productsData, error: productsError, mutate: mutateProducts } = useSWR("/api/products?status=ALL", {
+    revalidateOnFocus: false,
+    dedupingInterval: 60000,
+  });
+
+  const movements: StockMovement[] = movementsData?.movements || [];
+  const products: ProductOption[] = (productsData?.products || []).map((p: any) => ({
+    id: p.id,
+    name: p.name,
+    sku: p.sku || "N/A",
+    stock: p.stock ?? p.quantityOnHand ?? 0,
+  }));
+  const loading = isLoading && !movementsData;
+  const [error, setError] = useState<string | null>(null);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
+
+  const fetchMovements = async () => {
+    await mutate();
+  };
+
+  const fetchProductsCatalog = async () => {
+    await mutateProducts();
+  };
 
   // Modals
   const [isReceiveModalOpen, setIsReceiveModalOpen] = useState(false);
@@ -63,53 +95,6 @@ export default function InventoryPage() {
   const [adjustType, setAdjustType] = useState<"ADJUSTMENT" | "DAMAGE" | "RETURN">("ADJUSTMENT");
   const [adjustQty, setAdjustQty] = useState("");
   const [adjustReason, setAdjustReason] = useState("");
-
-  const fetchMovements = useCallback(async () => {
-    try {
-      setLoading(true);
-      setError(null);
-      const params = new URLSearchParams();
-      if (typeFilter !== "ALL") params.set("type", typeFilter);
-      if (productFilter !== "ALL") params.set("productId", productFilter);
-
-      const res = await fetch(`/api/inventory?${params.toString()}`);
-      const data = await res.json();
-
-      if (!res.ok) {
-        throw new Error(data.error || "Failed to load inventory movements");
-      }
-
-      setMovements(data.movements || []);
-    } catch (err: any) {
-      setError(err.message || "Failed to fetch inventory ledger");
-    } finally {
-      setLoading(false);
-    }
-  }, [typeFilter, productFilter]);
-
-  const fetchProductsCatalog = async () => {
-    try {
-      const res = await fetch("/api/products?status=ALL");
-      const data = await res.json();
-      if (res.ok && data.products) {
-        setProducts(
-          data.products.map((p: any) => ({
-            id: p.id,
-            name: p.name,
-            sku: p.sku || "N/A",
-            stock: p.stock,
-          }))
-        );
-      }
-    } catch {
-      // Ignore background product fetch errors
-    }
-  };
-
-  useEffect(() => {
-    fetchMovements();
-    fetchProductsCatalog();
-  }, [fetchMovements]);
 
   const showToast = (msg: string) => {
     setSuccessMessage(msg);
@@ -224,6 +209,10 @@ export default function InventoryPage() {
 
   return (
     <div className="space-y-6">
+      <DataLoadError
+        error={swrError || productsError}
+        onRetry={() => Promise.all([mutate(), mutateProducts()])}
+      />
       {/* Toast Notification */}
       {successMessage && (
         <div className="fixed top-5 right-5 z-50 flex items-center gap-2 rounded-xl bg-emerald-600 px-4 py-3 text-sm font-medium text-white shadow-lg animate-in fade-in slide-in-from-top-4">
@@ -333,9 +322,8 @@ export default function InventoryPage() {
         </div>
 
         {loading && movements.length === 0 ? (
-          <div className="p-12 text-center text-slate-500 space-y-3">
-            <RefreshCw className="h-6 w-6 animate-spin mx-auto text-blue-600" />
-            <p className="text-sm">Loading stock movements ledger...</p>
+          <div className="p-4">
+            <TableSkeleton rows={6} cols={6} hasFilters={false} />
           </div>
         ) : movements.length === 0 ? (
           <div className="p-12 text-center text-slate-500 space-y-3">

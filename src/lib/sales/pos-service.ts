@@ -28,6 +28,7 @@ export interface CreatePosSaleInput {
   customerName?: string;
   payment: PosPaymentInput;
   idempotencyKey?: string;
+  managerApprovalUserId?: string;
 }
 
 export interface PosReceiptItem {
@@ -88,6 +89,7 @@ export async function createPosSale(
     customerName = "Walk-in Customer",
     payment,
     idempotencyKey,
+    managerApprovalUserId,
   } = input;
 
   // 1. Check idempotency deduplication
@@ -116,9 +118,37 @@ export async function createPosSale(
   // 4. Validate discount permissions
   const safeDiscount = roundMoney(Math.max(0, discountTotal));
   if (safeDiscount > 0) {
-    if (!hasPermission(role, "sales:discount")) {
+    if (hasPermission(role, "sales:discount")) {
+      if (managerApprovalUserId) {
+        throw new AppError("Manager approval cannot be used by a user with discount permission.", 400);
+      }
+    } else if (!managerApprovalUserId) {
       throw new AppError("Discounts require Manager or Owner role authorization.", 403);
+    } else {
+      const managerMembership = await prisma.membership.findUnique({
+        where: {
+          businessId_userId: {
+            businessId,
+            userId: managerApprovalUserId,
+          },
+        },
+        select: {
+          role: true,
+          status: true,
+          user: { select: { accountStatus: true } },
+        },
+      });
+      if (
+        !managerMembership ||
+        managerMembership.status !== "ACTIVE" ||
+        managerMembership.user.accountStatus !== "ACTIVE" ||
+        (managerMembership.role !== "OWNER" && managerMembership.role !== "MANAGER")
+      ) {
+        throw new AppError("The approving manager no longer has permission to authorize discounts.", 403);
+      }
     }
+  } else if (managerApprovalUserId) {
+    throw new AppError("Manager approval is only valid when a discount is applied.", 400);
   }
 
   // 5. Fetch products & active business
@@ -233,6 +263,17 @@ export async function createPosSale(
         400
       );
     }
+
+    // Special validation for Store Credit (Idda / ዕዳ)
+    if (ref.startsWith("IDDA") || ref.startsWith("CREDIT")) {
+      if (!customerName || customerName.trim() === "Walk-in Customer") {
+        throw new AppError(
+          "Store Credit (Idda / ዕዳ) cannot be issued to an anonymous Walk-in Customer. Please select or enter a named customer with a phone number.",
+          400
+        );
+      }
+    }
+
     tendered = grandTotal;
     change = 0;
   }
@@ -339,6 +380,7 @@ export async function createPosSale(
           grandTotal,
           itemCount: preparedItems.length,
           paymentMethod: method,
+          ...(managerApprovalUserId ? { managerApprovalUserId } : {}),
         },
       },
     });

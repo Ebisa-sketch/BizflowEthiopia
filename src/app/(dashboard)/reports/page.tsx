@@ -1,6 +1,7 @@
 "use client";
 
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState } from "react";
+import useSWR from "swr";
 import {
   Download,
   TrendingUp,
@@ -21,6 +22,7 @@ import {
   RefreshCw,
 } from "lucide-react";
 import { formatMoney, calculateGrossProfit, calculateFinancialSummary } from "@/lib/money";
+import { DashboardSkeleton } from "@/components/ui/skeleton";
 
 type ReportPeriod = "today" | "week" | "month" | "quarter";
 
@@ -57,29 +59,19 @@ const PERIOD_LABELS: Record<ReportPeriod, string> = {
 
 export default function ReportsPage() {
   const [period, setPeriod] = useState<ReportPeriod>("month");
-  const [data, setData] = useState<PeriodData>(DEFAULT_PERIOD_DATA);
-  const [loading, setLoading] = useState(true);
 
-  const fetchReports = useCallback(async () => {
-    try {
-      setLoading(true);
-      const res = await fetch(`/api/reports?period=${period}`);
-      if (res.ok) {
-        const json = await res.json();
-        if (json.report) {
-          setData(json.report);
-        }
-      }
-    } catch {
-      // Retain existing state on fetch error
-    } finally {
-      setLoading(false);
-    }
-  }, [period]);
+  const { data: resData, isLoading, mutate } = useSWR(`/api/reports?period=${period}`, {
+    revalidateOnFocus: false,
+    dedupingInterval: 30000,
+    keepPreviousData: true,
+  });
 
-  useEffect(() => {
-    fetchReports();
-  }, [fetchReports]);
+  const data: PeriodData = resData?.report || DEFAULT_PERIOD_DATA;
+  const loading = isLoading && !resData;
+
+  const fetchReports = async () => {
+    await mutate();
+  };
 
   const financial = calculateFinancialSummary({
     salesInvoiced: data.revenue,
@@ -173,8 +165,12 @@ export default function ReportsPage() {
         ))}
       </div>
 
-      {/* 4 Financial KPI Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      {loading && data.dailyRevenue.length === 0 ? (
+        <DashboardSkeleton />
+      ) : (
+        <>
+          {/* 4 Financial KPI Cards */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {/* Gross Revenue */}
         <div className="bg-white p-5 rounded-2xl border border-slate-200/90 shadow-2xs space-y-2">
           <div className="flex items-center justify-between">
@@ -503,6 +499,8 @@ export default function ReportsPage() {
           )}
         </div>
       </div>
+      </>
+      )}
     </div>
   );
 }

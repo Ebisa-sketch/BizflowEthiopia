@@ -1,11 +1,17 @@
 {
+  "id": "/",
   "name": "BizFlow Ethiopia",
   "short_name": "BizFlow",
   "description": "Smart Business Management & POS for Ethiopian Small Businesses",
-  "start_url": "/dashboard",
+  "start_url": "/",
+  "scope": "/",
   "display": "standalone",
+  "orientation": "any",
+  "lang": "en",
+  "dir": "ltr",
   "background_color": "#0F172A",
   "theme_color": "#1E40AF",
+  "categories": ["business", "finance", "productivity"],
   "icons": [
     {
       "src": "/icons/icon-192.png",
@@ -16,6 +22,28 @@
       "src": "/icons/icon-512.png",
       "sizes": "512x512",
       "type": "image/png"
+    },
+    {
+      "src": "/icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "POS Checkout",
+      "short_name": "POS",
+      "url": "/sales/new",
+      "description": "Start a new point-of-sale transaction",
+      "icons": [{ "src": "/icons/icon-192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Dashboard",
+      "short_name": "Dashboard",
+      "url": "/dashboard",
+      "description": "View business dashboard and KPIs",
+      "icons": [{ "src": "/icons/icon-192.png", "sizes": "192x192" }]
     }
   ]
 }

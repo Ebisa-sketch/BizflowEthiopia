@@ -20,7 +20,7 @@ export async function verifyPassword(password: string, hash: string): Promise<bo
 
 export function signToken(payload: SessionPayload): string {
   return jwt.sign(payload, env.JWT_SECRET, {
-    expiresIn: "7d",
+    expiresIn: env.JWT_EXPIRES_IN as jwt.SignOptions["expiresIn"],
   });
 }
 

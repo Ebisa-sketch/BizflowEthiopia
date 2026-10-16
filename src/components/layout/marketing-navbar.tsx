@@ -2,7 +2,8 @@
 
 import React, { useState } from "react";
 import Link from "next/link";
-import { ArrowRight, Menu, X } from "lucide-react";
+import { ArrowRight, Menu, X, Download } from "lucide-react";
+import { useInstallPrompt } from "@/components/pwa/install-context";
 
 interface MarketingNavbarProps {
   currentPath?: string;
@@ -10,6 +11,7 @@ interface MarketingNavbarProps {
 
 export function MarketingNavbar({ currentPath = "/" }: MarketingNavbarProps) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const { isInstallable, promptInstall } = useInstallPrompt();
 
   const navLinks = [
     { label: "Home", href: "/" },
@@ -63,7 +65,19 @@ export function MarketingNavbar({ currentPath = "/" }: MarketingNavbarProps) {
         </nav>
 
         {/* Desktop Actions */}
-        <div className="hidden md:flex items-center gap-5">
+        <div className="hidden md:flex items-center gap-4">
+          {isInstallable && (
+            <button
+              type="button"
+              onClick={promptInstall}
+              className="inline-flex items-center gap-1.5 rounded-full border border-emerald-500/30 bg-emerald-950/40 hover:bg-emerald-900/60 px-3.5 py-1.5 text-xs font-bold text-emerald-300 transition shadow-xs active:scale-95"
+              title="Install BizFlow as Desktop/Mobile App"
+            >
+              <Download className="h-3.5 w-3.5 text-[#00D084]" />
+              <span>Install App</span>
+            </button>
+          )}
+
           <Link
             href="/login"
             className="text-sm font-semibold text-emerald-100/90 hover:text-white transition px-2 py-1"

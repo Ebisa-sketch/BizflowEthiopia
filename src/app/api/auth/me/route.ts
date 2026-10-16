@@ -58,10 +58,11 @@ export async function GET() {
       },
     });
   } catch (error) {
+    console.error("[auth/me] Session resolution error:", error);
     return NextResponse.json({
       success: false,
       authenticated: false,
       error: "Failed to resolve session",
-    });
+    }, { status: 500 });
   }
 }

@@ -4,7 +4,7 @@
   "private": true,
   "description": "Multi-tenant Business Management & POS SaaS for Ethiopian Businesses",
   "scripts": {
-    "dev": "next dev",
+    "dev": "next dev --hostname 0.0.0.0",
     "build": "next build",
     "start": "next start",
     "postinstall": "prisma generate",

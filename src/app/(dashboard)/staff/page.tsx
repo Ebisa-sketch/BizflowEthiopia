@@ -1,6 +1,7 @@
 "use client";
 
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState } from "react";
+import useSWR from "swr";
 import {
   Users,
   UserPlus,
@@ -18,6 +19,8 @@ import {
   SlidersHorizontal,
 } from "lucide-react";
 import { BusinessRole } from "@/lib/permissions";
+import { TableSkeleton } from "@/components/ui/skeleton";
+import { DataLoadError } from "@/components/ui/data-load-error";
 
 interface StaffMember {
   id: string;
@@ -30,10 +33,20 @@ interface StaffMember {
 }
 
 export default function StaffPage() {
-  const [staffList, setStaffList] = useState<StaffMember[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { data, error: swrError, isLoading, mutate } = useSWR("/api/staff", {
+    revalidateOnFocus: false,
+    dedupingInterval: 30000,
+    keepPreviousData: true,
+  });
+
+  const staffList: StaffMember[] = data?.staff || [];
+  const loading = isLoading && !data;
   const [error, setError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
+
+  const fetchStaff = async () => {
+    await mutate();
+  };
 
   // Modals
   const [showInviteModal, setShowInviteModal] = useState(false);
@@ -52,29 +65,6 @@ export default function StaffPage() {
   // Manage Form
   const [selectedRole, setSelectedRole] = useState<BusinessRole>("CASHIER");
   const [selectedStatus, setSelectedStatus] = useState<"ACTIVE" | "SUSPENDED">("ACTIVE");
-
-  const fetchStaff = useCallback(async () => {
-    try {
-      setLoading(true);
-      setError(null);
-      const res = await fetch("/api/staff");
-      const data = await res.json();
-
-      if (!res.ok) {
-        throw new Error(data.error || "Failed to load staff list");
-      }
-
-      setStaffList(data.staff || []);
-    } catch (err: any) {
-      setError(err.message || "Failed to fetch staff members");
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    fetchStaff();
-  }, [fetchStaff]);
 
   const showToast = (msg: string) => {
     setSuccessMessage(msg);
@@ -210,6 +200,7 @@ export default function StaffPage() {
 
   return (
     <div className="space-y-6">
+      <DataLoadError error={swrError} onRetry={mutate} />
       {/* Toast Notification */}
       {successMessage && (
         <div className="fixed top-5 right-5 z-50 flex items-center gap-2 rounded-xl bg-emerald-600 px-4 py-3 text-sm font-medium text-white shadow-lg animate-in fade-in slide-in-from-top-4">
@@ -274,9 +265,8 @@ export default function StaffPage() {
         </div>
 
         {loading && staffList.length === 0 ? (
-          <div className="p-12 text-center text-slate-500 space-y-3">
-            <RefreshCw className="h-6 w-6 animate-spin mx-auto text-blue-600" />
-            <p className="text-sm">Loading staff members...</p>
+          <div className="p-4">
+            <TableSkeleton rows={5} cols={6} hasFilters={false} />
           </div>
         ) : staffList.length === 0 ? (
           <div className="p-12 text-center text-slate-500 space-y-3">

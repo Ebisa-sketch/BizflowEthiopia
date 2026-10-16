@@ -10,6 +10,7 @@ export const translations: Record<SupportedLanguage, TranslationDictionary> = {
     "nav.dashboard": "Dashboard",
     "nav.pos": "POS Checkout",
     "nav.sales": "Sales History",
+    "nav.customers": "Customers & Debt",
     "nav.products": "Products",
     "nav.inventory": "Inventory",
     "nav.expenses": "Expenses",
@@ -92,6 +93,14 @@ export const translations: Record<SupportedLanguage, TranslationDictionary> = {
     "lang.en": "English",
     "lang.am": "አማርኛ",
     "lang.or": "Afaan Oromoo",
+
+    // PWA & Connectivity
+    "pwa.offlineTitle": "You are currently offline",
+    "pwa.offlineDesc": "Live sales, POS transactions, and inventory changes require an internet connection.",
+    "pwa.installTitle": "Install BizFlow Ethiopia",
+    "pwa.installDesc": "Install for faster launch, standalone experience, and reliable store management.",
+    "pwa.installBtn": "Install App",
+    "pwa.dismiss": "Dismiss",
   },
 
   AM: {
@@ -99,6 +108,7 @@ export const translations: Record<SupportedLanguage, TranslationDictionary> = {
     "nav.dashboard": "ዳሽቦርድ",
     "nav.pos": "የሽያጭ መመዝገቢያ (POS)",
     "nav.sales": "የሽያጭ ታሪክ",
+    "nav.customers": "ደንበኞች እና ዕዳ",
     "nav.products": "ምርቶች",
     "nav.inventory": "ዕቃዎች / ስቶክ",
     "nav.expenses": "ወጪዎች",
@@ -181,6 +191,14 @@ export const translations: Record<SupportedLanguage, TranslationDictionary> = {
     "lang.en": "English",
     "lang.am": "አማርኛ",
     "lang.or": "Afaan Oromoo",
+
+    // PWA & Connectivity
+    "pwa.offlineTitle": "አሁን ከበይነመረብ ውጭ ነዎት",
+    "pwa.offlineDesc": "የቀጥታ ሽያጭ፣ የPOS ግብይቶች እና የዕቃ ዝርዝር ለውጦች የበይነመረብ ግንኙነት ይፈልጋሉ።",
+    "pwa.installTitle": "የቢዝፍሎው ኢትዮጵያ መተግበሪያን ይጫኑ",
+    "pwa.installDesc": "ለፈጣን መዳረሻ እና ለተሟላ የስክሪን ተሞክሮ ይጫኑ።",
+    "pwa.installBtn": "መተግበሪያውን ጫን",
+    "pwa.dismiss": "ዝጋ",
   },
 
   OR: {
@@ -188,6 +206,7 @@ export const translations: Record<SupportedLanguage, TranslationDictionary> = {
     "nav.dashboard": "Daashboordii",
     "nav.pos": "Gurgurtaa (POS)",
     "nav.sales": "Seenaa Gurgurtaa",
+    "nav.customers": "Maamiltoota & Liqaa",
     "nav.products": "Oomishoota",
     "nav.inventory": "Kuusaa Qabeenyaa",
     "nav.expenses": "Baasiiwwan",
@@ -270,5 +289,13 @@ export const translations: Record<SupportedLanguage, TranslationDictionary> = {
     "lang.en": "English",
     "lang.am": "አማርኛ",
     "lang.or": "Afaan Oromoo",
+
+    // PWA & Connectivity
+    "pwa.offlineTitle": "Amma toora intarneetii irraa aladha",
+    "pwa.offlineDesc": "Gurgurtaan kallattii, kaffaltiin POS fi jijjiiramni kuusaa intarneetii barbaadu.",
+    "pwa.installTitle": "Appii BizFlow Itoophiyaa Fe'adhaa",
+    "pwa.installDesc": "Dhaqqabama saffisaa fi muuxannoo guutuu argachuuf fe'adhaa.",
+    "pwa.installBtn": "Appii Fe'i",
+    "pwa.dismiss": "Dhiisi",
   },
 };

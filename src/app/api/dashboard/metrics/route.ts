@@ -2,7 +2,13 @@ import { NextRequest, NextResponse } from "next/server";
 import { requireTenant } from "@/lib/auth/session";
 import { prisma } from "@/lib/db/prisma";
 import { handleApiError } from "@/lib/errors";
-import { roundMoney } from "@/lib/money";
+import { roundMoney, calculateFinancialSummary } from "@/lib/money";
+import {
+  buildPaymentMethodBreakdown,
+  buildSalesChartData,
+  getEatDateBoundaries,
+  type DashboardRange,
+} from "@/lib/dashboard-metrics";
 
 export async function GET(request: NextRequest) {
   try {
@@ -11,33 +17,27 @@ export async function GET(request: NextRequest) {
     });
 
     const searchParams = request.nextUrl.searchParams;
-    const range = (searchParams.get("range") || "today").toLowerCase();
+    const requestedRange = (searchParams.get("range") || "today").toLowerCase();
+    const range: DashboardRange = ["today", "7d", "30d", "month"].includes(requestedRange)
+      ? (requestedRange as DashboardRange)
+      : "today";
 
     const now = new Date();
-    let startDate: Date;
+    const { startDate } = getEatDateBoundaries(range, now);
 
-    if (range === "today") {
-      startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0, 0);
-    } else if (range === "7d") {
-      startDate = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
-    } else if (range === "30d") {
-      startDate = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
-    } else if (range === "month") {
-      startDate = new Date(now.getFullYear(), now.getMonth(), 1, 0, 0, 0, 0);
-    } else {
-      startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0, 0);
-    }
-
-    const [sales, expensesAgg, allProducts] = await Promise.all([
+    const [sales, expensesAgg, allProducts, recentSales, historicalSalesCount, allProductCount, allExpenseCount] = await Promise.all([
       prisma.sale.findMany({
         where: {
           businessId,
-          createdAt: { gte: startDate },
+          createdAt: { gte: startDate, lte: now },
           status: "COMPLETED",
         },
         select: {
+          id: true,
+          saleNumber: true,
           createdAt: true,
           grandTotal: true,
+          customerName: true,
           items: {
             select: {
               quantity: true,
@@ -58,7 +58,7 @@ export async function GET(request: NextRequest) {
       prisma.expense.aggregate({
         where: {
           businessId,
-          expenseDate: { gte: startDate },
+          expenseDate: { gte: startDate, lte: now },
         },
         _sum: { amount: true },
       }),
@@ -72,9 +72,39 @@ export async function GET(request: NextRequest) {
           reorderLevel: true,
         },
       }),
+      prisma.sale.findMany({
+        where: {
+          businessId,
+          createdAt: { gte: startDate, lte: now },
+          status: "COMPLETED",
+        },
+        select: {
+          id: true,
+          saleNumber: true,
+          createdAt: true,
+          grandTotal: true,
+          customerName: true,
+          status: true,
+          cashier: {
+            select: { name: true },
+          },
+          items: {
+            select: { quantity: true },
+          },
+          payments: {
+            select: { paymentMethod: true, amount: true },
+            take: 1,
+          },
+        },
+        orderBy: { createdAt: "desc" },
+        take: 6,
+      }),
+      prisma.sale.count({ where: { businessId } }),
+      prisma.product.count({ where: { businessId } }),
+      prisma.expense.count({ where: { businessId } }),
     ]);
 
-    // 1. Sales & Invoiced total
+    // 1. Financial aggregates
     const invoiced = roundMoney(sales.reduce((sum, s) => sum + Number(s.grandTotal), 0));
     const salesCount = sales.length;
 
@@ -98,25 +128,39 @@ export async function GET(request: NextRequest) {
     }
     collected = roundMoney(collected);
 
-    // 3. COGS calculation
+    // 3. COGS and product profitability
     let cogs = 0;
+    const productStats: Record<string, { name: string; units: number; revenue: number; cost: number }> = {};
     for (const sale of sales) {
       for (const item of sale.items) {
-        cogs += Number(item.quantity) * Number(item.unitCostSnapshot);
+        const itemQuantity = Number(item.quantity);
+        const itemCost = itemQuantity * Number(item.unitCostSnapshot);
+        cogs += itemCost;
+
+        const name = item.productNameSnapshot;
+        const stats = (productStats[name] ??= { name, units: 0, revenue: 0, cost: 0 });
+        stats.units += itemQuantity;
+        stats.revenue += Number(item.lineTotal);
+        stats.cost += itemCost;
       }
     }
     cogs = roundMoney(cogs);
 
-    const productStats: Record<string, { name: string; units: number; revenue: number; cost: number }> = {};
-    for (const sale of sales) {
-      for (const item of sale.items) {
-        const name = item.productNameSnapshot;
-        const stats = productStats[name] ??= { name, units: 0, revenue: 0, cost: 0 };
-        stats.units += Number(item.quantity);
-        stats.revenue += Number(item.lineTotal);
-        stats.cost += Number(item.quantity) * Number(item.unitCostSnapshot);
-      }
-    }
+    // 4. Operating Expenses
+    const expenses = roundMoney(Number(expensesAgg._sum.amount ?? 0));
+
+    // Calculate complete financial summary (Gross vs Net Profit)
+    const financialSummary = calculateFinancialSummary({
+      salesInvoiced: invoiced,
+      paymentsCollected: collected,
+      cogs,
+      operatingExpenses: expenses,
+    });
+
+    // 5. Dynamic Chart Data with accurate dates (EAT timezone aware)
+    const chartData = buildSalesChartData(range, sales, now);
+
+    // Top products
     const topProducts = Object.values(productStats)
       .sort((a, b) => b.revenue - a.revenue)
       .slice(0, 5)
@@ -124,49 +168,13 @@ export async function GET(request: NextRequest) {
         name: product.name,
         units: product.units,
         revenue: roundMoney(product.revenue),
-        margin: product.revenue > 0
-          ? `${(((product.revenue - product.cost) / product.revenue) * 100).toFixed(1)}%`
-          : "0.0%",
+        margin:
+          product.revenue > 0
+            ? `${(((product.revenue - product.cost) / product.revenue) * 100).toFixed(1)}%`
+            : "0.0%",
       }));
 
-    // 4. Operating Expenses
-    const expenses = roundMoney(Number(expensesAgg._sum.amount ?? 0));
-
-    // 5. Build dynamic chart data buckets
-    let chartData: { day: string; amount: number; sales: number }[] = [];
-
-    if (range === "today") {
-      const buckets = ["08:00", "10:00", "12:00", "14:00", "16:00", "18:00", "20:00"];
-      chartData = buckets.map((timeLabel) => {
-        const targetHour = parseInt(timeLabel.split(":")[0], 10);
-        const matchingSales = sales.filter((s) => {
-          const h = s.createdAt.getHours();
-          return h >= targetHour - 1 && h < targetHour + 1;
-        });
-        const amt = roundMoney(matchingSales.reduce((sum, s) => sum + Number(s.grandTotal), 0));
-        return { day: timeLabel, amount: amt, sales: matchingSales.length };
-      });
-    } else if (range === "7d") {
-      const days = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
-      chartData = Array.from({ length: 7 }).map((_, i) => {
-        const d = new Date(now.getTime() - (6 - i) * 24 * 60 * 60 * 1000);
-        const dayLabel = days[d.getDay()];
-        const matchingSales = sales.filter((s) => s.createdAt.toDateString() === d.toDateString());
-        const amt = roundMoney(matchingSales.reduce((sum, s) => sum + Number(s.grandTotal), 0));
-        return { day: dayLabel, amount: amt, sales: matchingSales.length };
-      });
-    } else {
-      // 30d or month -> 4 weekly buckets
-      chartData = [1, 2, 3, 4].map((wk) => {
-        const amt = roundMoney(
-          sales
-            .filter((_, idx) => idx % 4 === wk - 1)
-            .reduce((sum, s) => sum + Number(s.grandTotal), 0)
-        );
-        return { day: `Week ${wk}`, amount: amt, sales: Math.ceil(salesCount / 4) };
-      });
-    }
-
+    // Low stock items sorted by severity (out of stock first)
     const lowStockItems = allProducts
       .filter((p) => Number(p.quantityOnHand) <= Number(p.reorderLevel))
       .map((p) => ({
@@ -176,7 +184,21 @@ export async function GET(request: NextRequest) {
         stock: Number(p.quantityOnHand),
         reorderLevel: Number(p.reorderLevel),
         isOut: Number(p.quantityOnHand) <= 0,
-      }));
+      }))
+      .sort((a, b) => (a.isOut === b.isOut ? a.stock - b.stock : a.isOut ? -1 : 1));
+
+    // Recent transactions with tenant isolation
+    const recentTransactions = recentSales.map((s) => ({
+      id: s.id,
+      saleNumber: s.saleNumber,
+      createdAt: s.createdAt.toISOString(),
+      customerName: s.customerName || "Walk-in Customer",
+      cashierName: s.cashier?.name || "Cashier",
+      grandTotal: roundMoney(Number(s.grandTotal)),
+      itemCount: s.items.reduce((sum, item) => sum + Number(item.quantity), 0),
+      paymentMethod: s.payments[0]?.paymentMethod || "CASH",
+      status: s.status,
+    }));
 
     return NextResponse.json({
       success: true,
@@ -186,16 +208,20 @@ export async function GET(request: NextRequest) {
         collected,
         cogs,
         expenses,
+        grossProfit: financialSummary.grossProfit,
+        grossMarginPercentage: financialSummary.grossMarginPercentage,
+        netOperatingProfit: financialSummary.netOperatingProfit,
+        netMarginPercentage: financialSummary.netMarginPercentage,
         salesCount,
+        avgOrderValue: salesCount > 0 ? roundMoney(invoiced / salesCount) : 0,
         chartData,
       },
       lowStockItems,
       topProducts,
-      paymentMethods: Object.entries(paymentMethodsMap).map(([method, amount]) => ({
-        method,
-        amount: roundMoney(amount),
-        percentage: invoiced > 0 ? Math.round((amount / invoiced) * 100) : 0,
-      })),
+      recentTransactions,
+      paymentMethods: buildPaymentMethodBreakdown(paymentMethodsMap),
+      hasBusinessActivity:
+        historicalSalesCount > 0 || allProductCount > 0 || allExpenseCount > 0,
     });
   } catch (error) {
     return handleApiError(error);

@@ -22,8 +22,10 @@ describe("Edge session verification", () => {
 
     await expect(isValidEdgeSessionToken(undefined, env.JWT_SECRET)).resolves.toBe(false);
     await expect(isValidEdgeSessionToken("not-a-jwt", env.JWT_SECRET)).resolves.toBe(false);
+    const [header, payload, signature] = token.split(".");
+    const tamperedSignature = `${signature[0] === "a" ? "b" : "a"}${signature.slice(1)}`;
     await expect(
-      isValidEdgeSessionToken(`${token.slice(0, -1)}x`, env.JWT_SECRET)
+      isValidEdgeSessionToken(`${header}.${payload}.${tamperedSignature}`, env.JWT_SECRET)
     ).resolves.toBe(false);
   });
 

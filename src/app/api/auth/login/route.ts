@@ -69,6 +69,7 @@ export async function POST(request: Request) {
         id: user.id,
         name: user.name,
         email: user.email,
+        globalRole: user.globalRole,
         businessId: activeMembership?.businessId,
         businessName: activeMembership?.business?.name,
         role: activeMembership?.role,

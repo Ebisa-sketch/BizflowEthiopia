@@ -11,7 +11,7 @@ BizFlow Ethiopia is built as a **Modular Monolith** using **Next.js 15 (App Rout
            │
            ├──────────────┬──────────────┬──────────────┐
            ▼              ▼              ▼              ▼
-     (marketing)       (auth)       (dashboard)     (admin planned)
+     (marketing)       (auth)       (dashboard)     (platform admin)
            │              │              │              │
            └──────────────┴──────┬───────┴──────────────┘
                                  ▼
@@ -29,7 +29,7 @@ BizFlow Ethiopia is built as a **Modular Monolith** using **Next.js 15 (App Rout
 - **`src/app/(marketing)`**: Public-facing landing pages, pricing tiers (Starter, Business, Pro), contact and about pages.
 - **`src/app/(auth)`**: Authentication flows (login, register, password recovery).
 - **`src/app/(dashboard)`**: Tenant business operations workspace (POS sales, inventory, products, expenses, reports).
-- **Platform admin console**: Planned, not implemented yet. The Prisma schema has a `SUPERADMIN` global role, but the repository does not currently provide an admin route group or tenant/billing management UI.
+- **`src/app/(admin)/admin`**: Read-only platform administrator console for searching and filtering business tenants, viewing member counts, and checking the latest subscription status. Access is verified against the current database user role and account status; all tenant and billing mutations remain out of scope until platform policies are defined.
 - **`src/features/*`**: Domain boundaries containing services, validation schemas, repository functions, and domain UI.
 - **`src/lib/*`**: Cross-cutting foundation packages:
   - `lib/db`: Prisma singleton instance.

@@ -16,6 +16,7 @@ const PROTECTED_PREFIXES = [
   "/staff",
   "/subscription",
   "/settings",
+  "/admin",
 ];
 
 // Auth routes where already-authenticated users should be redirected to dashboard

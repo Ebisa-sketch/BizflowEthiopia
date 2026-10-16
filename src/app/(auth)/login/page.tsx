@@ -220,7 +220,11 @@ function LoginFormContent() {
         return;
       }
 
-      router.push(callbackUrl);
+      const destination =
+        callbackUrl === "/dashboard" && data.user?.globalRole === "SUPERADMIN"
+          ? "/admin"
+          : callbackUrl;
+      router.push(destination);
       router.refresh();
     } catch {
       setErrorMessage(

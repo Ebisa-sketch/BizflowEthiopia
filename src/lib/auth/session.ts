@@ -1,5 +1,6 @@
 import { cookies } from "next/headers";
 import { prisma } from "../db/prisma";
+import { GlobalRole } from "@prisma/client";
 import { verifyToken, signToken, SessionPayload } from "./index";
 import { BusinessRole, hasPermission, Permission } from "../permissions";
 import { AppError } from "../errors";
@@ -38,6 +39,23 @@ export async function requireAuth(): Promise<FullSessionUser> {
     throw new AppError("Authentication required. Please sign in.", 401);
   }
   return session;
+}
+
+export async function requireSuperAdmin(): Promise<{ userId: string }> {
+  const session = await requireAuth();
+  const user = await prisma.user.findUnique({
+    where: { id: session.userId },
+    select: { id: true, globalRole: true, accountStatus: true },
+  });
+
+  if (!user || user.accountStatus !== "ACTIVE") {
+    throw new AppError("An active account is required.", 403);
+  }
+  if (user.globalRole !== GlobalRole.SUPERADMIN) {
+    throw new AppError("Platform administrator access required.", 403);
+  }
+
+  return { userId: user.id };
 }
 
 /**

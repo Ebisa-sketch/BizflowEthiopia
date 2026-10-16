@@ -8,6 +8,7 @@ import {
 import {
   buildPaymentMethodBreakdown,
   buildSalesChartData,
+  formatEatTime,
   getEatDateBoundaries,
 } from "@/lib/dashboard-metrics";
 
@@ -105,6 +106,10 @@ describe("Dashboard Financial Metrics & Business Calculations", () => {
     expect(startDate.toISOString()).toBe("2026-10-14T21:00:00.000Z");
   });
 
+  it("formats transaction times in Addis Ababa time regardless of viewer timezone", () => {
+    expect(formatEatTime("2026-10-15T06:30:00.000Z")).toBe("09:30 AM");
+  });
+
   it("includes every day in the 30-day chart and excludes out-of-range days", () => {
     const now = new Date("2026-10-15T00:30:00.000Z");
     const chart = buildSalesChartData(
@@ -149,5 +154,18 @@ describe("Dashboard Financial Metrics & Business Calculations", () => {
 
     expect(breakdown.reduce((sum, item) => sum + item.percentage, 0)).toBe(100);
     expect(breakdown.map(({ method }) => method)).not.toContain("OTHER");
+  });
+
+  it("attaches transaction counts to payment method breakdown when provided", () => {
+    const breakdown = buildPaymentMethodBreakdown(
+      { CASH: 500, TELEBIRR: 300, CBE_BIRR: 200 },
+      { CASH: 5, TELEBIRR: 3, CBE_BIRR: 2 }
+    );
+
+    expect(breakdown).toHaveLength(3);
+    const cashEntry = breakdown.find((b) => b.method === "CASH");
+    expect(cashEntry?.count).toBe(5);
+    expect(cashEntry?.amount).toBe(500);
+    expect(cashEntry?.percentage).toBe(50);
   });
 });

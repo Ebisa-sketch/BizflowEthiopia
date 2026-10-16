@@ -25,7 +25,16 @@ export async function GET(request: NextRequest) {
     const now = new Date();
     const { startDate } = getEatDateBoundaries(range, now);
 
-    const [sales, expensesAgg, allProducts, recentSales, historicalSalesCount, allProductCount, allExpenseCount] = await Promise.all([
+    const [
+      sales,
+      expensesAgg,
+      allProducts,
+      recentSales,
+      historicalSalesCount,
+      allProductCount,
+      allExpenseCount,
+      allCreditSales,
+    ] = await Promise.all([
       prisma.sale.findMany({
         where: {
           businessId,
@@ -50,6 +59,7 @@ export async function GET(request: NextRequest) {
             select: {
               amount: true,
               paymentMethod: true,
+              reference: true,
             },
           },
         },
@@ -102,6 +112,24 @@ export async function GET(request: NextRequest) {
       prisma.sale.count({ where: { businessId } }),
       prisma.product.count({ where: { businessId } }),
       prisma.expense.count({ where: { businessId } }),
+      prisma.sale.findMany({
+        where: {
+          businessId,
+          payments: {
+            some: {
+              paymentMethod: "OTHER",
+              OR: [
+                { reference: { contains: "IDDA" } },
+                { reference: { contains: "CREDIT" } },
+              ],
+            },
+          },
+        },
+        select: {
+          grandTotal: true,
+          customerName: true,
+        },
+      }),
     ]);
 
     // 1. Financial aggregates
@@ -117,16 +145,46 @@ export async function GET(request: NextRequest) {
       BANK_TRANSFER: 0,
       OTHER: 0,
     };
+    const paymentMethodsCountMap: Record<string, number> = {
+      CASH: 0,
+      TELEBIRR: 0,
+      CBE_BIRR: 0,
+      BANK_TRANSFER: 0,
+      OTHER: 0,
+    };
+
+    let creditDebtInRange = 0;
+    let creditSalesCount = 0;
 
     for (const sale of sales) {
+      let isStoreCredit = false;
       for (const p of sale.payments) {
         const amt = Number(p.amount);
         collected += amt;
         const method = p.paymentMethod || "CASH";
         paymentMethodsMap[method] = (paymentMethodsMap[method] || 0) + amt;
+        paymentMethodsCountMap[method] = (paymentMethodsCountMap[method] || 0) + 1;
+        if (
+          method === "OTHER" &&
+          (p.reference?.includes("IDDA") || p.reference?.includes("CREDIT"))
+        ) {
+          isStoreCredit = true;
+        }
+      }
+      if (isStoreCredit) {
+        creditDebtInRange += Number(sale.grandTotal);
+        creditSalesCount += 1;
       }
     }
     collected = roundMoney(collected);
+    creditDebtInRange = roundMoney(creditDebtInRange);
+
+    const totalOutstandingCredit = roundMoney(
+      allCreditSales.reduce((sum, s) => sum + Number(s.grandTotal), 0)
+    );
+    const totalCreditCustomers = new Set(
+      allCreditSales.map((s) => s.customerName).filter(Boolean)
+    ).size;
 
     // 3. COGS and product profitability
     let cogs = 0;
@@ -215,11 +273,15 @@ export async function GET(request: NextRequest) {
         salesCount,
         avgOrderValue: salesCount > 0 ? roundMoney(invoiced / salesCount) : 0,
         chartData,
+        creditDebtInRange,
+        creditSalesCount,
+        totalOutstandingCredit,
+        totalCreditCustomers,
       },
       lowStockItems,
       topProducts,
       recentTransactions,
-      paymentMethods: buildPaymentMethodBreakdown(paymentMethodsMap),
+      paymentMethods: buildPaymentMethodBreakdown(paymentMethodsMap, paymentMethodsCountMap),
       hasBusinessActivity:
         historicalSalesCount > 0 || allProductCount > 0 || allExpenseCount > 0,
     });

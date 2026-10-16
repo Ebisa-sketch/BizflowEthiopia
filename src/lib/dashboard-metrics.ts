@@ -5,6 +5,15 @@ const DAY_MS = 24 * 60 * 60 * 1000;
 
 export type DashboardRange = "today" | "7d" | "30d" | "month";
 
+export function formatEatTime(value: string | Date) {
+  return new Intl.DateTimeFormat("en-US", {
+    timeZone: "Africa/Addis_Ababa",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: true,
+  }).format(new Date(value));
+}
+
 export interface DashboardSale {
   createdAt: Date;
   grandTotal: number | string | { toNumber(): number; toString(): string };
@@ -116,7 +125,10 @@ export function buildSalesChartData(
   });
 }
 
-export function buildPaymentMethodBreakdown(amounts: Record<string, number>) {
+export function buildPaymentMethodBreakdown(
+  amounts: Record<string, number>,
+  counts?: Record<string, number>
+) {
   const entries = Object.entries(amounts).filter(([, amount]) => amount > 0);
   const total = entries.reduce((sum, [, amount]) => sum + amount, 0);
   if (total <= 0) return [];
@@ -143,5 +155,6 @@ export function buildPaymentMethodBreakdown(amounts: Record<string, number>) {
     method,
     amount,
     percentage,
+    count: counts?.[method] !== undefined ? counts[method] : undefined,
   }));
 }

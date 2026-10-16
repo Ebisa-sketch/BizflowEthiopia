@@ -1,9 +1,11 @@
+import { createHash } from "node:crypto";
 import { prisma } from "../db/prisma";
 import { AppError } from "../errors";
 import { roundMoney } from "../money";
 import { BusinessRole, hasPermission } from "../permissions";
-import { checkIdempotency, recordIdempotency } from "../idempotency";
 import { MovementType, PaymentMethod, SaleStatus } from "@prisma/client";
+import { calculatePosTotals } from "./pos-pricing";
+import { verifyManagerDiscountGrant } from "./manager-authorization";
 
 export interface PosCartItemInput {
   productId: string;
@@ -23,12 +25,12 @@ export interface CreatePosSaleInput {
   role: BusinessRole;
   items: PosCartItemInput[];
   discountTotal?: number;
-  taxTotal?: number;
-  taxRate?: number;
+  applyVat?: boolean;
   customerName?: string;
   payment: PosPaymentInput;
   idempotencyKey?: string;
   managerApprovalUserId?: string;
+  managerApprovalToken?: string;
 }
 
 export interface PosReceiptItem {
@@ -85,73 +87,56 @@ export async function createPosSale(
     role,
     items,
     discountTotal = 0,
-    taxTotal = 0,
+    applyVat = false,
     customerName = "Walk-in Customer",
     payment,
     idempotencyKey,
     managerApprovalUserId,
+    managerApprovalToken,
   } = input;
 
-  // 1. Check idempotency deduplication
-  if (idempotencyKey) {
-    const existing = checkIdempotency(idempotencyKey);
-    if (existing) {
-      return existing as PosReceiptResult;
-    }
+  if (
+    idempotencyKey !== undefined &&
+    (idempotencyKey.length < 16 || idempotencyKey.length > 128)
+  ) {
+    throw new AppError("Invalid checkout idempotency key.", 400);
   }
 
-  // 2. Validate cart items presence
+  // Validate cart items presence
   if (!items || items.length === 0) {
     throw new AppError("Cart is empty. Please add at least one product.", 400);
   }
 
-  // 3. Validate positive quantities
+  // Validate positive quantities and reject duplicate product lines.
+  const uniqueProductIds = new Set<string>();
   for (const item of items) {
     if (!item.productId || typeof item.productId !== "string") {
       throw new AppError("Invalid product identifier in cart.", 400);
     }
-    if (!item.quantity || item.quantity <= 0 || !Number.isFinite(item.quantity)) {
-      throw new AppError(`Quantity must be a positive number for product ${item.productId}.`, 400);
+    if (
+      !item.quantity ||
+      item.quantity <= 0 ||
+      !Number.isFinite(item.quantity) ||
+      Math.abs(item.quantity * 100 - Math.round(item.quantity * 100)) >= 0.000001
+    ) {
+      throw new AppError(
+        `Quantity must be a positive number with at most two decimal places for product ${item.productId}.`,
+        400
+      );
     }
+    if (uniqueProductIds.has(item.productId)) {
+      throw new AppError("Each product can only appear once in the checkout cart.", 400);
+    }
+    uniqueProductIds.add(item.productId);
   }
 
-  // 4. Validate discount permissions
-  const safeDiscount = roundMoney(Math.max(0, discountTotal));
-  if (safeDiscount > 0) {
-    if (hasPermission(role, "sales:discount")) {
-      if (managerApprovalUserId) {
-        throw new AppError("Manager approval cannot be used by a user with discount permission.", 400);
-      }
-    } else if (!managerApprovalUserId) {
-      throw new AppError("Discounts require Manager or Owner role authorization.", 403);
-    } else {
-      const managerMembership = await prisma.membership.findUnique({
-        where: {
-          businessId_userId: {
-            businessId,
-            userId: managerApprovalUserId,
-          },
-        },
-        select: {
-          role: true,
-          status: true,
-          user: { select: { accountStatus: true } },
-        },
-      });
-      if (
-        !managerMembership ||
-        managerMembership.status !== "ACTIVE" ||
-        managerMembership.user.accountStatus !== "ACTIVE" ||
-        (managerMembership.role !== "OWNER" && managerMembership.role !== "MANAGER")
-      ) {
-        throw new AppError("The approving manager no longer has permission to authorize discounts.", 403);
-      }
-    }
-  } else if (managerApprovalUserId) {
-    throw new AppError("Manager approval is only valid when a discount is applied.", 400);
+  if (!Number.isFinite(discountTotal) || discountTotal < 0) {
+    throw new AppError("Discount must be a valid non-negative amount.", 400);
   }
 
-  // 5. Fetch products & active business
+  const safeDiscount = roundMoney(discountTotal);
+
+  // Fetch products & active business
   const business = await prisma.business.findUnique({
     where: { id: businessId },
     select: {
@@ -178,6 +163,86 @@ export async function createPosSale(
     throw new AppError("Cashier record not found.", 404);
   }
 
+  const normalizedCustomerName = customerName.trim() || "Walk-in Customer";
+  const payloadHash = idempotencyKey
+    ? createHash("sha256")
+        .update(
+          JSON.stringify({
+            cashierId,
+            items: [...items].sort((a, b) => a.productId.localeCompare(b.productId)),
+            discountTotal: safeDiscount,
+            applyVat,
+            customerName: normalizedCustomerName,
+            payment: {
+              paymentMethod: payment.paymentMethod,
+              reference: payment.reference?.trim() || null,
+              tendered: payment.tendered ?? null,
+            },
+          })
+        )
+        .digest("hex")
+    : null;
+
+  if (idempotencyKey) {
+    const existing = await findExistingIdempotentSale(businessId, idempotencyKey);
+    if (existing) {
+      if (existing.idempotencyHash !== payloadHash) {
+        throw new AppError(
+          "This checkout key was already used for a different sale. Start a new checkout.",
+          409
+        );
+      }
+      return buildReceiptFromExistingSale(existing);
+    }
+  }
+
+  let approvingManagerId = managerApprovalUserId;
+  if (managerApprovalToken) {
+    if (approvingManagerId) {
+      throw new AppError("Provide only one manager approval credential.", 400);
+    }
+    approvingManagerId = verifyManagerDiscountGrant(managerApprovalToken, {
+      businessId,
+      cashierId,
+    });
+  }
+
+  // Authorization is checked after a matching idempotent sale is returned so
+  // a lost-response retry remains safe even if its short-lived grant expires.
+  if (safeDiscount > 0) {
+    if (hasPermission(role, "sales:discount")) {
+      if (approvingManagerId) {
+        throw new AppError("Manager approval cannot be used by a user with discount permission.", 400);
+      }
+    } else if (!approvingManagerId) {
+      throw new AppError("Discounts require Manager or Owner role authorization.", 403);
+    } else {
+      const managerMembership = await prisma.membership.findUnique({
+        where: {
+          businessId_userId: {
+            businessId,
+            userId: approvingManagerId,
+          },
+        },
+        select: {
+          role: true,
+          status: true,
+          user: { select: { accountStatus: true } },
+        },
+      });
+      if (
+        !managerMembership ||
+        managerMembership.status !== "ACTIVE" ||
+        managerMembership.user.accountStatus !== "ACTIVE" ||
+        (managerMembership.role !== "OWNER" && managerMembership.role !== "MANAGER")
+      ) {
+        throw new AppError("The approving manager no longer has permission to authorize discounts.", 403);
+      }
+    }
+  } else if (approvingManagerId || managerApprovalToken) {
+    throw new AppError("Manager approval is only valid when a discount is applied.", 400);
+  }
+
   const productIds = items.map((i) => i.productId);
   const products = await prisma.product.findMany({
     where: {
@@ -192,8 +257,7 @@ export async function createPosSale(
 
   const productMap = new Map(products.map((p) => [p.id, p]));
 
-  // 6. Recalculate totals and check inventory
-  let subtotal = 0;
+  // Recalculate totals and check inventory
   const preparedItems: {
     product: (typeof products)[0];
     quantity: number;
@@ -223,7 +287,6 @@ export async function createPosSale(
     const unitPrice = roundMoney(Number(prod.sellingPrice));
     const unitCost = roundMoney(Number(prod.costPrice));
     const lineTotal = roundMoney(unitPrice * item.quantity);
-    subtotal = roundMoney(subtotal + lineTotal);
 
     preparedItems.push({
       product: prod,
@@ -234,17 +297,31 @@ export async function createPosSale(
     });
   }
 
+  const subtotal = roundMoney(
+    preparedItems.reduce((sum, item) => sum + item.lineTotal, 0)
+  );
   if (safeDiscount > subtotal) {
     throw new AppError("Discount cannot exceed subtotal amount.", 400);
   }
 
-  const safeTax = roundMoney(Math.max(0, taxTotal));
-  const grandTotal = roundMoney(subtotal - safeDiscount + safeTax);
+  const totals = calculatePosTotals(
+    preparedItems.map((item) => ({
+      unitPrice: item.unitPrice,
+      quantity: item.quantity,
+    })),
+    safeDiscount,
+    applyVat
+  );
+  const { taxTotal: safeTax, grandTotal } = totals;
 
-  // 7. Validate payment details
+  // Validate payment details
   const method = payment.paymentMethod;
   let tendered = payment.tendered ?? grandTotal;
   let change = 0;
+
+  if (!Number.isFinite(tendered) || tendered < 0) {
+    throw new AppError("Tendered amount must be a valid non-negative number.", 400);
+  }
 
   if (method === PaymentMethod.CASH) {
     if (tendered < grandTotal) {
@@ -264,50 +341,49 @@ export async function createPosSale(
       );
     }
 
-    // Special validation for Store Credit (Idda / ዕዳ)
-    if (ref.startsWith("IDDA") || ref.startsWith("CREDIT")) {
-      if (!customerName || customerName.trim() === "Walk-in Customer") {
-        throw new AppError(
-          "Store Credit (Idda / ዕዳ) cannot be issued to an anonymous Walk-in Customer. Please select or enter a named customer with a phone number.",
-          400
-        );
-      }
+    if (method === PaymentMethod.OTHER && normalizedCustomerName === "Walk-in Customer") {
+      throw new AppError(
+        "Store Credit (Idda / ዕዳ) cannot be issued to an anonymous Walk-in Customer. Please select or enter a named customer with a phone number.",
+        400
+      );
     }
 
     tendered = grandTotal;
     change = 0;
   }
 
-  // 8. Generate invoice number
+  // Generate invoice number
   const todayStr = new Date().toISOString().slice(0, 10).replace(/-/g, "");
   const randomSuffix = Math.floor(1000 + Math.random() * 9000);
   const saleNumber = `INV-${todayStr}-${randomSuffix}`;
 
-  // 9. Execute atomic database transaction
-  const result = await prisma.$transaction(async (tx) => {
-    // Re-verify stock inside transaction for concurrency safety
+  // Execute atomic database transaction.
+  let result;
+  try {
+    result = await prisma.$transaction(async (tx) => {
     for (const prep of preparedItems) {
-      const liveProd = await tx.product.findUnique({
-        where: { id: prep.product.id },
-        select: { id: true, name: true, quantityOnHand: true },
+      const stockUpdate = await tx.product.updateMany({
+        where: {
+          id: prep.product.id,
+          businessId,
+          status: "ACTIVE",
+          quantityOnHand: { gte: prep.quantity },
+        },
+        data: { quantityOnHand: { decrement: prep.quantity } },
       });
 
-      if (!liveProd || Number(liveProd.quantityOnHand) < prep.quantity) {
+      if (stockUpdate.count !== 1) {
+        const liveProd = await tx.product.findUnique({
+          where: { id: prep.product.id },
+          select: { name: true, quantityOnHand: true },
+        });
         throw new AppError(
-          `Concurrent inventory conflict: '${prep.product.name}' was just purchased by another counter.`,
+          liveProd
+            ? `Insufficient inventory for '${liveProd.name}'. In stock: ${Number(liveProd.quantityOnHand)}, requested: ${prep.quantity}.`
+            : `Product '${prep.product.name}' is no longer available in this business.`,
           409
         );
       }
-
-      // Decrement stock
-      await tx.product.update({
-        where: { id: prep.product.id },
-        data: {
-          quantityOnHand: {
-            decrement: prep.quantity,
-          },
-        },
-      });
     }
 
     // Create Sale record
@@ -322,6 +398,8 @@ export async function createPosSale(
         taxTotal: safeTax,
         grandTotal,
         status: SaleStatus.COMPLETED,
+        idempotencyKey: idempotencyKey || null,
+        idempotencyHash: payloadHash,
       },
     });
 
@@ -363,6 +441,8 @@ export async function createPosSale(
         paymentMethod: method,
         reference: payment.reference?.trim() || null,
         status: "COMPLETED",
+        tendered,
+        change,
         recordedBy: cashierId,
       },
     });
@@ -380,13 +460,28 @@ export async function createPosSale(
           grandTotal,
           itemCount: preparedItems.length,
           paymentMethod: method,
-          ...(managerApprovalUserId ? { managerApprovalUserId } : {}),
+          ...(approvingManagerId ? { managerApprovalUserId: approvingManagerId } : {}),
         },
       },
     });
 
     return sale;
-  });
+    });
+  } catch (error) {
+    if (idempotencyKey && isUniqueConstraintError(error)) {
+      const existing = await findExistingIdempotentSale(businessId, idempotencyKey);
+      if (existing) {
+        if (existing.idempotencyHash !== payloadHash) {
+          throw new AppError(
+            "This checkout key was already used for a different sale. Start a new checkout.",
+            409
+          );
+        }
+        return buildReceiptFromExistingSale(existing);
+      }
+    }
+    throw error;
+  }
 
   const receipt: PosReceiptResult = {
     saleId: result.id,
@@ -405,7 +500,7 @@ export async function createPosSale(
       name: cashier.name,
       email: cashier.email,
     },
-    customerName: customerName.trim() || "Walk-in Customer",
+    customerName: normalizedCustomerName,
     items: preparedItems.map((p) => ({
       productId: p.product.id,
       name: p.product.name,
@@ -427,10 +522,74 @@ export async function createPosSale(
     },
   };
 
-  // 10. Record in idempotency cache
-  if (idempotencyKey) {
-    recordIdempotency(idempotencyKey, receipt);
+  return receipt;
+}
+
+function isUniqueConstraintError(error: unknown): error is { code: string } {
+  return (
+    typeof error === "object" &&
+    error !== null &&
+    "code" in error &&
+    error.code === "P2002"
+  );
+}
+
+async function findExistingIdempotentSale(businessId: string, idempotencyKey: string) {
+  return prisma.sale.findFirst({
+    where: { businessId, idempotencyKey },
+    include: {
+      business: {
+        select: { id: true, name: true, phone: true, address: true, taxNumber: true, currency: true },
+      },
+      cashier: { select: { id: true, name: true, email: true } },
+      items: { include: { product: { select: { sku: true } } } },
+      payments: { orderBy: { createdAt: "asc" }, take: 1 },
+    },
+  });
+}
+
+function buildReceiptFromExistingSale(sale: NonNullable<Awaited<ReturnType<typeof findExistingIdempotentSale>>>): PosReceiptResult {
+  const payment = sale.payments[0];
+  if (!payment) {
+    throw new AppError("The previously recorded sale has no payment record.", 500);
   }
 
-  return receipt;
+  return {
+    saleId: sale.id,
+    saleNumber: sale.saleNumber,
+    createdAt: sale.createdAt.toISOString(),
+    business: {
+      id: sale.business.id,
+      name: sale.business.name,
+      phone: sale.business.phone,
+      address: sale.business.address,
+      taxNumber: sale.business.taxNumber,
+      currency: sale.business.currency || "ETB",
+    },
+    cashier: {
+      id: sale.cashier.id,
+      name: sale.cashier.name,
+      email: sale.cashier.email,
+    },
+    customerName: sale.customerName || "Walk-in Customer",
+    items: sale.items.map((item) => ({
+      productId: item.productId || item.id,
+      name: item.productNameSnapshot,
+      sku: item.product?.sku || null,
+      unitPrice: Number(item.unitPrice),
+      quantity: Number(item.quantity),
+      lineTotal: Number(item.lineTotal),
+    })),
+    subtotal: Number(sale.subtotal),
+    discountTotal: Number(sale.discountTotal),
+    taxTotal: Number(sale.taxTotal),
+    grandTotal: Number(sale.grandTotal),
+    payment: {
+      method: payment.paymentMethod,
+      amount: Number(payment.amount),
+      reference: payment.reference,
+      tendered: Number(payment.tendered ?? payment.amount),
+      change: Number(payment.change ?? 0),
+    },
+  };
 }

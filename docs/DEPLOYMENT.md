@@ -8,6 +8,8 @@
 ## Deployment Checklist
 1. Configure Environment Variables (`DATABASE_URL`, `JWT_SECRET`, `APP_URL`). Production startup requires an explicit `DATABASE_URL` and a unique `JWT_SECRET` of at least 32 characters; the development fallbacks are rejected.
 2. Set `JWT_EXPIRES_IN` to a duration such as `15m`, `7d`, or `1y` if the default seven-day token lifetime is not appropriate.
-3. Run database migrations: `npx prisma migrate deploy`.
+3. Apply the Prisma schema:
+   - For a new database, run `npx prisma migrate deploy`.
+   - For an existing database previously initialized with `prisma db push`, back it up, run `npx prisma db push` to add the current POS checkout columns, then baseline the schema with `npx prisma migrate resolve --applied 20261016000000_init`. Do this once before future `migrate deploy` runs.
 4. Build Next.js application: `npm run build`.
 5. Verify health endpoint and SSL configuration.

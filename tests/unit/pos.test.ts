@@ -11,7 +11,9 @@ vi.mock("@/lib/db/prisma", () => {
   const mockFindManyProducts = vi.fn();
   const mockFindUniqueProduct = vi.fn();
   const mockUpdateProduct = vi.fn();
+  const mockUpdateManyProduct = vi.fn();
   const mockCreateSale = vi.fn();
+  const mockFindFirstSale = vi.fn();
   const mockCreateSaleItem = vi.fn();
   const mockCreateStockMovement = vi.fn();
   const mockCreatePayment = vi.fn();
@@ -23,6 +25,7 @@ vi.mock("@/lib/db/prisma", () => {
       product: {
         findUnique: mockFindUniqueProduct,
         update: mockUpdateProduct,
+        updateMany: mockUpdateManyProduct,
       },
       sale: {
         create: mockCreateSale,
@@ -47,8 +50,14 @@ vi.mock("@/lib/db/prisma", () => {
       business: { findUnique: mockFindUniqueBusiness },
       user: { findUnique: mockFindUniqueCashier },
       membership: { findUnique: mockFindUniqueMembership },
-      product: { findMany: mockFindManyProducts, findUnique: mockFindUniqueProduct, update: mockUpdateProduct },
-      sale: { create: mockCreateSale },
+      product: {
+        findMany: mockFindManyProducts,
+        findUnique: mockFindUniqueProduct,
+        update: mockUpdateProduct,
+        updateMany: mockUpdateManyProduct,
+      },
+      sale: { create: mockCreateSale, findFirst: mockFindFirstSale },
+      payment: { create: mockCreatePayment },
       $transaction: mockTransaction,
     },
   };
@@ -119,6 +128,8 @@ describe("POS Checkout Service & Validation Engine", () => {
         ...data,
       };
     });
+    (prisma.product.updateMany as any).mockResolvedValue({ count: 1 });
+    (prisma.sale.findFirst as any).mockResolvedValue(null);
   });
 
   it("successfully completes a standard Cash sale with correct change and decimal math", async () => {
@@ -130,7 +141,6 @@ describe("POS Checkout Service & Validation Engine", () => {
         { productId: "prod-1", quantity: 2 }, // 2 * 35 = 70 ETB
         { productId: "prod-2", quantity: 1 }, // 1 * 850 = 850 ETB
       ], // Subtotal = 920 ETB
-      taxTotal: 0,
       discountTotal: 0,
       payment: {
         paymentMethod: PaymentMethod.CASH,
@@ -146,8 +156,18 @@ describe("POS Checkout Service & Validation Engine", () => {
     expect(receipt.grandTotal).toBe(920);
     expect(receipt.payment.tendered).toBe(1000);
     expect(receipt.payment.change).toBe(80);
+    expect(prisma.payment.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({ tendered: 1000, change: 80 }),
+      })
+    );
     expect(receipt.items).toHaveLength(2);
     expect(receipt.business.name).toBe("Bole Fresh Supermarket");
+    expect(prisma.product.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { id: { in: ["prod-1", "prod-2"] }, businessId: "biz-test-1" },
+      })
+    );
   });
 
   it("rejects sales when requested quantity exceeds available stock", async () => {
@@ -165,6 +185,20 @@ describe("POS Checkout Service & Validation Engine", () => {
     await expect(createPosSale(input)).rejects.toThrow(/Insufficient inventory/);
   });
 
+  it("prevents a concurrent checkout from decrementing stock below zero", async () => {
+    (prisma.product.updateMany as any).mockResolvedValueOnce({ count: 0 });
+    await expect(
+      createPosSale({
+        businessId: "biz-test-1",
+        cashierId: "usr-cashier-1",
+        role: "CASHIER",
+        items: [{ productId: "prod-1", quantity: 1 }],
+        payment: { paymentMethod: PaymentMethod.CASH, tendered: 35 },
+      })
+    ).rejects.toThrow(/Insufficient inventory/);
+    expect(prisma.sale.create).not.toHaveBeenCalled();
+  });
+
   it("rejects non-positive quantities (zero or negative)", async () => {
     const input: CreatePosSaleInput = {
       businessId: "biz-test-1",
@@ -177,6 +211,18 @@ describe("POS Checkout Service & Validation Engine", () => {
     };
 
     await expect(createPosSale(input)).rejects.toThrow(/Quantity must be a positive number/);
+  });
+
+  it("rejects quantities with more precision than inventory supports", async () => {
+    await expect(
+      createPosSale({
+        businessId: "biz-test-1",
+        cashierId: "usr-cashier-1",
+        role: "CASHIER",
+        items: [{ productId: "prod-1", quantity: 1.001 }],
+        payment: { paymentMethod: PaymentMethod.CASH, tendered: 35 },
+      })
+    ).rejects.toThrow(/at most two decimal places/);
   });
 
   it("blocks unauthorized discounts attempted by a CASHIER role", async () => {
@@ -211,6 +257,49 @@ describe("POS Checkout Service & Validation Engine", () => {
     const receipt = await createPosSale(input);
     expect(receipt.discountTotal).toBe(10);
     expect(receipt.grandTotal).toBe(60);
+  });
+
+  it("calculates 15% VAT on the discounted VAT-exclusive subtotal on the server", async () => {
+    const receipt = await createPosSale({
+      businessId: "biz-test-1",
+      cashierId: "usr-cashier-1",
+      role: "MANAGER",
+      items: [{ productId: "prod-1", quantity: 2 }],
+      discountTotal: 10,
+      applyVat: true,
+      payment: { paymentMethod: PaymentMethod.CASH, tendered: 69 },
+    });
+
+    expect(receipt.subtotal).toBe(70);
+    expect(receipt.discountTotal).toBe(10);
+    expect(receipt.taxTotal).toBe(9);
+    expect(receipt.grandTotal).toBe(69);
+  });
+
+  it("rejects discounts above subtotal and duplicate product lines", async () => {
+    await expect(
+      createPosSale({
+        businessId: "biz-test-1",
+        cashierId: "usr-cashier-1",
+        role: "MANAGER",
+        items: [{ productId: "prod-1", quantity: 1 }],
+        discountTotal: 36,
+        payment: { paymentMethod: PaymentMethod.CASH, tendered: 0 },
+      })
+    ).rejects.toThrow(/Discount cannot exceed subtotal/);
+
+    await expect(
+      createPosSale({
+        businessId: "biz-test-1",
+        cashierId: "usr-cashier-1",
+        role: "CASHIER",
+        items: [
+          { productId: "prod-1", quantity: 1 },
+          { productId: "prod-1", quantity: 1 },
+        ],
+        payment: { paymentMethod: PaymentMethod.CASH, tendered: 70 },
+      })
+    ).rejects.toThrow(/only appear once/);
   });
 
   it("allows cashier discounts only with a current active manager membership", async () => {
@@ -281,7 +370,22 @@ describe("POS Checkout Service & Validation Engine", () => {
     await expect(createPosSale(input)).rejects.toThrow(/transaction confirmation reference is required/);
   });
 
-  it("accepts electronic payments with verified confirmation reference numbers", async () => {
+  it("rejects store credit for an anonymous customer", async () => {
+    await expect(
+      createPosSale({
+        businessId: "biz-test-1",
+        cashierId: "usr-cashier-1",
+        role: "CASHIER",
+        items: [{ productId: "prod-1", quantity: 1 }],
+        payment: {
+          paymentMethod: PaymentMethod.OTHER,
+          reference: "CREDIT NOTE",
+        },
+      })
+    ).rejects.toThrow(/cannot be issued to an anonymous/i);
+  });
+
+  it("records external payment references without claiming gateway verification", async () => {
     const input: CreatePosSaleInput = {
       businessId: "biz-test-1",
       cashierId: "usr-cashier-1",
@@ -315,9 +419,84 @@ describe("POS Checkout Service & Validation Engine", () => {
     const firstResult = await createPosSale(input);
     expect(firstResult).toBeDefined();
 
-    // Call again with the exact same idempotency key
+    const createdSale = (prisma.sale.create as any).mock.calls[0][0].data;
+    const persistedSale = {
+      ...createdSale,
+      id: firstResult.saleId,
+      saleNumber: firstResult.saleNumber,
+      createdAt: new Date(firstResult.createdAt),
+      customerName: firstResult.customerName,
+      business: firstResult.business,
+      cashier: firstResult.cashier,
+      items: firstResult.items.map((item, index) => ({
+        ...item,
+        id: `sale-item-${index}`,
+        productNameSnapshot: item.name,
+        product: { sku: item.sku },
+      })),
+      payments: [
+        {
+          paymentMethod: firstResult.payment.method,
+          amount: firstResult.payment.amount,
+          reference: firstResult.payment.reference,
+          tendered: firstResult.payment.tendered,
+          change: firstResult.payment.change,
+        },
+      ],
+    };
+    (prisma.sale.findFirst as any)
+      .mockResolvedValueOnce(null)
+      .mockResolvedValueOnce(persistedSale);
+    (prisma.$transaction as any).mockRejectedValueOnce({ code: "P2002" });
+
+    // A concurrent duplicate loses the unique-key race and returns the durable sale.
     const secondResult = await createPosSale(input);
     expect(secondResult).toEqual(firstResult);
     expect(secondResult.saleNumber).toBe(firstResult.saleNumber);
+    expect(prisma.$transaction).toHaveBeenCalledTimes(2);
+  });
+
+  it("enforces tenant isolation by rejecting products belonging to another business", async () => {
+    (prisma.product.findMany as any).mockResolvedValueOnce([]); // No products found for biz-test-1
+
+    await expect(
+      createPosSale({
+        businessId: "biz-test-1",
+        cashierId: "usr-cashier-1",
+        role: "CASHIER",
+        items: [{ productId: "prod-cross-tenant", quantity: 1 }],
+        payment: { paymentMethod: PaymentMethod.CASH, tendered: 50 },
+      })
+    ).rejects.toThrow(/do not exist in your store inventory/i);
+  });
+
+  it("rejects sales when cash tendered is less than grand total", async () => {
+    await expect(
+      createPosSale({
+        businessId: "biz-test-1",
+        cashierId: "usr-cashier-1",
+        role: "CASHIER",
+        items: [{ productId: "prod-1", quantity: 1 }], // 35 ETB
+        payment: { paymentMethod: PaymentMethod.CASH, tendered: 30 },
+      })
+    ).rejects.toThrow(/Insufficient cash tendered/i);
+  });
+
+  it("rejects duplicate checkout keys when payload hash differs", async () => {
+    (prisma.sale.findFirst as any).mockResolvedValueOnce({
+      id: "sale-existing",
+      idempotencyHash: "hash-different-123",
+    });
+
+    await expect(
+      createPosSale({
+        businessId: "biz-test-1",
+        cashierId: "usr-cashier-1",
+        role: "CASHIER",
+        items: [{ productId: "prod-1", quantity: 1 }],
+        payment: { paymentMethod: PaymentMethod.CASH, tendered: 35 },
+        idempotencyKey: "duplicate-key-diff-payload-123",
+      })
+    ).rejects.toThrow(/already used for a different sale/i);
   });
 });

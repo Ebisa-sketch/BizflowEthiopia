@@ -2,7 +2,7 @@
 
 import React, { useState, useRef, useEffect } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import useSWR from "swr";
 import { swrFetcher } from "@/lib/swr-fetcher";
 import {
@@ -28,8 +28,6 @@ interface NotificationItem {
 
 import { useLanguage } from "@/lib/i18n/language-context";
 import { LanguageSwitcher } from "./language-switcher";
-import { useInstallPrompt } from "@/components/pwa/install-context";
-import { Download } from "lucide-react";
 
 export function AppHeader({ onToggleSidebar }: AppHeaderProps) {
   const [notificationsOpen, setNotificationsOpen] = useState(false);
@@ -39,8 +37,8 @@ export function AppHeader({ onToggleSidebar }: AppHeaderProps) {
     () => new Set()
   );
   const { t } = useLanguage();
-  const { isInstallable, promptInstall } = useInstallPrompt();
   const router = useRouter();
+  const pathname = usePathname();
   const notificationRef = useRef<HTMLDivElement>(null);
   const {
     data: dashboardData,
@@ -142,19 +140,6 @@ export function AppHeader({ onToggleSidebar }: AppHeaderProps) {
       </div>
 
       <div className="flex items-center gap-3">
-        {/* Install Web App Button */}
-        {isInstallable && (
-          <button
-            type="button"
-            onClick={promptInstall}
-            className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-slate-50 hover:bg-slate-100 px-3 py-2 text-xs font-bold text-slate-700 shadow-2xs hover:border-[#0D9668]/40 transition active:scale-95"
-            title="Install BizFlow as Desktop/Mobile App"
-          >
-            <Download className="h-4 w-4 text-[#0D9668]" />
-            <span className="hidden sm:inline">Install App</span>
-          </button>
-        )}
-
         {/* Real Reactive Language Switcher */}
         <LanguageSwitcher />
 

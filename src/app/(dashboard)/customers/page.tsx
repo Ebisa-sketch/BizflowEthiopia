@@ -51,7 +51,11 @@ export default function CustomersPage() {
   // Fetch customers with SWR
   const { data, error, isLoading, mutate } = useSWR(
     `/api/customers${searchTerm ? `?search=${encodeURIComponent(searchTerm)}` : ""}`,
-    swrFetcher
+    {
+      revalidateOnFocus: false,
+      dedupingInterval: 30000,
+      keepPreviousData: true,
+    }
   );
 
   const customers: DetailedCustomer[] = data?.detailedCustomers || [];

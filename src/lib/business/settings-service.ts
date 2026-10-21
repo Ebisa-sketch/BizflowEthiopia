@@ -121,7 +121,7 @@ export async function getBusinessSettings(businessId: string, userRole: Business
     defaultPaymentMethod: extended.defaultPaymentMethod || "CASH",
     receiptFooterMessage:
       extended.receiptFooterMessage ||
-      `Thank you for shopping at ${business.name}! 🇪🇹`,
+      `Thank you for shopping at ${business.name}!`,
     autoReceiptPrint: extended.autoReceiptPrint ?? true,
     lowStockAlertEnabled: extended.lowStockAlertEnabled ?? true,
     lowStockThresholdDefault: extended.lowStockThresholdDefault ?? 5,

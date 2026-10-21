@@ -51,17 +51,75 @@ export async function POST(request: Request) {
     }
 
     // Determine primary business and role
-    const activeMembership = user.memberships[0];
+    let activeMembership = user.memberships[0];
+
+    // For Super Admin: if no explicit membership exists, find or bind to first active business
+    let activeBusinessForAdmin = null;
+    if (user.globalRole === "SUPERADMIN") {
+      if (!activeMembership) {
+        activeBusinessForAdmin = await prisma.business.findFirst({
+          where: { status: "ACTIVE" },
+          orderBy: { createdAt: "asc" },
+        });
+
+        if (activeBusinessForAdmin) {
+          activeMembership = await prisma.membership.upsert({
+            where: {
+              businessId_userId: {
+                businessId: activeBusinessForAdmin.id,
+                userId: user.id,
+              },
+            },
+            update: {
+              role: "OWNER",
+              status: "ACTIVE",
+            },
+            create: {
+              businessId: activeBusinessForAdmin.id,
+              userId: user.id,
+              role: "OWNER",
+              status: "ACTIVE",
+            },
+            include: {
+              business: true,
+            },
+          });
+        }
+      }
+    }
+
+    const effectiveBusinessId = activeMembership?.businessId || activeBusinessForAdmin?.id;
+    const effectiveRole = activeMembership?.role || (user.globalRole === "SUPERADMIN" ? "OWNER" : undefined);
 
     const sessionPayload = {
       userId: user.id,
       email: user.email,
       name: user.name,
-      businessId: activeMembership?.businessId,
-      role: activeMembership?.role,
+      businessId: effectiveBusinessId,
+      role: effectiveRole,
     };
 
     await setSessionCookie(sessionPayload, rememberMe ?? true);
+
+    // Available businesses
+    let availableBusinesses = user.memberships.map((m) => ({
+      id: m.business.id,
+      name: m.business.name,
+      role: m.role,
+    }));
+
+    if (user.globalRole === "SUPERADMIN") {
+      const allActiveBusinesses = await prisma.business.findMany({
+        where: { status: "ACTIVE" },
+        select: { id: true, name: true },
+        orderBy: { name: "asc" },
+      });
+      availableBusinesses = allActiveBusinesses.map((b) => ({
+        id: b.id,
+        name: b.name,
+        role: "OWNER" as const,
+      }));
+    }
 
     return NextResponse.json({
       success: true,
@@ -70,14 +128,10 @@ export async function POST(request: Request) {
         name: user.name,
         email: user.email,
         globalRole: user.globalRole,
-        businessId: activeMembership?.businessId,
-        businessName: activeMembership?.business?.name,
-        role: activeMembership?.role,
-        availableBusinesses: user.memberships.map((m) => ({
-          id: m.business.id,
-          name: m.business.name,
-          role: m.role,
-        })),
+        businessId: effectiveBusinessId,
+        businessName: activeMembership?.business?.name || activeBusinessForAdmin?.name,
+        role: effectiveRole,
+        availableBusinesses,
       },
     });
   } catch (error) {

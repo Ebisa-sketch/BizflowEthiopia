@@ -35,6 +35,8 @@ import {
   Phone,
   User,
   Info,
+  Keyboard,
+  QrCode,
 } from "lucide-react";
 import { formatMoney, roundMoney } from "@/lib/money";
 import {
@@ -165,6 +167,8 @@ export default function PosCheckoutPage() {
   const [heldDraftsOpen, setHeldDraftsOpen] = useState(false);
   const [checkoutModalOpen, setCheckoutModalOpen] = useState(false);
   const [completedReceipt, setCompletedReceipt] = useState<CompletedReceipt | null>(null);
+  const [shortcutsModalOpen, setShortcutsModalOpen] = useState(false);
+  const [autoPrintReceipt, setAutoPrintReceipt] = useState(false);
 
   const searchInputRef = useRef<HTMLInputElement>(null);
   const checkoutAttemptRef = useRef<{ fingerprint: string; key: string } | null>(null);
@@ -412,47 +416,165 @@ export default function PosCheckoutPage() {
     return () => window.removeEventListener("keydown", handleGlobalKeyDown);
   }, [products, addToCart, playBeepSound, showToast]);
 
+  // Pricing & Exact Decimal Calculations
+  const subtotal = roundMoney(
+    cart.reduce((sum, item) => sum + roundMoney(item.price * item.quantity), 0)
+  );
+
+  const rawDiscount =
+    discountType === "PERCENT"
+      ? roundMoney((subtotal * Math.min(100, Math.max(0, discountValue))) / 100)
+      : roundMoney(Math.max(0, discountValue));
+
+  const safeDiscount = canApplyDiscount
+    ? roundMoney(Math.min(subtotal, Math.max(0, rawDiscount)))
+    : 0;
+
+  const totals = calculatePosTotals(
+    cart.map((item) => ({ unitPrice: item.price, quantity: item.quantity })),
+    safeDiscount,
+    applyVat,
+    false // Tax-exclusive prices: VAT is calculated on taxable subtotal
+  );
+
+  const taxTotal = totals.taxTotal;
+  const grandTotal = totals.grandTotal;
+
   // Global Keyboard Shortcuts Handler
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       const target = e.target as HTMLElement | null;
-      const isEditing =
-        target?.isContentEditable ||
+      const isInput =
         (target instanceof HTMLInputElement &&
           target.type !== "button" &&
-          target.type !== "submit") ||
+          target.type !== "submit" &&
+          target.type !== "checkbox") ||
         target instanceof HTMLTextAreaElement ||
-        target instanceof HTMLSelectElement;
+        target?.isContentEditable;
 
+      // Escape closes whichever modal is open
       if (e.key === "Escape") {
-        setCheckoutModalOpen(false);
-        setClearConfirmOpen(false);
-        setHeldDraftsOpen(false);
-        setNewCustomerModalOpen(false);
-        setManagerAuthorizationModalOpen(false);
-        if (completedReceipt) setCompletedReceipt(null);
+        if (shortcutsModalOpen) {
+          setShortcutsModalOpen(false);
+          return;
+        }
+        if (completedReceipt) {
+          setCompletedReceipt(null);
+          return;
+        }
+        if (checkoutModalOpen) {
+          setCheckoutModalOpen(false);
+          return;
+        }
+        if (clearConfirmOpen) {
+          setClearConfirmOpen(false);
+          return;
+        }
+        if (heldDraftsOpen) {
+          setHeldDraftsOpen(false);
+          return;
+        }
+        if (newCustomerModalOpen) {
+          setNewCustomerModalOpen(false);
+          return;
+        }
+        if (managerAuthorizationModalOpen) {
+          setManagerAuthorizationModalOpen(false);
+          return;
+        }
         return;
       }
 
+      // F1 or ? toggles Shortcuts Guide (when not editing an input)
+      if (e.key === "F1" || (e.key === "?" && !isInput)) {
+        e.preventDefault();
+        setShortcutsModalOpen((prev) => !prev);
+        return;
+      }
+
+      // Hotkeys when Receipt Modal is active
+      if (completedReceipt) {
+        if ((e.key === "p" || e.key === "P" || (e.ctrlKey && e.key === "p")) && !isInput) {
+          e.preventDefault();
+          window.print();
+          return;
+        }
+        if ((e.key === "t" || e.key === "T") && !isInput) {
+          e.preventDefault();
+          handleDownloadReceipt();
+          return;
+        }
+        if ((e.key === " " || e.key === "Enter") && !isInput) {
+          e.preventDefault();
+          setCompletedReceipt(null);
+          return;
+        }
+        return;
+      }
+
+      // Hotkeys when Checkout Modal is active
+      if (checkoutModalOpen) {
+        // Quick payment method switch with numbers 1 - 5 when not typing in an input
+        if (!isInput) {
+          if (e.key === "1") {
+            e.preventDefault();
+            setPaymentMethod("CASH");
+            return;
+          }
+          if (e.key === "2") {
+            e.preventDefault();
+            setPaymentMethod("TELEBIRR");
+            return;
+          }
+          if (e.key === "3") {
+            e.preventDefault();
+            setPaymentMethod("CBE_BIRR");
+            return;
+          }
+          if (e.key === "4") {
+            e.preventDefault();
+            setPaymentMethod("BANK_TRANSFER");
+            return;
+          }
+          if (e.key === "5") {
+            e.preventDefault();
+            setPaymentMethod("OTHER");
+            if (!paymentRef) {
+              setPaymentRef(`IDDA: Store Credit - ${customerName}`);
+            }
+            return;
+          }
+        }
+
+        // Enter submits sale (if not in a multiline textarea)
+        if (e.key === "Enter" && !e.shiftKey) {
+          if (target instanceof HTMLTextAreaElement) return;
+          e.preventDefault();
+          void handleCompleteSale();
+          return;
+        }
+        return;
+      }
+
+      // If other secondary modals are open or cashier is typing in an input, ignore general shortcuts
       if (
-        isEditing ||
-        checkoutModalOpen ||
+        isInput ||
         clearConfirmOpen ||
         heldDraftsOpen ||
         newCustomerModalOpen ||
         managerAuthorizationModalOpen ||
-        completedReceipt
+        shortcutsModalOpen
       ) {
         return;
       }
 
-      // F2: Focus Search Box
+      // F2: Focus Search / Barcode Box
       if (e.key === "F2") {
         e.preventDefault();
         searchInputRef.current?.focus();
         searchInputRef.current?.select();
       }
-      // F4: Clear Cart
+      // F4: Clear Cart Confirmation
       else if (e.key === "F4") {
         e.preventDefault();
         if (cart.length > 0) setClearConfirmOpen(true);
@@ -479,31 +601,19 @@ export default function PosCheckoutPage() {
     heldDraftsOpen,
     newCustomerModalOpen,
     managerAuthorizationModalOpen,
-  ]);
-
-  // Pricing & Exact Decimal Calculations
-  const subtotal = roundMoney(
-    cart.reduce((sum, item) => sum + roundMoney(item.price * item.quantity), 0)
-  );
-
-  const rawDiscount =
-    discountType === "PERCENT"
-      ? roundMoney((subtotal * Math.min(100, Math.max(0, discountValue))) / 100)
-      : roundMoney(Math.max(0, discountValue));
-
-  const safeDiscount = canApplyDiscount
-    ? roundMoney(Math.min(subtotal, Math.max(0, rawDiscount)))
-    : 0;
-
-  const totals = calculatePosTotals(
-    cart.map((item) => ({ unitPrice: item.price, quantity: item.quantity })),
+    shortcutsModalOpen,
+    paymentMethod,
+    cashTendered,
+    grandTotal,
+    paymentRef,
+    customerName,
+    paymentManuallyConfirmed,
+    isSubmitting,
     safeDiscount,
     applyVat,
-    false // Tax-exclusive prices: VAT is calculated on taxable subtotal
-  );
+    managerApprovalToken,
+  ]);
 
-  const taxTotal = totals.taxTotal;
-  const grandTotal = totals.grandTotal;
 
   // Auto-sync cash tendered when modal opens or total changes
   useEffect(() => {
@@ -763,6 +873,11 @@ export default function PosCheckoutPage() {
       checkoutAttemptRef.current = null;
       setCustomerName("Walk-in Customer");
       showToast(`Sale completed: #${data.receipt.saleNumber}`);
+      if (autoPrintReceipt) {
+        setTimeout(() => {
+          window.print();
+        }, 300);
+      }
     } catch (err: any) {
       setSubmitError(err.message || "An unexpected error occurred during checkout.");
       if (err.message?.includes("Manager approval is invalid or expired")) {
@@ -895,20 +1010,22 @@ export default function PosCheckoutPage() {
               </span>
             </h1>
           </div>
-          <p className="text-xs text-slate-500 mt-1 flex items-center gap-1.5 flex-wrap">
-            <span>Shortcuts:</span>
-            <kbd className="px-1.5 py-0.5 bg-slate-100 border border-slate-300 rounded text-[10px] font-mono font-bold text-slate-700">F2</kbd> Search
-            <span>•</span>
-            <kbd className="px-1.5 py-0.5 bg-slate-100 border border-slate-300 rounded text-[10px] font-mono font-bold text-slate-700">F4</kbd> Clear
-            <span>•</span>
-            <kbd className="px-1.5 py-0.5 bg-slate-100 border border-slate-300 rounded text-[10px] font-mono font-bold text-slate-700">F8</kbd> Hold
-            <span>•</span>
-            <kbd className="px-1.5 py-0.5 bg-slate-100 border border-slate-300 rounded text-[10px] font-mono font-bold text-slate-700">F9</kbd> Pay
+          <p className="text-xs text-slate-500 mt-0.5">
+            Quick barcode scanning & cash register checkout
           </p>
         </div>
 
-        {/* Action Controls: Hold, Resume, Clear */}
+        {/* Action Controls: Shortcuts, Hold, Resume, Clear */}
         <div className="flex items-center gap-2 flex-wrap">
+          <button
+            onClick={() => setShortcutsModalOpen(true)}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-xl border border-slate-300 bg-white text-slate-700 hover:bg-slate-50 transition shadow-2xs"
+            title="Keyboard Shortcuts"
+          >
+            <Keyboard className="h-3.5 w-3.5 text-slate-500" />
+            <span className="hidden sm:inline">Shortcuts</span>
+          </button>
+
           {heldDrafts.length > 0 && (
             <button
               onClick={() => setHeldDraftsOpen(true)}
@@ -1459,9 +1576,12 @@ export default function PosCheckoutPage() {
               </span>
             </div>
 
-            {/* Payment Method Selector */}
+            {/* Payment Method Selector with 1-5 Hotkeys */}
             <div className="space-y-2">
-              <label className="text-xs font-bold text-slate-700 block">Select Payment Method</label>
+              <div className="flex items-center justify-between">
+                <label className="text-xs font-bold text-slate-700 block">Select Payment Method</label>
+                <span className="text-[10px] text-slate-400 font-mono">Press 1-5 to switch</span>
+              </div>
               <div className="grid grid-cols-2 gap-2">
                 <button
                   type="button"
@@ -1469,14 +1589,17 @@ export default function PosCheckoutPage() {
                     setPaymentMethod("CASH");
                     setPaymentManuallyConfirmed(false);
                   }}
-                  className={`p-3 rounded-xl border text-xs font-bold flex items-center gap-2 transition ${
+                  className={`p-3 rounded-xl border text-xs font-bold flex items-center justify-between transition cursor-pointer ${
                     paymentMethod === "CASH"
                       ? "border-[#0D9668] bg-[#DCEFE7]/50 text-emerald-900 ring-2 ring-[#0D9668]/20"
                       : "border-slate-200 hover:bg-slate-50 text-slate-700"
                   }`}
                 >
-                  <Banknote className="h-4 w-4 text-[#0D9668]" />
-                  <span>Cash Payment</span>
+                  <div className="flex items-center gap-2">
+                    <Banknote className="h-4 w-4 text-[#0D9668]" />
+                    <span>Cash</span>
+                  </div>
+                  <kbd className="text-[9px] px-1 py-0.5 rounded bg-slate-200/60 font-mono font-bold text-slate-600">1</kbd>
                 </button>
 
                 <button
@@ -1485,14 +1608,17 @@ export default function PosCheckoutPage() {
                     setPaymentMethod("TELEBIRR");
                     setPaymentManuallyConfirmed(false);
                   }}
-                  className={`p-3 rounded-xl border text-xs font-bold flex items-center gap-2 transition ${
+                  className={`p-3 rounded-xl border text-xs font-bold flex items-center justify-between transition cursor-pointer ${
                     paymentMethod === "TELEBIRR"
                       ? "border-blue-600 bg-blue-50 text-blue-900 ring-2 ring-blue-500/20"
                       : "border-slate-200 hover:bg-slate-50 text-slate-700"
                   }`}
                 >
-                  <Smartphone className="h-4 w-4 text-blue-600" />
-                  <span>Telebirr</span>
+                  <div className="flex items-center gap-2">
+                    <Smartphone className="h-4 w-4 text-blue-600" />
+                    <span>Telebirr</span>
+                  </div>
+                  <kbd className="text-[9px] px-1 py-0.5 rounded bg-slate-200/60 font-mono font-bold text-slate-600">2</kbd>
                 </button>
 
                 <button
@@ -1501,14 +1627,17 @@ export default function PosCheckoutPage() {
                     setPaymentMethod("CBE_BIRR");
                     setPaymentManuallyConfirmed(false);
                   }}
-                  className={`p-3 rounded-xl border text-xs font-bold flex items-center gap-2 transition ${
+                  className={`p-3 rounded-xl border text-xs font-bold flex items-center justify-between transition cursor-pointer ${
                     paymentMethod === "CBE_BIRR"
                       ? "border-purple-600 bg-purple-50 text-purple-900 ring-2 ring-purple-500/20"
                       : "border-slate-200 hover:bg-slate-50 text-slate-700"
                   }`}
                 >
-                  <CreditCard className="h-4 w-4 text-purple-600" />
-                  <span>CBE Birr</span>
+                  <div className="flex items-center gap-2">
+                    <CreditCard className="h-4 w-4 text-purple-600" />
+                    <span>CBE Birr</span>
+                  </div>
+                  <kbd className="text-[9px] px-1 py-0.5 rounded bg-slate-200/60 font-mono font-bold text-slate-600">3</kbd>
                 </button>
 
                 <button
@@ -1517,14 +1646,17 @@ export default function PosCheckoutPage() {
                     setPaymentMethod("BANK_TRANSFER");
                     setPaymentManuallyConfirmed(false);
                   }}
-                  className={`p-3 rounded-xl border text-xs font-bold flex items-center gap-2 transition ${
+                  className={`p-3 rounded-xl border text-xs font-bold flex items-center justify-between transition cursor-pointer ${
                     paymentMethod === "BANK_TRANSFER"
                       ? "border-amber-600 bg-amber-50 text-amber-900 ring-2 ring-amber-500/20"
                       : "border-slate-200 hover:bg-slate-50 text-slate-700"
                   }`}
                 >
-                  <Building className="h-4 w-4 text-amber-600" />
-                  <span>Bank Transfer</span>
+                  <div className="flex items-center gap-2">
+                    <Building className="h-4 w-4 text-amber-600" />
+                    <span>Bank Transfer</span>
+                  </div>
+                  <kbd className="text-[9px] px-1 py-0.5 rounded bg-slate-200/60 font-mono font-bold text-slate-600">4</kbd>
                 </button>
 
                 <button
@@ -1536,17 +1668,20 @@ export default function PosCheckoutPage() {
                       setPaymentRef(`IDDA: Store Credit - ${customerName}`);
                     }
                   }}
-                  className={`p-3 rounded-xl border text-xs font-bold flex items-center gap-2 transition col-span-2 ${
+                  className={`p-3 rounded-xl border text-xs font-bold flex items-center justify-between transition col-span-2 cursor-pointer ${
                     paymentMethod === "OTHER"
                       ? "border-orange-600 bg-orange-50 text-orange-950 ring-2 ring-orange-500/20"
                       : "border-slate-200 hover:bg-slate-50 text-slate-700"
                   }`}
                 >
-                  <BookOpen className="h-4 w-4 text-orange-600 shrink-0" />
-                  <div className="text-left">
-                    <span className="font-bold">Store Credit (ዕዳ / Idda)</span>
-                    <span className="block text-[10px] text-orange-700 font-normal">Customer balance ledger • Settle later</span>
+                  <div className="flex items-center gap-2 text-left">
+                    <BookOpen className="h-4 w-4 text-orange-600 shrink-0" />
+                    <div>
+                      <span className="font-bold">Store Credit (ዕዳ / Idda)</span>
+                      <span className="block text-[10px] text-orange-700 font-normal">Customer balance ledger • Settle later</span>
+                    </div>
                   </div>
+                  <kbd className="text-[9px] px-1 py-0.5 rounded bg-slate-200/60 font-mono font-bold text-slate-600">5</kbd>
                 </button>
               </div>
             </div>
@@ -1554,35 +1689,72 @@ export default function PosCheckoutPage() {
             {/* Payment Details Container */}
             {paymentMethod === "CASH" ? (
               <div className="space-y-3 bg-[#DCEFE7]/30 p-4 rounded-2xl border border-emerald-200/60">
-                <div className="flex items-center justify-between">
-                  <label className="text-xs font-bold text-slate-700">Cash Tendered (ETB)</label>
-                  <div className="flex gap-1 flex-wrap">
-                    {[0, 50, 100, 200, 500].map((extra) => (
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <label className="text-xs font-bold text-slate-700">Cash Tendered (ETB)</label>
+                    <button
+                      type="button"
+                      onClick={() => setCashTendered(grandTotal)}
+                      className="px-2 py-0.5 text-[10px] font-bold rounded-lg bg-[#0D9668] text-white hover:bg-emerald-700 shadow-2xs cursor-pointer"
+                    >
+                      Exact ({formatMoney(grandTotal)})
+                    </button>
+                  </div>
+
+                  {/* Ethiopian Birr Note Denominations Presets */}
+                  <div className="flex items-center gap-1.5 flex-wrap">
+                    <span className="text-[10px] font-bold text-slate-400 mr-0.5">Bills:</span>
+                    {[
+                      { label: "100 Br", val: Math.max(100, Math.ceil(grandTotal / 100) * 100) },
+                      { label: "200 Br", val: Math.max(200, Math.ceil(grandTotal / 200) * 200) },
+                      { label: "500 Br", val: Math.max(500, Math.ceil(grandTotal / 500) * 500) },
+                      { label: "1,000 Br", val: Math.max(1000, Math.ceil(grandTotal / 1000) * 1000) },
+                    ].map((item) => (
+                      <button
+                        key={item.label}
+                        type="button"
+                        onClick={() => setCashTendered(item.val)}
+                        className={`px-2 py-1 text-[10px] font-bold rounded-lg border transition cursor-pointer ${
+                          cashTendered === item.val
+                            ? "bg-slate-900 text-white border-slate-900"
+                            : "bg-white border-slate-200 text-slate-700 hover:bg-slate-50"
+                        }`}
+                      >
+                        {item.val} Br
+                      </button>
+                    ))}
+                  </div>
+
+                  {/* Quick Add Increment Chips */}
+                  <div className="flex items-center gap-1.5 flex-wrap pt-0.5">
+                    <span className="text-[10px] font-bold text-slate-400 mr-0.5">Add:</span>
+                    {[50, 100, 200, 500, 1000].map((extra) => (
                       <button
                         key={extra}
                         type="button"
-                        onClick={() =>
-                          setCashTendered(
-                            extra === 0 ? grandTotal : roundMoney(Math.ceil(grandTotal / 50) * 50 + extra)
-                          )
-                        }
-                        className="px-2 py-0.5 text-[10px] font-bold rounded-lg bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 shadow-2xs"
+                        onClick={() => setCashTendered((prev) => roundMoney((prev || grandTotal) + extra))}
+                        className="px-1.5 py-0.5 text-[10px] font-mono font-bold rounded-md bg-white border border-slate-200 text-slate-600 hover:bg-slate-50 shadow-2xs cursor-pointer"
                       >
-                        {extra === 0 ? "Exact" : `+${extra}`}
+                        +{extra}
                       </button>
                     ))}
                   </div>
                 </div>
 
-                <input
-                  type="number"
-                  min={grandTotal}
-                  value={cashTendered || ""}
-                  onChange={(e) => setCashTendered(Number(e.target.value) || 0)}
-                  aria-label="Cash tendered"
-                  step="0.01"
-                  className="w-full text-xl font-mono font-black rounded-xl border border-slate-300 p-2.5 text-slate-900 bg-white focus:border-[#0D9668] focus:ring-2 focus:ring-[#0D9668]/20"
-                />
+                <div className="relative">
+                  <input
+                    type="number"
+                    min={grandTotal}
+                    value={cashTendered || ""}
+                    onChange={(e) => setCashTendered(Number(e.target.value) || 0)}
+                    aria-label="Cash tendered"
+                    step="0.01"
+                    className="w-full text-xl font-mono font-black rounded-xl border border-slate-300 p-2.5 text-slate-900 bg-white focus:border-[#0D9668] focus:ring-2 focus:ring-[#0D9668]/20"
+                  />
+                  <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-400 font-mono">
+                    ETB
+                  </span>
+                </div>
 
                 {/* Change Calculation Display */}
                 <div className="flex items-center justify-between pt-2 border-t border-emerald-200/60">
@@ -1697,57 +1869,74 @@ export default function PosCheckoutPage() {
 
       {/* MODAL 2: Completed Sale Thermal Receipt Modal */}
       {completedReceipt && (
-        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl max-w-sm w-full shadow-2xl border border-slate-200 p-5 space-y-4 animate-in fade-in zoom-in-95 duration-150">
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto">
+          <div className="bg-white dark:bg-slate-900 rounded-2xl max-w-sm w-full shadow-2xl border border-slate-200 dark:border-slate-800 p-5 space-y-4 animate-in fade-in zoom-in-95 duration-150 my-auto">
             {/* Printable Thermal Receipt (80mm standard format) */}
-            <div id="pos-print-receipt" className="text-center font-mono text-xs space-y-2">
-              <div className="border-b border-dashed border-slate-300 pb-3">
+            <div id="pos-print-receipt" className="text-center font-mono text-xs space-y-2 bg-white text-black p-1">
+              <div className="border-b border-dashed border-slate-400 pb-3">
                 <span className="inline-block p-1.5 bg-[#DCEFE7] text-[#0D9668] rounded-full mb-1">
                   <Check className="h-5 w-5" />
                 </span>
-                <h2 className="text-base font-black text-slate-900 tracking-tight">
+                <div className="text-[10px] uppercase font-bold tracking-widest text-slate-500">
+                  የጥሬ ገንዘብ ሽያጭ ደረሰኝ
+                </div>
+                <div className="text-[10px] uppercase font-bold tracking-wider text-slate-500 mb-1">
+                  CASH SALES INVOICE
+                </div>
+                <h2 className="text-base font-black text-slate-900 tracking-tight uppercase">
                   {completedReceipt.business.name}
                 </h2>
                 {completedReceipt.business.address && (
-                  <p className="text-[10px] text-slate-500">{completedReceipt.business.address}</p>
+                  <p className="text-[10px] text-slate-600">{completedReceipt.business.address}</p>
                 )}
                 {completedReceipt.business.phone && (
-                  <p className="text-[10px] text-slate-500">Tel: {completedReceipt.business.phone}</p>
+                  <p className="text-[10px] text-slate-600">Tel: {completedReceipt.business.phone}</p>
                 )}
                 {completedReceipt.business.taxNumber && (
-                  <p className="text-[10px] text-slate-600 font-bold">
+                  <p className="text-[10px] text-slate-800 font-bold">
                     TIN: {completedReceipt.business.taxNumber}
                   </p>
                 )}
-                <p className="text-[11px] font-bold text-[#0D9668] mt-1">
-                  {completedReceipt.saleNumber}
-                </p>
-                <p className="text-[10px] text-slate-400">
-                  {formatPosReceiptDateTime(completedReceipt.createdAt)} EAT
-                </p>
-                <p className="text-[10px] text-slate-500">
-                  Cashier: {completedReceipt.cashier.name} • Client: {completedReceipt.customerName}
-                </p>
+                <div className="mt-1 pt-1 border-t border-dotted border-slate-300 flex items-center justify-between text-[10px]">
+                  <span className="font-bold text-[#0D9668]">#{completedReceipt.saleNumber}</span>
+                  <span className="text-slate-500">{formatPosReceiptDateTime(completedReceipt.createdAt)} EAT</span>
+                </div>
+                <div className="flex items-center justify-between text-[10px] text-slate-600 pt-0.5">
+                  <span>Cashier: {completedReceipt.cashier.name}</span>
+                  <span className="truncate max-w-[130px]">Client: {completedReceipt.customerName}</span>
+                </div>
+              </div>
+
+              {/* Items Table Headers */}
+              <div className="grid grid-cols-12 text-[10px] font-bold border-b border-slate-300 pb-1 text-slate-600 uppercase">
+                <span className="col-span-6 text-left">Item</span>
+                <span className="col-span-2 text-center">Qty</span>
+                <span className="col-span-4 text-right">Total</span>
               </div>
 
               {/* Items List */}
-              <div className="divide-y divide-slate-100 text-left max-h-48 overflow-y-auto pr-1">
+              <div className="divide-y divide-dotted divide-slate-200 text-left max-h-48 overflow-y-auto pr-1">
                 {completedReceipt.items.map((item) => (
-                  <div key={item.productId} className="py-1 flex justify-between text-[11px]">
-                    <div className="truncate pr-2">
-                      <span className="font-bold">{item.name}</span>
-                      <div className="text-[9px] text-slate-400">
-                        {item.quantity} × {item.unitPrice.toFixed(2)}
+                  <div key={item.productId} className="py-1 grid grid-cols-12 text-[11px] items-baseline">
+                    <div className="col-span-6 truncate pr-1">
+                      <span className="font-bold text-slate-900">{item.name}</span>
+                      <div className="text-[9px] text-slate-500">
+                        @{item.unitPrice.toFixed(2)}
                       </div>
                     </div>
-                    <span className="font-bold shrink-0">{item.lineTotal.toFixed(2)}</span>
+                    <div className="col-span-2 text-center text-slate-600 font-bold">
+                      {item.quantity}
+                    </div>
+                    <div className="col-span-4 text-right font-bold text-slate-900">
+                      {item.lineTotal.toFixed(2)}
+                    </div>
                   </div>
                 ))}
               </div>
 
               {/* Financial Totals */}
-              <div className="pt-2 border-t border-dashed border-slate-300 space-y-1 text-right text-[11px]">
-                <div className="flex justify-between">
+              <div className="pt-2 border-t border-dashed border-slate-400 space-y-1 text-right text-[11px]">
+                <div className="flex justify-between text-slate-600">
                   <span>Subtotal:</span>
                   <span>{formatMoney(completedReceipt.subtotal)}</span>
                 </div>
@@ -1758,19 +1947,20 @@ export default function PosCheckoutPage() {
                   </div>
                 )}
                 {completedReceipt.taxTotal > 0 && (
-                  <div className="flex justify-between">
-                    <span>VAT (15% added):</span>
+                  <div className="flex justify-between text-slate-600">
+                    <span>VAT (15%):</span>
                     <span>+{formatMoney(completedReceipt.taxTotal)}</span>
                   </div>
                 )}
-                <div className="flex justify-between text-sm font-black text-slate-900 pt-1 border-t">
-                  <span>Grand Total:</span>
+                <div className="flex justify-between text-sm font-black text-slate-900 pt-1.5 border-t border-slate-300">
+                  <span>GRAND TOTAL:</span>
                   <span>{formatMoney(completedReceipt.grandTotal)}</span>
                 </div>
 
-                <div className="pt-1 text-[10px] text-slate-600 text-left border-t border-slate-100">
-                  <div>
-                    Payment:{" "}
+                {/* Payment Breakdown */}
+                <div className="pt-1 text-[10px] text-slate-700 text-left border-t border-dotted border-slate-300 space-y-0.5">
+                  <div className="flex justify-between">
+                    <span>Payment Method:</span>
                     <span className="font-bold">
                       {completedReceipt.payment.method === "OTHER" && completedReceipt.payment.reference?.includes("IDDA")
                         ? "Store Credit (ዕዳ / Idda)"
@@ -1778,53 +1968,239 @@ export default function PosCheckoutPage() {
                     </span>
                   </div>
                   {completedReceipt.payment.reference && (
-                    <div className="text-slate-600">Ref / Note: {completedReceipt.payment.reference}</div>
-                  )}
-                  {completedReceipt.payment.method !== "CASH" &&
-                    completedReceipt.payment.method !== "OTHER" && (
-                      <div className="pt-1 font-bold text-amber-800">
-                        Reference recorded manually; not gateway-verified.
-                      </div>
-                    )}
-                  {completedReceipt.payment.method === "CASH" && (
-                    <div className="flex justify-between pt-0.5">
-                      <span>Tendered: {formatMoney(completedReceipt.payment.tendered)}</span>
-                      <span className="font-bold text-[#0D9668]">
-                        Change: {formatMoney(completedReceipt.payment.change)}
-                      </span>
+                    <div className="text-[9px] text-slate-500 truncate">
+                      Ref: {completedReceipt.payment.reference}
                     </div>
+                  )}
+                  {completedReceipt.payment.method === "CASH" && (
+                    <>
+                      <div className="flex justify-between text-slate-600">
+                        <span>Tendered:</span>
+                        <span>{formatMoney(completedReceipt.payment.tendered)}</span>
+                      </div>
+                      <div className="flex justify-between font-bold text-[#0D9668]">
+                        <span>Change:</span>
+                        <span>{formatMoney(completedReceipt.payment.change)}</span>
+                      </div>
+                    </>
                   )}
                 </div>
 
-                <p className="text-[9px] text-slate-400 text-center pt-2">
-                  *** Powered by BizFlow Ethiopia ***
-                </p>
+                {/* Simulated Barcode Strip */}
+                <div className="pt-2 flex flex-col items-center justify-center">
+                  <div className="flex items-center justify-center gap-[2px] h-7 w-48 overflow-hidden opacity-85">
+                    {[3, 1, 2, 4, 1, 3, 2, 1, 4, 2, 1, 3, 1, 2, 3, 1, 4, 1, 2, 3, 2, 1, 3, 2, 4, 1, 2].map(
+                      (w, idx) => (
+                        <span
+                          key={idx}
+                          className="bg-black inline-block h-full"
+                          style={{ width: `${w}px` }}
+                        />
+                      )
+                    )}
+                  </div>
+                  <span className="text-[9px] font-mono tracking-widest text-slate-500 mt-0.5">
+                    *{completedReceipt.saleNumber}*
+                  </span>
+                </div>
+
+                {/* Policy Footer */}
+                <div className="pt-1.5 text-center text-[9px] text-slate-500 space-y-0.5 border-t border-dotted border-slate-300">
+                  <p className="font-semibold text-slate-700">ዕቃዎች ከተሸጡ በኋላ አይመለሱም!</p>
+                  <p>Goods once sold are not returnable without receipt.</p>
+                  <p className="font-bold text-[#0D9668] pt-0.5">★ አመሰግናለሁ • Thank You! ★</p>
+                  <p className="text-[8px] text-slate-400">Powered by BizFlow Ethiopia</p>
+                </div>
               </div>
             </div>
 
-            {/* Receipt Modal Action Buttons */}
-            <div className="grid grid-cols-3 gap-2 pt-2">
-              <button
-                onClick={() => window.print()}
-                className="py-2 rounded-xl border border-slate-300 hover:bg-slate-50 font-bold text-xs text-slate-700 flex items-center justify-center gap-1 transition"
-              >
-                <Printer className="h-3.5 w-3.5" />
-                <span>Print</span>
-              </button>
+            {/* Receipt Modal Action Buttons with Hotkeys */}
+            <div className="space-y-2 pt-2 border-t border-slate-100 dark:border-slate-800">
+              <div className="grid grid-cols-3 gap-2">
+                <button
+                  type="button"
+                  onClick={() => window.print()}
+                  className="py-2.5 rounded-xl bg-[#0D9668] hover:bg-emerald-700 font-bold text-xs text-white flex flex-col items-center justify-center gap-0.5 transition shadow-xs cursor-pointer"
+                  title="Print Thermal Receipt (Press Enter or P)"
+                >
+                  <div className="flex items-center gap-1.5">
+                    <Printer className="h-3.5 w-3.5" />
+                    <span>Print</span>
+                  </div>
+                  <span className="text-[9px] opacity-80 font-mono">Enter / P</span>
+                </button>
 
-              <button
-                onClick={handleDownloadReceipt}
-                className="py-2 rounded-xl border border-slate-300 hover:bg-slate-50 font-bold text-xs text-slate-700 flex items-center justify-center gap-1 transition"
-              >
-                <Download className="h-3.5 w-3.5" />
-                <span>Text</span>
-              </button>
+                <button
+                  type="button"
+                  onClick={handleDownloadReceipt}
+                  className="py-2.5 rounded-xl border border-slate-300 hover:bg-slate-50 font-bold text-xs text-slate-700 flex flex-col items-center justify-center gap-0.5 transition cursor-pointer"
+                  title="Download receipt text file (Press T)"
+                >
+                  <div className="flex items-center gap-1.5">
+                    <Download className="h-3.5 w-3.5" />
+                    <span>Save Text</span>
+                  </div>
+                  <span className="text-[9px] text-slate-400 font-mono">T</span>
+                </button>
 
+                <button
+                  type="button"
+                  onClick={() => setCompletedReceipt(null)}
+                  className="py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 font-bold text-xs text-white flex flex-col items-center justify-center gap-0.5 transition cursor-pointer"
+                  title="Close receipt and start next sale (Press Space or Esc)"
+                >
+                  <div className="flex items-center gap-1.5">
+                    <CheckCircle2 className="h-3.5 w-3.5" />
+                    <span>Next Sale</span>
+                  </div>
+                  <span className="text-[9px] opacity-80 font-mono">Space</span>
+                </button>
+              </div>
+
+              {/* Auto-print next time toggle */}
+              <label className="flex items-center justify-center gap-2 text-[11px] text-slate-600 dark:text-slate-400 cursor-pointer pt-1 select-none">
+                <input
+                  type="checkbox"
+                  checked={autoPrintReceipt}
+                  onChange={(e) => setAutoPrintReceipt(e.target.checked)}
+                  className="rounded text-[#0D9668] focus:ring-[#0D9668]"
+                />
+                <span>Automatically trigger print dialog on future sales</span>
+              </label>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL: POS Keyboard Shortcuts Cheat Sheet (F1 or ?) */}
+      {shortcutsModalOpen && (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white dark:bg-slate-900 rounded-2xl max-w-lg w-full shadow-2xl border border-slate-200 dark:border-slate-800 p-6 space-y-5 animate-in fade-in zoom-in-95 duration-150">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800">
+              <div className="flex items-center gap-2.5">
+                <div className="h-9 w-9 rounded-xl bg-[#DCEFE7] text-[#0D9668] flex items-center justify-center">
+                  <Keyboard className="h-5 w-5" />
+                </div>
+                <div>
+                  <h3 className="font-bold text-slate-900 dark:text-slate-100 text-base">
+                    POS Keyboard Shortcuts
+                  </h3>
+                  <p className="text-xs text-slate-500">
+                    High-speed hotkeys designed for retail cashiers
+                  </p>
+                </div>
+              </div>
               <button
-                onClick={() => setCompletedReceipt(null)}
-                className="py-2 rounded-xl bg-[#0F172A] hover:bg-slate-800 font-bold text-xs text-white transition"
+                type="button"
+                onClick={() => setShortcutsModalOpen(false)}
+                className="p-1.5 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-400 hover:text-slate-600 transition cursor-pointer"
               >
-                New Sale
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
+              {/* Category 1: Navigation & Scanning */}
+              <div className="space-y-2 bg-slate-50 dark:bg-slate-800/50 p-3.5 rounded-xl border border-slate-100 dark:border-slate-800">
+                <h4 className="font-bold text-[11px] uppercase tracking-wider text-slate-500">
+                  Cart & Navigation
+                </h4>
+                <div className="space-y-1.5">
+                  <div className="flex items-center justify-between">
+                    <span className="text-slate-600 dark:text-slate-400">Search / Barcode</span>
+                    <kbd className="px-1.5 py-0.5 rounded bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 font-mono font-bold">F2</kbd>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-slate-600 dark:text-slate-400">Clear Cart</span>
+                    <kbd className="px-1.5 py-0.5 rounded bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 font-mono font-bold">F4</kbd>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-slate-600 dark:text-slate-400">Hold Sale (Draft)</span>
+                    <kbd className="px-1.5 py-0.5 rounded bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 font-mono font-bold">F8</kbd>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-slate-600 dark:text-slate-400">Open Payment</span>
+                    <kbd className="px-1.5 py-0.5 rounded bg-[#0D9668] text-white border border-[#0D9668] font-mono font-bold">F9</kbd>
+                  </div>
+                </div>
+              </div>
+
+              {/* Category 2: Checkout Payment Switcher */}
+              <div className="space-y-2 bg-slate-50 dark:bg-slate-800/50 p-3.5 rounded-xl border border-slate-100 dark:border-slate-800">
+                <h4 className="font-bold text-[11px] uppercase tracking-wider text-slate-500">
+                  In Payment Modal
+                </h4>
+                <div className="space-y-1.5">
+                  <div className="flex items-center justify-between">
+                    <span className="text-slate-600 dark:text-slate-400">Cash</span>
+                    <kbd className="px-1.5 py-0.5 rounded bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 font-mono font-bold">1</kbd>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-slate-600 dark:text-slate-400">Telebirr</span>
+                    <kbd className="px-1.5 py-0.5 rounded bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 font-mono font-bold">2</kbd>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-slate-600 dark:text-slate-400">CBE Birr</span>
+                    <kbd className="px-1.5 py-0.5 rounded bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 font-mono font-bold">3</kbd>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-slate-600 dark:text-slate-400">Bank Transfer</span>
+                    <kbd className="px-1.5 py-0.5 rounded bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 font-mono font-bold">4</kbd>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-slate-600 dark:text-slate-400">Store Credit (Idda)</span>
+                    <kbd className="px-1.5 py-0.5 rounded bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 font-mono font-bold">5</kbd>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-slate-600 dark:text-slate-400">Submit Sale</span>
+                    <kbd className="px-1.5 py-0.5 rounded bg-[#0D9668] text-white font-mono font-bold">Enter</kbd>
+                  </div>
+                </div>
+              </div>
+
+              {/* Category 3: Hardware Barcode Scanners */}
+              <div className="space-y-2 bg-slate-50 dark:bg-slate-800/50 p-3.5 rounded-xl border border-slate-100 dark:border-slate-800">
+                <h4 className="font-bold text-[11px] uppercase tracking-wider text-slate-500">
+                  Barcode Scanners
+                </h4>
+                <p className="text-[11px] text-slate-500 leading-relaxed">
+                  USB & Bluetooth barcode wedges work automatically anywhere on this page without needing to focus the search box.
+                </p>
+                <div className="pt-1 flex items-center gap-2 text-[11px] text-[#0D9668] font-bold">
+                  <Check className="h-3.5 w-3.5" />
+                  <span>Hardware Wedge & Audio Beep Active</span>
+                </div>
+              </div>
+
+              {/* Category 4: Receipt Modal Actions */}
+              <div className="space-y-2 bg-slate-50 dark:bg-slate-800/50 p-3.5 rounded-xl border border-slate-100 dark:border-slate-800">
+                <h4 className="font-bold text-[11px] uppercase tracking-wider text-slate-500">
+                  Thermal Receipt Screen
+                </h4>
+                <div className="space-y-1.5">
+                  <div className="flex items-center justify-between">
+                    <span className="text-slate-600 dark:text-slate-400">Print Receipt</span>
+                    <kbd className="px-1.5 py-0.5 rounded bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 font-mono font-bold">Enter / P</kbd>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-slate-600 dark:text-slate-400">Download Text Invoice</span>
+                    <kbd className="px-1.5 py-0.5 rounded bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 font-mono font-bold">T</kbd>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-slate-600 dark:text-slate-400">Next Customer / Dismiss</span>
+                    <kbd className="px-1.5 py-0.5 rounded bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 font-mono font-bold">Space / Esc</kbd>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="pt-2 flex justify-end">
+              <button
+                type="button"
+                onClick={() => setShortcutsModalOpen(false)}
+                className="px-4 py-2 rounded-xl bg-slate-900 text-white text-xs font-bold hover:bg-slate-800 transition cursor-pointer"
+              >
+                Close (Esc)
               </button>
             </div>
           </div>

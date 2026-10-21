@@ -13,10 +13,19 @@ export class AppError extends Error {
 export function handleApiError(error: unknown) {
   console.error("API Error encountered:", error);
 
-  if (error instanceof AppError) {
+  const isAppErrorLike =
+    error instanceof AppError ||
+    (typeof error === "object" &&
+      error !== null &&
+      "statusCode" in error &&
+      typeof (error as { statusCode: unknown }).statusCode === "number");
+
+  if (isAppErrorLike) {
+    const errObj = error as { statusCode: number; message?: string };
+    const statusCode = errObj.statusCode || 400;
     return NextResponse.json(
-      { success: false, error: error.message },
-      { status: error.statusCode }
+      { success: false, error: errObj.message || "An application error occurred." },
+      { status: statusCode }
     );
   }
 

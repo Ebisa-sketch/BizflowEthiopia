@@ -17,6 +17,7 @@ export function formatEatTime(value: string | Date) {
 export interface DashboardSale {
   createdAt: Date;
   grandTotal: number | string | { toNumber(): number; toString(): string };
+  profit?: number;
 }
 
 export function getEatDateBoundaries(range: DashboardRange, now = new Date()) {
@@ -31,10 +32,52 @@ export function getEatDateBoundaries(range: DashboardRange, now = new Date()) {
       ? Date.UTC(eatNow.getUTCFullYear(), eatNow.getUTCMonth(), 1)
       : currentDay - (range === "today" ? 0 : range === "7d" ? 6 : 29) * DAY_MS;
 
+  let prevStartDay: number;
+  let prevEndDay: number;
+
+  if (range === "today") {
+    prevStartDay = currentDay - DAY_MS;
+    prevEndDay = currentDay;
+  } else if (range === "7d") {
+    prevStartDay = startDay - 7 * DAY_MS;
+    prevEndDay = startDay;
+  } else if (range === "30d") {
+    prevStartDay = startDay - 30 * DAY_MS;
+    prevEndDay = startDay;
+  } else {
+    // month
+    prevStartDay = Date.UTC(eatNow.getUTCFullYear(), eatNow.getUTCMonth() - 1, 1);
+    prevEndDay = startDay;
+  }
+
   return {
     startDate: new Date(startDay - EAT_OFFSET_MS),
+    previousStartDate: new Date(prevStartDay - EAT_OFFSET_MS),
+    previousEndDate: new Date(prevEndDay - EAT_OFFSET_MS),
     eatNow,
   };
+}
+
+export function calculateMetricChange(current: number, previous: number): {
+  changePercent: number;
+  text: string;
+  direction: "up" | "down" | "neutral";
+} {
+  if (previous === 0) {
+    if (current === 0) {
+      return { changePercent: 0, text: "0%", direction: "neutral" };
+    }
+    return { changePercent: 100, text: "+100%", direction: "up" };
+  }
+  const diff = current - previous;
+  const pct = Math.round((diff / previous) * 100);
+  if (pct > 0) {
+    return { changePercent: pct, text: `+${pct}%`, direction: "up" };
+  }
+  if (pct < 0) {
+    return { changePercent: pct, text: `${pct}%`, direction: "down" };
+  }
+  return { changePercent: 0, text: "0%", direction: "neutral" };
 }
 
 function eatDayNumber(date: Date) {
@@ -46,8 +89,17 @@ function eatDayNumber(date: Date) {
 }
 
 function sumSales(sales: DashboardSale[]) {
+  const amount = roundMoney(sales.reduce((sum, sale) => sum + Number(sale.grandTotal), 0));
+  const profit = roundMoney(
+    sales.reduce(
+      (sum, sale) =>
+        sum + (sale.profit !== undefined ? Number(sale.profit) : Number(sale.grandTotal) * 0.35),
+      0
+    )
+  );
   return {
-    amount: roundMoney(sales.reduce((sum, sale) => sum + Number(sale.grandTotal), 0)),
+    amount,
+    profit,
     sales: sales.length,
   };
 }

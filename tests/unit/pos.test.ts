@@ -12,8 +12,7 @@ vi.mock("@/lib/db/prisma", () => {
   const mockFindUniqueProduct = vi.fn();
   const mockUpdateProduct = vi.fn();
   const mockUpdateManyProduct = vi.fn();
-  const mockCreateSale = vi.fn();
-  const mockFindFirstSale = vi.fn();
+  const mockCreateSale = vi.fn();  const mockFindFirstSale = vi.fn();
   const mockCreateSaleItem = vi.fn();
   const mockCreateStockMovement = vi.fn();
   const mockCreatePayment = vi.fn();

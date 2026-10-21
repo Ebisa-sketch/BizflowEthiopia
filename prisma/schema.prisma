@@ -82,14 +82,30 @@ model User {
   createdAt     DateTime   @default(now())
   updatedAt     DateTime   @updatedAt
 
-  memberships    Membership[]
-  stockMovements StockMovement[]
-  sales          Sale[]
-  payments       Payment[]
-  expenses       Expense[]
-  auditLogs      AuditLog[]
+  memberships         Membership[]
+  stockMovements      StockMovement[]
+  sales               Sale[]
+  payments            Payment[]
+  expenses            Expense[]
+  auditLogs           AuditLog[]
+  passwordResetTokens PasswordResetToken[]
 
   @@map("users")
+}
+
+model PasswordResetToken {
+  id        String    @id @default(uuid())
+  userId    String
+  tokenHash String    @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([tokenHash])
+  @@map("password_reset_tokens")
 }
 
 model Business {

@@ -20,14 +20,16 @@ export default function DashboardLayout({
       value={{
         fetcher: swrFetcher,
         revalidateOnFocus: false,
-        revalidateIfStale: true,
-        dedupingInterval: 30000,
+        revalidateIfStale: false,
+        revalidateOnReconnect: false,
+        keepPreviousData: true,
+        dedupingInterval: 60000,
       }}
     >
       {/* Top loading progress bar */}
       <NavigationProgress />
 
-      <div className="flex min-h-screen bg-slate-50">
+      <div className="flex min-h-screen bg-slate-50 dark:bg-[#070e17] transition-colors">
         {/* Sidebar (Permanent on Desktop, Drawer on Mobile/Tablet) */}
         <AppSidebar
           isOpen={mobileSidebarOpen}
@@ -40,13 +42,13 @@ export default function DashboardLayout({
           <main className="flex-1 p-4 md:p-6 lg:p-8 max-w-7xl mx-auto w-full">
             <Suspense fallback={
               <div className="space-y-6 animate-in fade-in-0 duration-300">
-                <div className="h-7 w-48 rounded-lg bg-slate-200/70 animate-pulse" />
+                <div className="h-7 w-48 rounded-lg bg-slate-200/70 dark:bg-slate-800 animate-pulse" />
                 <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
                   {Array.from({ length: 4 }).map((_, i) => (
-                    <div key={i} className="h-24 rounded-2xl border border-slate-200/80 bg-white animate-pulse" />
+                    <div key={i} className="h-24 rounded-2xl border border-slate-200/80 dark:border-slate-800 bg-white dark:bg-slate-900 animate-pulse" />
                   ))}
                 </div>
-                <div className="h-64 rounded-2xl border border-slate-200/80 bg-white animate-pulse" />
+                <div className="h-64 rounded-2xl border border-slate-200/80 dark:border-slate-800 bg-white dark:bg-slate-900 animate-pulse" />
               </div>
             }>
               {children}

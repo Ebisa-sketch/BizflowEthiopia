@@ -112,7 +112,17 @@ self.addEventListener('fetch', (event) => {
   }
 
   // 5. Default: Network with graceful fail
-  event.respondWith(fetch(request));
+  event.respondWith(
+    fetch(request).catch(() => {
+      if (request.mode === 'navigate') {
+        return caches.match(OFFLINE_FALLBACK_URL);
+      }
+      return new Response(JSON.stringify({ error: "Network error" }), {
+        status: 503,
+        headers: { "Content-Type": "application/json" },
+      });
+    })
+  );
 });
 
 self.addEventListener('message', (event) => {

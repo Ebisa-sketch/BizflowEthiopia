@@ -23,7 +23,63 @@ export async function POST(request: Request) {
 
     const { businessId } = parsed.data;
 
-    // Verify membership
+    // Check user role
+    const user = await prisma.user.findUnique({
+      where: { id: session.userId },
+      select: { id: true, globalRole: true, email: true, name: true },
+    });
+
+    if (user?.globalRole === "SUPERADMIN") {
+      const business = await prisma.business.findUnique({
+        where: { id: businessId },
+      });
+
+      if (!business || business.status !== "ACTIVE") {
+        throw new AppError("Target business not found or is suspended.", 404);
+      }
+
+      const adminMembership = await prisma.membership.upsert({
+        where: {
+          businessId_userId: {
+            businessId: business.id,
+            userId: user.id,
+          },
+        },
+        update: {
+          role: "OWNER",
+          status: "ACTIVE",
+        },
+        create: {
+          businessId: business.id,
+          userId: user.id,
+          role: "OWNER",
+          status: "ACTIVE",
+        },
+        include: {
+          business: true,
+        },
+      });
+
+      await setSessionCookie({
+        userId: user.id,
+        email: user.email,
+        name: user.name,
+        businessId: business.id,
+        role: "OWNER",
+      });
+
+      return NextResponse.json({
+        success: true,
+        activeBusiness: {
+          id: adminMembership.business.id,
+          name: adminMembership.business.name,
+          role: adminMembership.role,
+          currency: adminMembership.business.currency,
+        },
+      });
+    }
+
+    // Verify membership for regular staff
     const membership = await prisma.membership.findUnique({
       where: {
         businessId_userId: {

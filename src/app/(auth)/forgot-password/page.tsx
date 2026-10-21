@@ -20,6 +20,7 @@ export default function ForgotPasswordPage() {
   const [email, setEmail] = useState("");
   const [loading, setLoading] = useState(false);
   const [submitted, setSubmitted] = useState(false);
+  const [resetUrl, setResetUrl] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState("");
   const [fieldError, setFieldError] = useState("");
 
@@ -56,6 +57,9 @@ export default function ForgotPasswordPage() {
         throw new Error(data.error || "Failed to submit recovery request");
       }
 
+      if (data.resetUrl) {
+        setResetUrl(data.resetUrl);
+      }
       setSubmitted(true);
     } catch (err: any) {
       setErrorMessage(err.message || "Failed to send reset instructions");
@@ -153,6 +157,26 @@ export default function ForgotPasswordPage() {
               <p className="text-sm text-slate-600 leading-relaxed">
                 If an active BizFlow account exists for <strong className="text-slate-800">{email}</strong>, a password reset link has been dispatched. Please review your spam or promotions folder if it doesn’t arrive within 3 minutes.
               </p>
+
+              {resetUrl && (
+                <div className="p-3.5 rounded-xl bg-emerald-50 border border-emerald-200 space-y-2">
+                  <div className="flex items-center gap-2 text-xs font-bold text-emerald-800">
+                    <Sparkles className="h-4 w-4 text-emerald-600" />
+                    <span>Instant Recovery Link</span>
+                  </div>
+                  <p className="text-xs text-emerald-700 leading-relaxed">
+                    A secure recovery link has been created for testing. You can proceed directly to choose a new password:
+                  </p>
+                  <Link
+                    href={resetUrl}
+                    className="inline-flex items-center justify-center gap-1.5 w-full py-2 px-3 rounded-lg text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-700 transition"
+                  >
+                    <span>Open Password Reset Page</span>
+                    <ArrowRight className="h-3.5 w-3.5" />
+                  </Link>
+                </div>
+              )}
+
               <div className="pt-2">
                 <Link
                   href="/login"

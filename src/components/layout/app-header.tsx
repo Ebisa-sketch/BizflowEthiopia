@@ -2,17 +2,21 @@
 
 import React, { useState, useRef, useEffect } from "react";
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
+import { useRouter } from "next/navigation";
 import useSWR from "swr";
 import { swrFetcher } from "@/lib/swr-fetcher";
 import {
   Bell,
   Search,
-  ShoppingCart,
   Menu,
   AlertTriangle,
   ExternalLink,
+  Moon,
+  Sun,
 } from "lucide-react";
+import { useLanguage } from "@/lib/i18n/language-context";
+import { useTheme } from "@/lib/theme-context";
+import { LanguageSwitcher } from "./language-switcher";
 
 interface AppHeaderProps {
   onToggleSidebar?: () => void;
@@ -26,20 +30,33 @@ interface NotificationItem {
   unread: boolean;
 }
 
-import { useLanguage } from "@/lib/i18n/language-context";
-import { LanguageSwitcher } from "./language-switcher";
-
 export function AppHeader({ onToggleSidebar }: AppHeaderProps) {
   const [notificationsOpen, setNotificationsOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
-  const [searchScope, setSearchScope] = useState<"products" | "sales" | "customers">("products");
   const [dismissedNotificationIds, setDismissedNotificationIds] = useState<Set<string>>(
     () => new Set()
   );
   const { t } = useLanguage();
+  const { isDark, toggleTheme } = useTheme();
   const router = useRouter();
-  const pathname = usePathname();
   const notificationRef = useRef<HTMLDivElement>(null);
+  const searchInputRef = useRef<HTMLInputElement>(null);
+
+  const { data: sessionData } = useSWR("/api/auth/me", swrFetcher);
+  const user = sessionData?.user;
+  const userName = user?.name || user?.email?.split("@")[0] || "Account";
+  const nameParts = userName.split(" ");
+  const initials =
+    nameParts
+      .filter(Boolean)
+      .map((n: string) => n[0].toUpperCase())
+      .join("")
+      .slice(0, 2) || userName.slice(0, 2).toUpperCase() || "AC";
+  const businessName = user?.businessName || "My Business";
+  const role = user?.role
+    ? user.role.charAt(0).toUpperCase() + user.role.slice(1).toLowerCase()
+    : "Staff";
+
   const {
     data: dashboardData,
     error: notificationError,
@@ -48,6 +65,7 @@ export function AppHeader({ onToggleSidebar }: AppHeaderProps) {
     revalidateOnFocus: false,
     dedupingInterval: 30000,
   });
+
   const notifications: NotificationItem[] = (dashboardData?.lowStockItems || []).map(
     (item: { id: string; name: string; stock: number; reorderLevel: number; isOut: boolean }) => ({
       id: item.id,
@@ -59,6 +77,18 @@ export function AppHeader({ onToggleSidebar }: AppHeaderProps) {
   );
 
   const unreadCount = notifications.filter((notification) => notification.unread).length;
+
+  // Global Ctrl + K listener
+  useEffect(() => {
+    function handleKeyDown(event: KeyboardEvent) {
+      if ((event.ctrlKey || event.metaKey) && event.key === "k") {
+        event.preventDefault();
+        searchInputRef.current?.focus();
+      }
+    }
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, []);
 
   // Close notifications on outside click
   useEffect(() => {
@@ -87,96 +117,85 @@ export function AppHeader({ onToggleSidebar }: AppHeaderProps) {
     const query = searchTerm.trim();
     if (!query) return;
 
-    router.push(`/${searchScope}?search=${encodeURIComponent(query)}`);
+    router.push(`/products?search=${encodeURIComponent(query)}`);
   };
 
   return (
-    <header className="sticky top-0 z-30 flex h-16 w-full items-center justify-between border-b border-slate-200 bg-white/95 px-4 md:px-6 backdrop-blur">
-      <div className="flex items-center gap-3">
+    <header className="sticky top-0 z-30 flex h-16 w-full items-center justify-between border-b border-slate-200/90 dark:border-slate-800 bg-white/95 dark:bg-[#071924]/95 px-4 md:px-6 backdrop-blur transition-colors">
+      <div className="flex items-center gap-3 flex-1 max-w-xl">
         {/* Mobile/Tablet Menu Button to open sidebar drawer */}
         {onToggleSidebar && (
           <button
             onClick={onToggleSidebar}
-            className="md:hidden p-2 rounded-xl text-slate-600 hover:bg-slate-100 transition"
+            className="md:hidden p-2 rounded-xl text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition"
             aria-label="Open sidebar menu"
           >
             <Menu className="h-5 w-5" />
           </button>
         )}
 
-        {/* Global Search */}
-        <form onSubmit={submitSearch} className="relative hidden sm:flex w-72 lg:w-[30rem]">
-          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+        {/* Global Search with Ctrl + K */}
+        <form onSubmit={submitSearch} className="relative hidden sm:flex w-full">
+          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 dark:text-slate-500" />
           <input
+            ref={searchInputRef}
             type="search"
             value={searchTerm}
             onChange={(event) => setSearchTerm(event.target.value)}
             placeholder={t("header.searchPlaceholder", "Search products, invoices, customers...")}
             aria-label="Search dashboard records"
-            className="min-w-0 flex-1 rounded-l-xl border border-r-0 border-slate-200 bg-slate-50 pl-10 pr-3 py-2 text-xs text-slate-900 placeholder-slate-400 focus:border-[#0D9668] focus:bg-white focus:outline-none focus:ring-1 focus:ring-[#0D9668] transition"
+            className="w-full rounded-xl border border-slate-200/90 dark:border-slate-700/80 bg-slate-50/70 dark:bg-slate-800/60 pl-10 pr-20 py-2 text-xs text-slate-900 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500 focus:border-[#0D9668] focus:bg-white dark:focus:bg-slate-800 focus:outline-none focus:ring-1 focus:ring-[#0D9668] transition"
           />
-          <select
-            value={searchScope}
-            onChange={(event) => {
-              const scope = event.target.value;
-              if (scope === "products" || scope === "sales" || scope === "customers") {
-                setSearchScope(scope);
-              }
-            }}
-            aria-label="Search category"
-            className="border-y border-slate-200 bg-slate-50 px-2 text-xs text-slate-600 focus:outline-none"
-          >
-            <option value="products">Products</option>
-            <option value="sales">Sales</option>
-            <option value="customers">Customers</option>
-          </select>
-          <button
-            type="submit"
-            className="rounded-r-xl border border-slate-200 bg-white px-3 text-xs font-semibold text-slate-700 hover:bg-slate-100"
-          >
-            Search
-          </button>
+          <kbd className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] font-sans text-slate-400 dark:text-slate-500 border border-slate-200/80 dark:border-slate-700 rounded px-1.5 py-0.5 bg-white dark:bg-slate-800 shadow-2xs">
+            Ctrl + K
+          </kbd>
         </form>
       </div>
 
-      <div className="flex items-center gap-3">
-        {/* Real Reactive Language Switcher */}
+      <div className="flex items-center gap-2.5 sm:gap-3">
+        {/* Language Switcher */}
         <LanguageSwitcher />
 
-        {/* Quick Launch POS Terminal */}
-        <Link
-          href="/sales/new"
-          className="inline-flex items-center gap-2 rounded-xl bg-[#0D9668] hover:bg-[#097852] px-3.5 py-2 text-xs font-bold text-white shadow-xs shadow-[#0D9668]/30 transition"
+        {/* Dark Mode Icon */}
+        <button
+          type="button"
+          onClick={toggleTheme}
+          className="p-2 text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-amber-300 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition cursor-pointer"
+          title={isDark ? "Switch to Light Mode" : "Switch to Dark Mode"}
+          aria-label={isDark ? "Switch to Light Mode" : "Switch to Dark Mode"}
         >
-          <ShoppingCart className="h-4 w-4" />
-          <span className="hidden sm:inline">{t("header.newSale", "New Sale (POS)")}</span>
-          <span className="sm:hidden">POS</span>
-        </Link>
+          {isDark ? (
+            <Sun className="h-4 w-4 text-amber-400" />
+          ) : (
+            <Moon className="h-4 w-4" />
+          )}
+        </button>
 
-        {/* Notification Bell & Interactive Panel */}
+        {/* Notification Bell with Badge */}
         <div className="relative" ref={notificationRef}>
           <button
             type="button"
             onClick={() => setNotificationsOpen(!notificationsOpen)}
-            className="relative rounded-xl p-2.5 text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition"
+            className="relative rounded-xl p-2 text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-slate-200 transition cursor-pointer"
             aria-label="View notifications"
             aria-expanded={notificationsOpen}
           >
-            <Bell className="h-5 w-5" />
+            <Bell className="h-4 w-4" />
             {unreadCount > 0 && (
-              <span className="absolute top-2 right-2 flex h-2 w-2">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
-                <span className="relative inline-flex rounded-full h-2 w-2 bg-amber-500"></span>
+              <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-[10px] font-bold text-white shadow-xs">
+                {unreadCount > 9 ? "9+" : unreadCount}
               </span>
             )}
           </button>
 
           {/* Interactive Notifications Flyout */}
           {notificationsOpen && (
-            <div className="absolute right-0 mt-2 w-80 sm:w-96 rounded-2xl bg-white shadow-2xl border border-slate-200/90 py-3 z-50 animate-in fade-in zoom-in-95 duration-150">
+            <div className="absolute right-0 mt-2 w-80 sm:w-96 rounded-2xl bg-white dark:bg-slate-850 shadow-2xl border border-slate-200/90 dark:border-slate-700 py-3 z-50 animate-in fade-in zoom-in-95 duration-150">
               <div className="flex items-center justify-between px-4 pb-3 border-b border-slate-100">
                 <div className="flex items-center gap-2">
-                  <h3 className="font-bold text-slate-900 text-sm">{t("header.notifications", "Notifications")}</h3>
+                  <h3 className="font-bold text-slate-900 text-sm">
+                    {t("header.notifications", "Notifications")}
+                  </h3>
                   {unreadCount > 0 && (
                     <span className="text-[10px] font-bold bg-[#DCEFE7] text-[#0D9668] px-2 py-0.5 rounded-full">
                       {unreadCount} {t("header.unread", "new")}
@@ -219,24 +238,15 @@ export function AppHeader({ onToggleSidebar }: AppHeaderProps) {
                       }`}
                     >
                       <div className="shrink-0 mt-0.5">
-                        {n.type === "STOCK_CRITICAL" && (
-                          <div className="h-8 w-8 rounded-lg bg-orange-100 text-orange-700 flex items-center justify-center">
-                            <AlertTriangle className="h-4 w-4" />
-                          </div>
-                        )}
-                        {n.type === "STOCK_WARNING" && (
-                          <div className="h-8 w-8 rounded-lg bg-amber-100 text-amber-700 flex items-center justify-center">
-                            <AlertTriangle className="h-4 w-4" />
-                          </div>
-                        )}
+                        <div className="h-8 w-8 rounded-lg bg-amber-100 text-amber-700 flex items-center justify-center">
+                          <AlertTriangle className="h-4 w-4" />
+                        </div>
                       </div>
 
                       <div className="flex-1 min-w-0">
-                        <div className="flex items-center justify-between gap-1">
-                          <h4 className="text-xs font-bold text-slate-900 truncate">
-                            {n.title}
-                          </h4>
-                        </div>
+                        <h4 className="text-xs font-bold text-slate-900 truncate">
+                          {n.title}
+                        </h4>
                         <p className="text-xs text-slate-600 mt-0.5 line-clamp-2">
                           {n.message}
                         </p>
@@ -259,6 +269,25 @@ export function AppHeader({ onToggleSidebar }: AppHeaderProps) {
             </div>
           )}
         </div>
+
+        {/* User Profile Info Pill */}
+        <Link
+          href="/profile"
+          className="flex items-center gap-2.5 pl-2 py-1 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-800/60 transition border-l border-slate-200 dark:border-slate-800"
+          title="Account profile"
+        >
+          <div className="h-8 w-8 rounded-full bg-[#101827] dark:bg-emerald-600 flex items-center justify-center font-bold text-white text-xs shrink-0 shadow-2xs">
+            {initials}
+          </div>
+          <div className="hidden sm:block text-left">
+            <p className="text-xs font-bold text-slate-900 dark:text-slate-100 leading-tight truncate max-w-[120px]">
+              {userName}
+            </p>
+            <p className="text-[10px] text-slate-500 dark:text-slate-400 truncate max-w-[120px]">
+              {role} • {businessName}
+            </p>
+          </div>
+        </Link>
       </div>
     </header>
   );

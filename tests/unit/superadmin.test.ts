@@ -1,9 +1,11 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { signToken } from "@/lib/auth";
 
-const { cookiesMock, findUniqueMock } = vi.hoisted(() => ({
+const { cookiesMock, findUniqueMock, findFirstBusinessMock, upsertMembershipMock } = vi.hoisted(() => ({
   cookiesMock: vi.fn(),
   findUniqueMock: vi.fn(),
+  findFirstBusinessMock: vi.fn(),
+  upsertMembershipMock: vi.fn(),
 }));
 
 vi.mock("next/headers", () => ({
@@ -15,10 +17,19 @@ vi.mock("@/lib/db/prisma", () => ({
     user: {
       findUnique: findUniqueMock,
     },
+    business: {
+      findFirst: findFirstBusinessMock,
+      findUnique: vi.fn(),
+    },
+    membership: {
+      findUnique: vi.fn().mockResolvedValue(null),
+      findFirst: vi.fn().mockResolvedValue(null),
+      upsert: upsertMembershipMock,
+    },
   },
 }));
 
-import { requireSuperAdmin } from "@/lib/auth/session";
+import { requireSuperAdmin, requireTenant } from "@/lib/auth/session";
 
 describe("Platform administrator authorization", () => {
   const sessionToken = signToken({
@@ -31,6 +42,7 @@ describe("Platform administrator authorization", () => {
     vi.clearAllMocks();
     cookiesMock.mockResolvedValue({
       get: () => ({ value: sessionToken }),
+      set: vi.fn(),
     });
     findUniqueMock.mockResolvedValue({
       id: "user-1",
@@ -71,5 +83,34 @@ describe("Platform administrator authorization", () => {
 
     await expect(requireSuperAdmin()).rejects.toThrow(/authentication required/i);
     expect(findUniqueMock).not.toHaveBeenCalled();
+  });
+
+  it("seamlessly auto-attaches SUPERADMIN to the active store in requireTenant without throwing 403", async () => {
+    findFirstBusinessMock.mockResolvedValueOnce({
+      id: "store-100",
+      name: "Bole Central Store",
+      currency: "ETB",
+      status: "ACTIVE",
+    });
+
+    upsertMembershipMock.mockResolvedValueOnce({
+      businessId: "store-100",
+      role: "OWNER",
+      status: "ACTIVE",
+      business: {
+        name: "Bole Central Store",
+        currency: "ETB",
+        status: "ACTIVE",
+      },
+    });
+
+    const tenantContext = await requireTenant();
+    expect(tenantContext).toEqual({
+      userId: "user-1",
+      businessId: "store-100",
+      role: "OWNER",
+      businessName: "Bole Central Store",
+      currency: "ETB",
+    });
   });
 });

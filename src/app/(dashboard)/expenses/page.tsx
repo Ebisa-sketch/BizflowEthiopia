@@ -1,6 +1,7 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
+import { useSearchParams } from "next/navigation";
 import useSWR from "swr";
 import {
   Plus,
@@ -42,8 +43,9 @@ const COMMON_CATEGORIES = [
 ];
 
 export default function ExpensesPage() {
+  const searchParams = useSearchParams();
   // Filters
-  const [searchTerm, setSearchTerm] = useState("");
+  const [searchTerm, setSearchTerm] = useState(() => searchParams.get("search") || "");
   const [selectedCategory, setSelectedCategory] = useState("ALL");
 
   const params = new URLSearchParams();
@@ -71,6 +73,12 @@ export default function ExpensesPage() {
   // Modal State
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+
+  useEffect(() => {
+    if (searchParams.get("action") === "new") {
+      setIsModalOpen(true);
+    }
+  }, [searchParams]);
 
   // Form State
   const [formCategory, setFormCategory] = useState(COMMON_CATEGORIES[0]);

@@ -6,6 +6,7 @@ const nextConfig: NextConfig = {
   outputFileTracingExcludes: {
     "/_not-found": ["**/*"],
   },
+  devIndicators: false,
 };
 
 export default nextConfig;

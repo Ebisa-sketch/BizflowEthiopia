@@ -6,6 +6,7 @@ import { roundMoney, calculateFinancialSummary } from "@/lib/money";
 import {
   buildPaymentMethodBreakdown,
   buildSalesChartData,
+  calculateMetricChange,
   getEatDateBoundaries,
   type DashboardRange,
 } from "@/lib/dashboard-metrics";
@@ -23,7 +24,7 @@ export async function GET(request: NextRequest) {
       : "today";
 
     const now = new Date();
-    const { startDate } = getEatDateBoundaries(range, now);
+    const { startDate, previousStartDate, previousEndDate } = getEatDateBoundaries(range, now);
 
     const [
       sales,
@@ -34,6 +35,8 @@ export async function GET(request: NextRequest) {
       allProductCount,
       allExpenseCount,
       allCreditSales,
+      prevSales,
+      prevExpensesAgg,
     ] = await Promise.all([
       prisma.sale.findMany({
         where: {
@@ -45,6 +48,9 @@ export async function GET(request: NextRequest) {
           id: true,
           saleNumber: true,
           createdAt: true,
+          subtotal: true,
+          discountTotal: true,
+          taxTotal: true,
           grandTotal: true,
           customerName: true,
           items: {
@@ -80,6 +86,8 @@ export async function GET(request: NextRequest) {
           sku: true,
           quantityOnHand: true,
           reorderLevel: true,
+          sellingPrice: true,
+          costPrice: true,
         },
       }),
       prisma.sale.findMany({
@@ -99,7 +107,7 @@ export async function GET(request: NextRequest) {
             select: { name: true },
           },
           items: {
-            select: { quantity: true },
+            select: { quantity: true, productNameSnapshot: true },
           },
           payments: {
             select: { paymentMethod: true, amount: true },
@@ -130,10 +138,36 @@ export async function GET(request: NextRequest) {
           customerName: true,
         },
       }),
+      prisma.sale.findMany({
+        where: {
+          businessId,
+          createdAt: { gte: previousStartDate, lt: previousEndDate },
+          status: "COMPLETED",
+        },
+        select: {
+          grandTotal: true,
+          items: {
+            select: {
+              quantity: true,
+              unitCostSnapshot: true,
+            },
+          },
+        },
+      }),
+      prisma.expense.aggregate({
+        where: {
+          businessId,
+          expenseDate: { gte: previousStartDate, lt: previousEndDate },
+        },
+        _sum: { amount: true },
+      }),
     ]);
 
     // 1. Financial aggregates
     const invoiced = roundMoney(sales.reduce((sum, s) => sum + Number(s.grandTotal), 0));
+    const subtotal = roundMoney(sales.reduce((sum, s) => sum + Number(s.subtotal || 0), 0));
+    const discountTotal = roundMoney(sales.reduce((sum, s) => sum + Number(s.discountTotal || 0), 0));
+    const taxTotal = roundMoney(sales.reduce((sum, s) => sum + Number(s.taxTotal || 0), 0));
     const salesCount = sales.length;
 
     // 2. Payments collected & methods breakdown
@@ -245,7 +279,7 @@ export async function GET(request: NextRequest) {
       }))
       .sort((a, b) => (a.isOut === b.isOut ? a.stock - b.stock : a.isOut ? -1 : 1));
 
-    // Recent transactions with tenant isolation
+    // Recent transactions with tenant isolation and products summary
     const recentTransactions = recentSales.map((s) => ({
       id: s.id,
       saleNumber: s.saleNumber,
@@ -254,15 +288,103 @@ export async function GET(request: NextRequest) {
       cashierName: s.cashier?.name || "Cashier",
       grandTotal: roundMoney(Number(s.grandTotal)),
       itemCount: s.items.reduce((sum, item) => sum + Number(item.quantity), 0),
+      productsSummary:
+        s.items
+          .map((i) => i.productNameSnapshot)
+          .filter(Boolean)
+          .slice(0, 3)
+          .join(", ") || "General Items",
       paymentMethod: s.payments[0]?.paymentMethod || "CASH",
       status: s.status,
     }));
+
+    // 5b. Previous period calculations and comparisons
+    const comparisonLabel =
+      range === "today"
+        ? "vs. yesterday"
+        : range === "7d"
+        ? "vs. previous 7 days"
+        : range === "30d"
+        ? "vs. previous 30 days"
+        : "vs. last month";
+
+    const prevInvoiced = roundMoney(prevSales.reduce((sum, s) => sum + Number(s.grandTotal), 0));
+    const prevSalesCount = prevSales.length;
+    let prevCogs = 0;
+    for (const s of prevSales) {
+      for (const item of s.items) {
+        prevCogs += Number(item.quantity) * Number(item.unitCostSnapshot);
+      }
+    }
+    const prevGrossProfit = roundMoney(prevInvoiced - prevCogs);
+    const prevExpenses = roundMoney(Number(prevExpensesAgg._sum.amount ?? 0));
+
+    const comparisons = {
+      sales: calculateMetricChange(invoiced, prevInvoiced),
+      grossProfit: calculateMetricChange(financialSummary.grossProfit, prevGrossProfit),
+      transactions: calculateMetricChange(salesCount, prevSalesCount),
+      label: comparisonLabel,
+    };
+
+    // Quick Stats & Business Insights
+    const totalStockValue = roundMoney(
+      allProducts.reduce(
+        (sum, p) => sum + Number(p.quantityOnHand) * Number(p.sellingPrice || 0),
+        0
+      )
+    );
+    const totalCustomers = new Set(
+      allCreditSales
+        .concat(sales as any)
+        .map((s: any) => s.customerName)
+        .filter(Boolean)
+    ).size;
+
+    const quickStats = {
+      totalProducts: allProductCount,
+      totalCustomers,
+      totalStockValue,
+      totalExpensesMonth: expenses,
+    };
+
+    const slowMovingProduct =
+      allProducts.find((p) => !productStats[p.name] || productStats[p.name].units === 0) || null;
+
+    let expenseTrendText = "No operating expenses recorded";
+    if (expenses === 0 && prevExpenses === 0) {
+      expenseTrendText = "No operating expenses recorded";
+    } else if (prevExpenses === 0) {
+      expenseTrendText = `ETB ${expenses} recorded in this period`;
+    } else if (expenses < prevExpenses) {
+      const pct = Math.round(((prevExpenses - expenses) / prevExpenses) * 100);
+      expenseTrendText = `Expenses are ${pct}% lower ${comparisonLabel}`;
+    } else if (expenses > prevExpenses) {
+      const pct = Math.round(((expenses - prevExpenses) / prevExpenses) * 100);
+      expenseTrendText = `Expenses are ${pct}% higher ${comparisonLabel}`;
+    } else {
+      expenseTrendText = `Expenses unchanged ${comparisonLabel}`;
+    }
+
+    const businessInsights = {
+      topProduct: topProducts[0] || null,
+      slowMovingProduct: slowMovingProduct
+        ? {
+            name: slowMovingProduct.name,
+            units: 0,
+            days: range === "today" ? 1 : range === "7d" ? 7 : range === "30d" ? 30 : 30,
+          }
+        : null,
+      expenseTrendText,
+    };
 
     return NextResponse.json({
       success: true,
       range,
       metrics: {
         invoiced,
+        subtotal,
+        discountTotal,
+        taxTotal,
         collected,
         cogs,
         expenses,
@@ -277,10 +399,23 @@ export async function GET(request: NextRequest) {
         creditSalesCount,
         totalOutstandingCredit,
         totalCreditCustomers,
+        cashCollected: roundMoney(paymentMethodsMap.CASH || 0),
+        cashSalesCount: paymentMethodsCountMap.CASH || 0,
+        digitalCollected: roundMoney(
+          (paymentMethodsMap.TELEBIRR || 0) +
+            (paymentMethodsMap.CBE_BIRR || 0) +
+            (paymentMethodsMap.BANK_TRANSFER || 0)
+        ),
+        expectedCashInTill: roundMoney(
+          Math.max(0, (paymentMethodsMap.CASH || 0) - expenses)
+        ),
+        comparisons,
       },
       lowStockItems,
       topProducts,
       recentTransactions,
+      quickStats,
+      businessInsights,
       paymentMethods: buildPaymentMethodBreakdown(paymentMethodsMap, paymentMethodsCountMap),
       hasBusinessActivity:
         historicalSalesCount > 0 || allProductCount > 0 || allExpenseCount > 0,

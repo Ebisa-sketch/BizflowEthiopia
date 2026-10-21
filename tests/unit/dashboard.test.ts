@@ -8,6 +8,7 @@ import {
 import {
   buildPaymentMethodBreakdown,
   buildSalesChartData,
+  calculateMetricChange,
   formatEatTime,
   getEatDateBoundaries,
 } from "@/lib/dashboard-metrics";
@@ -167,5 +168,58 @@ describe("Dashboard Financial Metrics & Business Calculations", () => {
     expect(cashEntry?.count).toBe(5);
     expect(cashEntry?.amount).toBe(500);
     expect(cashEntry?.percentage).toBe(50);
+  });
+
+  it("calculates metric change cleanly without division-by-zero or misleading infinity", () => {
+    // Both zero
+    expect(calculateMetricChange(0, 0)).toEqual({
+      changePercent: 0,
+      text: "0%",
+      direction: "neutral",
+    });
+
+    // Previous was zero, current is positive (first sales/new period)
+    expect(calculateMetricChange(5000, 0)).toEqual({
+      changePercent: 100,
+      text: "+100%",
+      direction: "up",
+    });
+
+    // Positive growth
+    expect(calculateMetricChange(12500, 10000)).toEqual({
+      changePercent: 25,
+      text: "+25%",
+      direction: "up",
+    });
+
+    // Negative decline
+    expect(calculateMetricChange(8000, 10000)).toEqual({
+      changePercent: -20,
+      text: "-20%",
+      direction: "down",
+    });
+
+    // No change
+    expect(calculateMetricChange(10000, 10000)).toEqual({
+      changePercent: 0,
+      text: "0%",
+      direction: "neutral",
+    });
+  });
+
+  it("calculates accurate previous period date boundaries for all ranges", () => {
+    const now = new Date("2026-10-15T12:00:00.000Z");
+
+    const todayBoundaries = getEatDateBoundaries("today", now);
+    expect(todayBoundaries.previousStartDate < todayBoundaries.previousEndDate).toBe(true);
+    expect(todayBoundaries.previousEndDate.getTime()).toBe(todayBoundaries.startDate.getTime());
+
+    const sevenDaysBoundaries = getEatDateBoundaries("7d", now);
+    expect(sevenDaysBoundaries.previousStartDate < sevenDaysBoundaries.previousEndDate).toBe(true);
+    expect(sevenDaysBoundaries.previousEndDate.getTime()).toBe(sevenDaysBoundaries.startDate.getTime());
+
+    const monthBoundaries = getEatDateBoundaries("month", now);
+    expect(monthBoundaries.previousStartDate < monthBoundaries.previousEndDate).toBe(true);
+    expect(monthBoundaries.previousEndDate.getTime()).toBe(monthBoundaries.startDate.getTime());
   });
 });

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db/prisma";
 import { handleApiError, AppError } from "@/lib/errors";
+import { createResetToken } from "@/lib/auth/password-reset";
 
 export async function POST(request: NextRequest) {
   try {
@@ -19,7 +20,17 @@ export async function POST(request: NextRequest) {
       include: { memberships: { take: 1 } },
     });
 
-    if (user) {
+    let resetUrl: string | undefined = undefined;
+
+    if (user && user.accountStatus === "ACTIVE") {
+      const { rawToken, expiresAt } = await createResetToken(user.id);
+
+      const host = request.headers.get("x-forwarded-host") || request.headers.get("host") || "localhost:3000";
+      const proto = request.headers.get("x-forwarded-proto") || "http";
+      resetUrl = `${proto}://${host}/reset-password?token=${rawToken}`;
+
+      console.log(`[PASSWORD_RECOVERY] Generated reset link for ${trimmedEmail}: ${resetUrl}`);
+
       // Record security audit log
       await prisma.auditLog.create({
         data: {
@@ -28,7 +39,7 @@ export async function POST(request: NextRequest) {
           action: "PASSWORD_RECOVERY_REQUESTED",
           entityType: "User",
           entityId: user.id,
-          metadata: { email: trimmedEmail, timestamp: new Date().toISOString() },
+          metadata: { email: trimmedEmail, expiresAt: expiresAt.toISOString() },
         },
       });
     }
@@ -37,6 +48,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({
       success: true,
       message: "If an account exists with this email, recovery instructions have been dispatched.",
+      ...(process.env.NODE_ENV !== "production" || !process.env.SMTP_HOST ? { resetUrl } : {}),
     });
   } catch (error) {
     return handleApiError(error);

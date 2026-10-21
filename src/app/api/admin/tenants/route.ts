@@ -102,3 +102,127 @@ export async function GET(request: NextRequest) {
     return handleApiError(error);
   }
 }
+
+export async function POST(request: NextRequest) {
+  try {
+    await requireSuperAdmin();
+
+    const body = await request.json();
+    const {
+      name,
+      contactEmail,
+      phone,
+      address,
+      currency = "ETB",
+      taxNumber,
+      ownerName,
+      ownerEmail,
+      ownerPassword,
+      plan = "STARTER",
+      trialDays = 30,
+    } = body;
+
+    const trimmedName = name?.trim();
+    const trimmedOwnerName = ownerName?.trim();
+    const trimmedOwnerEmail = ownerEmail?.trim()?.toLowerCase();
+
+    if (!trimmedName) {
+      throw new AppError("Business name is required.", 400);
+    }
+    if (!trimmedOwnerName) {
+      throw new AppError("Owner name is required.", 400);
+    }
+    if (!trimmedOwnerEmail || !trimmedOwnerEmail.includes("@")) {
+      throw new AppError("Valid owner email address is required.", 400);
+    }
+    if (!ownerPassword || ownerPassword.length < 6) {
+      throw new AppError("Owner password must be at least 6 characters.", 400);
+    }
+
+    const validPlans = ["STARTER", "BUSINESS", "PRO"] as const;
+    const selectedPlan = validPlans.includes(plan) ? plan : "STARTER";
+
+    const { hashPassword } = await import("@/lib/auth");
+    const passwordHash = await hashPassword(ownerPassword);
+
+    const result = await prisma.$transaction(async (tx) => {
+      // 1. Create or retrieve owner user
+      let user = await tx.user.findUnique({
+        where: { email: trimmedOwnerEmail },
+      });
+
+      if (!user) {
+        user = await tx.user.create({
+          data: {
+            name: trimmedOwnerName,
+            email: trimmedOwnerEmail,
+            passwordHash,
+            globalRole: "USER",
+            accountStatus: "ACTIVE",
+          },
+        });
+      }
+
+      // 2. Create the business tenant
+      const business = await tx.business.create({
+        data: {
+          name: trimmedName,
+          contactEmail: contactEmail?.trim() || trimmedOwnerEmail,
+          phone: phone?.trim() || null,
+          address: address?.trim() || null,
+          currency: currency?.trim()?.toUpperCase() || "ETB",
+          taxNumber: taxNumber?.trim() || null,
+          status: "ACTIVE",
+        },
+      });
+
+      // 3. Create owner membership
+      await tx.membership.create({
+        data: {
+          businessId: business.id,
+          userId: user.id,
+          role: "OWNER",
+          status: "ACTIVE",
+        },
+      });
+
+      // 4. Create default general category
+      await tx.category.create({
+        data: {
+          businessId: business.id,
+          name: "General",
+          description: "Default product category",
+        },
+      });
+
+      // 5. Create initial subscription
+      const periodEnd = new Date();
+      periodEnd.setDate(periodEnd.getDate() + Number(trialDays || 30));
+
+      await tx.subscription.create({
+        data: {
+          businessId: business.id,
+          plan: selectedPlan,
+          status: "TRIAL",
+          billingPeriodStart: new Date(),
+          billingPeriodEnd: periodEnd,
+        },
+      });
+
+      return { business, user };
+    });
+
+    return NextResponse.json({
+      success: true,
+      message: `Business tenant '${result.business.name}' created successfully with owner ${result.user.email}.`,
+      tenant: {
+        id: result.business.id,
+        name: result.business.name,
+        contactEmail: result.business.contactEmail,
+        status: result.business.status,
+      },
+    }, { status: 201 });
+  } catch (error) {
+    return handleApiError(error);
+  }
+}

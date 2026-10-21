@@ -10,7 +10,10 @@ async function main() {
   const adminPasswordHash = await bcrypt.hash('Admin@123456', 10);
   const admin = await prisma.user.upsert({
     where: { email: 'admin@bizflow.et' },
-    update: {},
+    update: {
+      passwordHash: adminPasswordHash,
+      globalRole: GlobalRole.SUPERADMIN,
+    },
     create: {
       name: 'System Administrator',
       email: 'admin@bizflow.et',
@@ -23,7 +26,9 @@ async function main() {
   const ownerPasswordHash = await bcrypt.hash('Owner@123456', 10);
   const owner = await prisma.user.upsert({
     where: { email: 'owner@addismart.et' },
-    update: {},
+    update: {
+      passwordHash: ownerPasswordHash,
+    },
     create: {
       name: 'Abebe Kebede',
       email: 'owner@addismart.et',
@@ -95,22 +100,52 @@ async function main() {
     },
   });
 
-  // 6. Create Product Categories
-  const beverageCategory = await prisma.category.create({
-    data: {
+  // Connect Superadmin to demo business as OWNER
+  await prisma.membership.upsert({
+    where: {
+      businessId_userId: {
+        businessId: business.id,
+        userId: admin.id,
+      },
+    },
+    update: {
+      role: BusinessRole.OWNER,
+      status: "ACTIVE",
+    },
+    create: {
       businessId: business.id,
-      name: 'Beverages & Soft Drinks',
-      description: 'Water, juices, soft drinks, and packaged beverages',
+      userId: admin.id,
+      role: BusinessRole.OWNER,
+      status: "ACTIVE",
     },
   });
 
-  const pantryCategory = await prisma.category.create({
-    data: {
-      businessId: business.id,
-      name: 'Grains & Pantry',
-      description: 'Teff, edible oil, flour, sugar, and staples',
-    },
+  // 6. Create Product Categories
+  let beverageCategory = await prisma.category.findFirst({
+    where: { businessId: business.id, name: 'Beverages & Soft Drinks' },
   });
+  if (!beverageCategory) {
+    beverageCategory = await prisma.category.create({
+      data: {
+        businessId: business.id,
+        name: 'Beverages & Soft Drinks',
+        description: 'Water, juices, soft drinks, and packaged beverages',
+      },
+    });
+  }
+
+  let pantryCategory = await prisma.category.findFirst({
+    where: { businessId: business.id, name: 'Grains & Pantry' },
+  });
+  if (!pantryCategory) {
+    pantryCategory = await prisma.category.create({
+      data: {
+        businessId: business.id,
+        name: 'Grains & Pantry',
+        description: 'Teff, edible oil, flour, sugar, and staples',
+      },
+    });
+  }
 
   // 7. Create Sample Products
   await prisma.product.createMany({
@@ -164,6 +199,7 @@ async function main() {
         status: ProductStatus.ACTIVE,
       },
     ],
+    skipDuplicates: true,
   });
 
   console.log('Database seeded successfully!');

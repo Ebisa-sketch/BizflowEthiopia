@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import useSWR from "swr";
 import {
   Plus,
@@ -8,6 +8,7 @@ import {
   ArrowDownLeft,
   ArrowUpRight,
   AlertCircle,
+  AlertTriangle,
   RefreshCw,
   CheckCircle2,
   X,
@@ -16,9 +17,14 @@ import {
   Truck,
   RotateCcw,
   SlidersHorizontal,
+  Wallet,
+  TrendingUp,
+  Search,
+  Boxes,
 } from "lucide-react";
 import { TableSkeleton } from "@/components/ui/skeleton";
 import { DataLoadError } from "@/components/ui/data-load-error";
+import { formatMoney } from "@/lib/money";
 
 interface StockMovement {
   id: string;
@@ -33,17 +39,21 @@ interface StockMovement {
   actor: string;
 }
 
-interface ProductOption {
+interface ProductItem {
   id: string;
   name: string;
   sku: string;
   stock: number;
+  cost: number;
+  price: number;
+  reorderLevel: number;
 }
 
 export default function InventoryPage() {
   // Filters
   const [typeFilter, setTypeFilter] = useState("ALL");
   const [productFilter, setProductFilter] = useState("ALL");
+  const [searchQuery, setSearchQuery] = useState("");
 
   const params = new URLSearchParams();
   if (typeFilter !== "ALL") params.set("type", typeFilter);
@@ -59,15 +69,58 @@ export default function InventoryPage() {
   const { data: productsData, error: productsError, mutate: mutateProducts } = useSWR("/api/products?status=ALL", {
     revalidateOnFocus: false,
     dedupingInterval: 60000,
+    keepPreviousData: true,
   });
 
   const movements: StockMovement[] = movementsData?.movements || [];
-  const products: ProductOption[] = (productsData?.products || []).map((p: any) => ({
-    id: p.id,
-    name: p.name,
-    sku: p.sku || "N/A",
-    stock: p.stock ?? p.quantityOnHand ?? 0,
-  }));
+  const products: ProductItem[] = useMemo(() => {
+    return (productsData?.products || []).map((p: any) => ({
+      id: p.id,
+      name: p.name,
+      sku: p.sku || "N/A",
+      stock: Number(p.stock ?? p.quantityOnHand ?? 0),
+      cost: Number(p.cost ?? p.costPrice ?? 0),
+      price: Number(p.price ?? p.sellingPrice ?? 0),
+      reorderLevel: Number(p.reorderLevel ?? 5),
+    }));
+  }, [productsData]);
+
+  // Inventory Valuation KPI Computations
+  const valuation = useMemo(() => {
+    const totalUnits = products.reduce((acc, p) => acc + Math.max(0, p.stock), 0);
+    const totalCostValuation = products.reduce((acc, p) => acc + (Math.max(0, p.stock) * p.cost), 0);
+    const totalRetailValuation = products.reduce((acc, p) => acc + (Math.max(0, p.stock) * p.price), 0);
+    const potentialMargin = totalRetailValuation > 0
+      ? ((totalRetailValuation - totalCostValuation) / totalRetailValuation) * 100
+      : 0;
+
+    const outOfStock = products.filter((p) => p.stock <= 0);
+    const lowStock = products.filter((p) => p.stock > 0 && p.stock <= p.reorderLevel);
+
+    return {
+      totalUnits,
+      totalCostValuation,
+      totalRetailValuation,
+      potentialMargin,
+      outOfStock,
+      lowStock,
+      criticalItems: [...outOfStock, ...lowStock],
+    };
+  }, [products]);
+
+  // Filtered movements based on search query
+  const filteredMovements = useMemo(() => {
+    if (!searchQuery.trim()) return movements;
+    const q = searchQuery.toLowerCase();
+    return movements.filter(
+      (m) =>
+        m.product.toLowerCase().includes(q) ||
+        m.sku.toLowerCase().includes(q) ||
+        (m.reason && m.reason.toLowerCase().includes(q)) ||
+        (m.actor && m.actor.toLowerCase().includes(q))
+    );
+  }, [movements, searchQuery]);
+
   const loading = isLoading && !movementsData;
   const [error, setError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
@@ -226,7 +279,7 @@ export default function InventoryPage() {
         <div>
           <h1 className="text-2xl font-bold tracking-tight text-slate-900">Inventory & Stock Ledger</h1>
           <p className="text-sm text-slate-500">
-            Track deliveries, sales deductions, damages, and audit adjustments with immutable ledger
+            Real-time store stock valuation, low inventory alerts, and immutable audit movements
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -235,7 +288,7 @@ export default function InventoryPage() {
               fetchMovements();
               fetchProductsCatalog();
             }}
-            className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 transition"
+            className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 transition shadow-2xs"
             title="Refresh Ledger"
           >
             <RefreshCw className={`h-3.5 w-3.5 ${loading ? "animate-spin text-blue-600" : ""}`} />
@@ -277,55 +330,242 @@ export default function InventoryPage() {
         </div>
       )}
 
-      {/* Filters */}
-      <div className="flex flex-wrap items-center gap-3 bg-white p-3 rounded-2xl border border-slate-200 shadow-xs">
-        <div className="flex items-center gap-1.5 text-xs text-slate-500 font-medium">
-          <Filter className="h-3.5 w-3.5" />
-          <span>Filter Ledger:</span>
+      {/* Inventory Valuation KPI Cards */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        {/* Total Stock Units */}
+        <div className="rounded-2xl border border-slate-200/80 bg-white p-4 shadow-xs hover:border-slate-300 transition">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-medium text-slate-500">Total Units on Hand</span>
+            <div className="rounded-xl bg-blue-50 p-2.5 text-blue-600">
+              <Boxes className="h-5 w-5" />
+            </div>
+          </div>
+          <div className="mt-3">
+            <div className="text-2xl font-bold font-mono text-slate-900">
+              {valuation.totalUnits.toLocaleString()}
+            </div>
+            <div className="mt-1 flex items-center gap-1.5 text-xs text-slate-500">
+              <span className="font-semibold text-slate-700">{products.length}</span> active SKUs in catalog
+            </div>
+          </div>
         </div>
 
-        <select
-          value={typeFilter}
-          onChange={(e) => setTypeFilter(e.target.value)}
-          className="rounded-lg border border-slate-200 bg-slate-50 py-1.5 px-2.5 text-xs font-semibold text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
-        >
-          <option value="ALL">All Movement Types</option>
-          <option value="RECEIPT">Delivery Receipts</option>
-          <option value="SALE">Sales Deductions</option>
-          <option value="ADJUSTMENT">Adjustments</option>
-          <option value="DAMAGE">Damages & Spoilage</option>
-          <option value="RETURN">Customer Returns</option>
-        </select>
+        {/* Total Cost Valuation */}
+        <div className="rounded-2xl border border-slate-200/80 bg-white p-4 shadow-xs hover:border-slate-300 transition">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-medium text-slate-500">Wholesale Asset Value (Cost)</span>
+            <div className="rounded-xl bg-amber-50 p-2.5 text-amber-600">
+              <Wallet className="h-5 w-5" />
+            </div>
+          </div>
+          <div className="mt-3">
+            <div className="text-2xl font-bold font-mono text-slate-900">
+              {formatMoney(valuation.totalCostValuation)}
+            </div>
+            <div className="mt-1 text-xs text-slate-500">
+              Capital tied up in merchandise
+            </div>
+          </div>
+        </div>
 
-        <select
-          value={productFilter}
-          onChange={(e) => setProductFilter(e.target.value)}
-          className="rounded-lg border border-slate-200 bg-slate-50 py-1.5 px-2.5 text-xs font-semibold text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500 max-w-xs truncate"
-        >
-          <option value="ALL">All Products in Store</option>
-          {products.map((p) => (
-            <option key={p.id} value={p.id}>
-              {p.name} ({p.sku})
-            </option>
-          ))}
-        </select>
+        {/* Retail Potential Value */}
+        <div className="rounded-2xl border border-slate-200/80 bg-white p-4 shadow-xs hover:border-slate-300 transition">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-medium text-slate-500">Retail Potential Value</span>
+            <div className="rounded-xl bg-emerald-50 p-2.5 text-emerald-600">
+              <TrendingUp className="h-5 w-5" />
+            </div>
+          </div>
+          <div className="mt-3">
+            <div className="text-2xl font-bold font-mono text-emerald-700">
+              {formatMoney(valuation.totalRetailValuation)}
+            </div>
+            <div className="mt-1 flex items-center gap-1 text-xs text-emerald-600 font-medium">
+              <span>+{valuation.potentialMargin.toFixed(1)}%</span>
+              <span className="text-slate-400">projected gross markup</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Low Stock Alerts */}
+        <div className={`rounded-2xl border p-4 shadow-xs transition ${
+          valuation.criticalItems.length > 0
+            ? "border-rose-200 bg-rose-50/40"
+            : "border-slate-200/80 bg-white"
+        }`}>
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-medium text-slate-500">Replenishment Alerts</span>
+            <div className={`rounded-xl p-2.5 ${
+              valuation.criticalItems.length > 0
+                ? "bg-rose-100 text-rose-600"
+                : "bg-emerald-50 text-emerald-600"
+            }`}>
+              <AlertTriangle className="h-5 w-5" />
+            </div>
+          </div>
+          <div className="mt-3">
+            <div className={`text-2xl font-bold font-mono ${
+              valuation.criticalItems.length > 0 ? "text-rose-700" : "text-slate-900"
+            }`}>
+              {valuation.criticalItems.length} Products
+            </div>
+            <div className="mt-1 text-xs text-slate-500">
+              <span className="font-semibold text-rose-600">{valuation.outOfStock.length}</span> out ·{" "}
+              <span className="font-semibold text-amber-600">{valuation.lowStock.length}</span> low stock
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Prominent Low Stock Restock Banner */}
+      {valuation.criticalItems.length > 0 && (
+        <div className="rounded-2xl border border-rose-200/90 bg-gradient-to-r from-rose-50 via-white to-amber-50/30 p-4 shadow-xs">
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
+            <div className="flex items-start gap-3">
+              <div className="rounded-xl bg-rose-500 p-2 text-white shrink-0 mt-0.5">
+                <AlertCircle className="h-5 w-5" />
+              </div>
+              <div>
+                <h3 className="text-sm font-bold text-slate-900">
+                  Inventory Replenishment Required ({valuation.criticalItems.length} items critical)
+                </h3>
+                <p className="text-xs text-slate-600 mt-0.5">
+                  Products below reorder threshold may cause checkout disruptions at POS. Click any item to restock.
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* Quick Restock Item Badges */}
+          <div className="mt-3 flex flex-wrap items-center gap-2 pt-2 border-t border-rose-100">
+            {valuation.criticalItems.slice(0, 6).map((item) => {
+              const isOut = item.stock <= 0;
+              const suggestedRestock = Math.max(10, item.reorderLevel * 2 - Math.max(0, item.stock));
+              return (
+                <div
+                  key={item.id}
+                  className={`inline-flex items-center gap-2 rounded-xl border px-3 py-1.5 text-xs transition ${
+                    isOut
+                      ? "border-red-300 bg-red-100/70 text-red-900"
+                      : "border-amber-300 bg-amber-50 text-amber-900"
+                  }`}
+                >
+                  <span className="font-bold">{item.name}</span>
+                  <span className="font-mono text-[11px] opacity-80">
+                    ({item.stock} / min {item.reorderLevel})
+                  </span>
+                  <button
+                    onClick={() => {
+                      setReceiveProductId(item.id);
+                      setReceiveQty(suggestedRestock.toString());
+                      setIsReceiveModalOpen(true);
+                    }}
+                    className="ml-1 inline-flex items-center gap-1 rounded-lg bg-white px-2 py-0.5 text-[11px] font-bold text-blue-700 shadow-2xs hover:bg-blue-50 border border-blue-200 transition"
+                  >
+                    <Truck className="h-3 w-3" />
+                    <span>+Restock {suggestedRestock}</span>
+                  </button>
+                </div>
+              );
+            })}
+            {valuation.criticalItems.length > 6 && (
+              <span className="text-xs text-slate-500 italic">
+                +{valuation.criticalItems.length - 6} more items
+              </span>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Movement Ledger Controls & Filters */}
+      <div className="space-y-3 bg-white p-4 rounded-2xl border border-slate-200/90 shadow-xs">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
+          {/* Search bar */}
+          <div className="relative flex-1 max-w-md">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+            <input
+              type="text"
+              placeholder="Search ledger by product, SKU, reference, or staff member..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full rounded-xl border border-slate-200 bg-slate-50/70 pl-9 pr-3 py-2 text-xs text-slate-900 placeholder:text-slate-400 focus:border-blue-600 focus:bg-white focus:outline-none focus:ring-1 focus:ring-blue-600"
+            />
+            {searchQuery && (
+              <button
+                onClick={() => setSearchQuery("")}
+                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+              >
+                <X className="h-3.5 w-3.5" />
+              </button>
+            )}
+          </div>
+
+          {/* Product selector filter */}
+          <div className="flex items-center gap-2">
+            <span className="text-xs font-medium text-slate-500 shrink-0">Product:</span>
+            <select
+              value={productFilter}
+              onChange={(e) => setProductFilter(e.target.value)}
+              className="rounded-xl border border-slate-200 bg-slate-50/70 py-2 px-3 text-xs font-semibold text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500 max-w-xs truncate"
+            >
+              <option value="ALL">All Products in Store ({products.length})</option>
+              {products.map((p) => (
+                <option key={p.id} value={p.id}>
+                  {p.name} ({p.sku}) — {p.stock} in stock
+                </option>
+              ))}
+            </select>
+          </div>
+        </div>
+
+        {/* Type Filter Pills */}
+        <div className="flex flex-wrap items-center gap-1.5 pt-2 border-t border-slate-100">
+          {[
+            { id: "ALL", label: "All Movements" },
+            { id: "RECEIPT", label: "Delivery Receipts" },
+            { id: "SALE", label: "Sales Deductions" },
+            { id: "ADJUSTMENT", label: "Audits & Corrections" },
+            { id: "DAMAGE", label: "Damages & Spoilage" },
+            { id: "RETURN", label: "Customer Returns" },
+          ].map((pill) => {
+            const isActive = typeFilter === pill.id;
+            return (
+              <button
+                key={pill.id}
+                onClick={() => setTypeFilter(pill.id)}
+                className={`rounded-lg px-2.5 py-1 text-xs font-medium transition ${
+                  isActive
+                    ? "bg-slate-900 text-white font-semibold"
+                    : "bg-slate-100 text-slate-600 hover:bg-slate-200/80"
+                }`}
+              >
+                {pill.label}
+              </button>
+            );
+          })}
+        </div>
       </div>
 
       {/* Movement Ledger Table */}
       <div className="bg-white rounded-2xl border border-slate-200/90 shadow-xs overflow-hidden">
         <div className="px-5 py-4 border-b border-slate-200 flex items-center justify-between">
-          <h2 className="font-bold text-slate-900 text-sm flex items-center gap-2">
+          <div className="flex items-center gap-2">
             <History className="h-4 w-4 text-slate-500" />
-            Audit Ledger (Movement History)
-          </h2>
-          <span className="text-xs text-slate-500 font-mono">Immutable Trace</span>
+            <h2 className="font-bold text-slate-900 text-sm">
+              Audit Ledger (Movement History)
+            </h2>
+            <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-mono text-slate-600">
+              {filteredMovements.length} records
+            </span>
+          </div>
+          <span className="text-xs text-slate-400 font-mono">Immutable Compliance Log</span>
         </div>
 
-        {loading && movements.length === 0 ? (
+        {loading && filteredMovements.length === 0 ? (
           <div className="p-4">
             <TableSkeleton rows={6} cols={6} hasFilters={false} />
           </div>
-        ) : movements.length === 0 ? (
+        ) : filteredMovements.length === 0 ? (
           <div className="p-12 text-center text-slate-500 space-y-3">
             <Package className="h-10 w-10 mx-auto text-slate-300" />
             <h3 className="font-semibold text-slate-700">No stock movements found</h3>
@@ -347,7 +587,7 @@ export default function InventoryPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 font-mono">
-                {movements.map((m) => {
+                {filteredMovements.map((m) => {
                   const isPositive = m.quantity > 0;
                   return (
                     <tr key={m.id} className="hover:bg-slate-50/70 transition">
@@ -358,17 +598,24 @@ export default function InventoryPage() {
                       </td>
                       <td className="py-3 px-4 font-sans">
                         <span
-                          className={`inline-block px-2 py-0.5 rounded text-[10px] font-semibold ${
+                          className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-md text-[10px] font-semibold ${
                             m.type === "RECEIPT"
                               ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
                               : m.type === "SALE"
                               ? "bg-blue-50 text-blue-700 border border-blue-200"
                               : m.type === "DAMAGE"
                               ? "bg-red-50 text-red-700 border border-red-200"
+                              : m.type === "RETURN"
+                              ? "bg-purple-50 text-purple-700 border border-purple-200"
                               : "bg-amber-50 text-amber-700 border border-amber-200"
                           }`}
                         >
-                          {m.type}
+                          {m.type === "RECEIPT" && <Truck className="h-3 w-3" />}
+                          {m.type === "SALE" && <ArrowDownLeft className="h-3 w-3" />}
+                          {m.type === "DAMAGE" && <AlertCircle className="h-3 w-3" />}
+                          {m.type === "RETURN" && <RotateCcw className="h-3 w-3" />}
+                          {m.type === "ADJUSTMENT" && <SlidersHorizontal className="h-3 w-3" />}
+                          <span>{m.type}</span>
                         </span>
                       </td>
                       <td

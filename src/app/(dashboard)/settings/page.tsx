@@ -118,7 +118,7 @@ export default function SettingsPage() {
   // Store Operations State
   const [store, setStore] = useState<StoreSettings>({
     defaultPaymentMethod: "TELEBIRR",
-    receiptFooterMessage: "Thank you for shopping at Addis Mini Mart! 🇪🇹",
+    receiptFooterMessage: "Thank you for shopping with us!",
     autoReceiptPrint: true,
     lowStockAlertEnabled: true,
     lowStockThresholdDefault: 10,

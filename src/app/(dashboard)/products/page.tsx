@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useSearchParams } from "next/navigation";
 import useSWR from "swr";
 import {
@@ -18,6 +18,12 @@ import {
   Tag,
   DollarSign,
   Layers,
+  Wand2,
+  Printer,
+  Barcode,
+  TrendingUp,
+  ArrowUpRight,
+  Truck,
 } from "lucide-react";
 import { formatMoney } from "@/lib/money";
 import { TableSkeleton } from "@/components/ui/skeleton";
@@ -76,6 +82,18 @@ export default function ProductsPage() {
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
+  // Stock Level Filter
+  const [stockLevelFilter, setStockLevelFilter] = useState<"ALL" | "LOW_STOCK" | "OUT_OF_STOCK" | "IN_STOCK">("ALL");
+
+  // Barcode Label Print Modal
+  const [barcodePrintProduct, setBarcodePrintProduct] = useState<Product | null>(null);
+  const [barcodeLabelCount, setBarcodeLabelCount] = useState<number>(4);
+
+  // Quick Restock Modal
+  const [restockProduct, setRestockProduct] = useState<Product | null>(null);
+  const [restockQuantity, setRestockQuantity] = useState<string>("10");
+  const [restockSubmitting, setRestockSubmitting] = useState(false);
+
   // Add Product Form State
   const [formName, setFormName] = useState("");
   const [formSku, setFormSku] = useState("");
@@ -86,6 +104,68 @@ export default function ProductsPage() {
   const [formSellingPrice, setFormSellingPrice] = useState("");
   const [formInitialStock, setFormInitialStock] = useState("0");
   const [formReorderLevel, setFormReorderLevel] = useState("5");
+
+  // Auto SKU & Barcode Generator
+  const generateSku = (name: string, categoryId?: string) => {
+    const cat = categories.find((c) => c.id === categoryId)?.name || "PRD";
+    const prefix = (cat.replace(/[^a-zA-Z]/g, "").slice(0, 3) || "PRD").toUpperCase();
+    const namePart = (name.replace(/[^a-zA-Z]/g, "").slice(0, 3) || "ITM").toUpperCase();
+    const num = Math.floor(100 + Math.random() * 900);
+    return `${prefix}-${namePart}-${num}`;
+  };
+
+  const generateBarcode = () => {
+    const randomDigits = Math.floor(100000000 + Math.random() * 900000000).toString();
+    return `200${randomDigits}`;
+  };
+
+  // Profit Margin Calculator
+  const calculateMargin = (costStr: string, priceStr: string) => {
+    const cost = parseFloat(costStr) || 0;
+    const price = parseFloat(priceStr) || 0;
+    if (price <= 0) return null;
+    const profit = price - cost;
+    const marginPct = (profit / price) * 100;
+    const markupPct = cost > 0 ? (profit / cost) * 100 : 100;
+    return {
+      profit,
+      marginPct: Math.round(marginPct * 10) / 10,
+      markupPct: Math.round(markupPct * 10) / 10,
+      isLoss: profit < 0,
+      isZero: profit === 0,
+    };
+  };
+
+  const handleQuickRestock = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!restockProduct) return;
+    const qty = parseInt(restockQuantity, 10);
+    if (!qty || qty <= 0) return;
+
+    try {
+      setRestockSubmitting(true);
+      const res = await fetch("/api/inventory", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          productId: restockProduct.id,
+          movementType: "RECEIPT",
+          quantity: qty,
+          reason: `Direct catalog restock (+${qty} units)`,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok || !data.success) throw new Error(data.error || "Restock failed");
+
+      showToast(`Restocked ${restockProduct.name}: +${qty} units added!`);
+      setRestockProduct(null);
+      await fetchProducts();
+    } catch (err: any) {
+      alert(err.message || "Failed to restock");
+    } finally {
+      setRestockSubmitting(false);
+    }
+  };
 
   const showToast = (msg: string) => {
     setSuccessMessage(msg);
@@ -107,10 +187,17 @@ export default function ProductsPage() {
 
   const openAddModal = () => {
     resetForm();
-    // Auto-generate suggested SKU prefix
+    // Auto-generate suggested SKU
     setFormSku(`PRD-${Math.floor(1000 + Math.random() * 9000)}`);
+    setFormBarcode(generateBarcode());
     setIsAddModalOpen(true);
   };
+
+  useEffect(() => {
+    if (searchParams.get("action") === "new") {
+      openAddModal();
+    }
+  }, [searchParams]);
 
   const openEditModal = (p: Product) => {
     setEditingProduct(p);
@@ -347,6 +434,77 @@ export default function ProductsPage() {
         </div>
       </div>
 
+      {/* Stock Level Quick Filter Pills */}
+      <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none text-xs font-semibold">
+        <button
+          type="button"
+          onClick={() => setStockLevelFilter("ALL")}
+          className={`px-3 py-1.5 rounded-xl transition cursor-pointer flex items-center gap-1.5 ${
+            stockLevelFilter === "ALL"
+              ? "bg-slate-900 text-white shadow-xs"
+              : "bg-white border border-slate-200 text-slate-600 hover:bg-slate-50"
+          }`}
+        >
+          <span>All Items</span>
+          <span className={`px-1.5 py-0.5 rounded-full text-[10px] font-mono ${
+            stockLevelFilter === "ALL" ? "bg-white/20 text-white" : "bg-slate-100 text-slate-500"
+          }`}>
+            {products.length}
+          </span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setStockLevelFilter("LOW_STOCK")}
+          className={`px-3 py-1.5 rounded-xl transition cursor-pointer flex items-center gap-1.5 ${
+            stockLevelFilter === "LOW_STOCK"
+              ? "bg-amber-600 text-white shadow-xs"
+              : "bg-white border border-slate-200 text-amber-700 hover:bg-amber-50"
+          }`}
+        >
+          <span>Low Stock Alert</span>
+          <span className={`px-1.5 py-0.5 rounded-full text-[10px] font-mono ${
+            stockLevelFilter === "LOW_STOCK" ? "bg-white/20 text-white" : "bg-amber-100 text-amber-800"
+          }`}>
+            {products.filter((p) => p.stock > 0 && p.stock <= p.reorderLevel).length}
+          </span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setStockLevelFilter("OUT_OF_STOCK")}
+          className={`px-3 py-1.5 rounded-xl transition cursor-pointer flex items-center gap-1.5 ${
+            stockLevelFilter === "OUT_OF_STOCK"
+              ? "bg-red-600 text-white shadow-xs"
+              : "bg-white border border-slate-200 text-red-600 hover:bg-red-50"
+          }`}
+        >
+          <span>Out of Stock</span>
+          <span className={`px-1.5 py-0.5 rounded-full text-[10px] font-mono ${
+            stockLevelFilter === "OUT_OF_STOCK" ? "bg-white/20 text-white" : "bg-red-100 text-red-700"
+          }`}>
+            {products.filter((p) => p.stock <= 0).length}
+          </span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setStockLevelFilter("IN_STOCK")}
+          className={`px-3 py-1.5 rounded-xl transition cursor-pointer flex items-center gap-1.5 ${
+            stockLevelFilter === "IN_STOCK"
+              ? "bg-[#0D9668] text-white shadow-xs"
+              : "bg-white border border-slate-200 text-emerald-700 hover:bg-emerald-50"
+          }`}
+        >
+          <span>Optimal Stock</span>
+          <span className={`px-1.5 py-0.5 rounded-full text-[10px] font-mono ${
+            stockLevelFilter === "IN_STOCK" ? "bg-white/20 text-white" : "bg-emerald-100 text-emerald-800"
+          }`}>
+            {products.filter((p) => p.stock > p.reorderLevel).length}
+          </span>
+        </button>
+      </div>
+
       {/* Products Table */}
       <div className="bg-white rounded-2xl border border-slate-200/90 shadow-xs overflow-hidden">
         {loading && products.length === 0 ? (
@@ -385,95 +543,128 @@ export default function ProductsPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 font-mono">
-                {products.map((p) => {
-                  const isOutOfStock = p.stock <= 0;
-                  const isLow = p.stock > 0 && p.stock <= p.reorderLevel;
+                {products
+                  .filter((p) => {
+                    if (stockLevelFilter === "LOW_STOCK") return p.stock > 0 && p.stock <= p.reorderLevel;
+                    if (stockLevelFilter === "OUT_OF_STOCK") return p.stock <= 0;
+                    if (stockLevelFilter === "IN_STOCK") return p.stock > p.reorderLevel;
+                    return true;
+                  })
+                  .map((p) => {
+                    const isOutOfStock = p.stock <= 0;
+                    const isLow = p.stock > 0 && p.stock <= p.reorderLevel;
 
-                  return (
-                    <tr key={p.id} className="hover:bg-slate-50/70 transition">
-                      <td className="py-3 px-4">
-                        <p className="font-sans font-semibold text-slate-900 text-sm">{p.name}</p>
-                        <div className="flex items-center gap-2 text-[11px] text-slate-400">
-                          <span>{p.sku || "No SKU"}</span>
-                          {p.barcode && <span>• Barcode: {p.barcode}</span>}
-                        </div>
-                      </td>
-                      <td className="py-3 px-4 font-sans text-slate-600">
-                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-slate-100 text-slate-700 font-medium">
-                          <Tag className="h-3 w-3 text-slate-400" />
-                          {p.category}
-                        </span>
-                      </td>
-                      <td className="py-3 px-4 text-right text-slate-500">{formatMoney(p.cost)}</td>
-                      <td className="py-3 px-4 text-right font-bold text-slate-900 text-sm">
-                        {formatMoney(p.price)}
-                      </td>
-                      <td className="py-3 px-4 text-right">
-                        <span
-                          className={`font-bold ${
-                            isOutOfStock
-                              ? "text-red-600"
-                              : isLow
-                              ? "text-amber-600"
-                              : "text-emerald-700"
-                          }`}
-                        >
-                          {p.stock} units
-                        </span>
-                        {isOutOfStock && (
-                          <span className="block text-[10px] text-red-600 font-sans font-medium">
-                            Out of stock
+                    return (
+                      <tr key={p.id} className="hover:bg-slate-50/70 transition">
+                        <td className="py-3 px-4">
+                          <p className="font-sans font-semibold text-slate-900 text-sm">{p.name}</p>
+                          <div className="flex items-center gap-2 text-[11px] text-slate-400">
+                            <span>{p.sku || "No SKU"}</span>
+                            {p.barcode && <span>• Barcode: {p.barcode}</span>}
+                          </div>
+                        </td>
+                        <td className="py-3 px-4 font-sans text-slate-600">
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-slate-100 text-slate-700 font-medium">
+                            <Tag className="h-3 w-3 text-slate-400" />
+                            {p.category}
                           </span>
-                        )}
-                        {isLow && (
-                          <span className="block text-[10px] text-amber-600 font-sans font-medium">
-                            Low (min {p.reorderLevel})
-                          </span>
-                        )}
-                      </td>
-                      <td className="py-3 px-4 text-center">
-                        <span
-                          className={`inline-block px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider font-sans ${
-                            p.status === "ACTIVE"
-                              ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
-                              : "bg-slate-100 text-slate-500 border border-slate-200"
-                          }`}
-                        >
-                          {p.status}
-                        </span>
-                      </td>
-                      <td className="py-3 px-4 text-right font-sans">
-                        <div className="inline-flex items-center gap-1.5">
-                          <button
-                            onClick={() => openEditModal(p)}
-                            className="p-1.5 rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-100 hover:text-blue-600 transition"
-                            title="Edit Product"
-                          >
-                            <Edit2 className="h-3.5 w-3.5" />
-                          </button>
-                          <button
-                            onClick={() => handleToggleArchive(p)}
-                            className={`p-1.5 rounded-lg border transition ${
-                              p.status === "ACTIVE"
-                                ? "border-slate-200 text-slate-600 hover:bg-amber-50 hover:text-amber-600"
-                                : "border-emerald-200 text-emerald-700 hover:bg-emerald-50"
+                        </td>
+                        <td className="py-3 px-4 text-right text-slate-500">{formatMoney(p.cost)}</td>
+                        <td className="py-3 px-4 text-right font-bold text-slate-900 text-sm">
+                          {formatMoney(p.price)}
+                        </td>
+                        <td className="py-3 px-4 text-right">
+                          <span
+                            className={`font-bold ${
+                              isOutOfStock
+                                ? "text-red-600"
+                                : isLow
+                                ? "text-amber-600"
+                                : "text-emerald-700"
                             }`}
-                            title={p.status === "ACTIVE" ? "Archive Product" : "Restore Product"}
                           >
-                            <Archive className="h-3.5 w-3.5" />
-                          </button>
-                          <button
-                            onClick={() => handleDeleteProduct(p)}
-                            className="p-1.5 rounded-lg border border-slate-200 text-slate-500 hover:bg-red-50 hover:text-red-600 hover:border-red-200 transition"
-                            title="Delete Product"
+                            {p.stock} units
+                          </span>
+                          {isOutOfStock && (
+                            <span className="block text-[10px] text-red-600 font-sans font-medium">
+                              Out of stock
+                            </span>
+                          )}
+                          {isLow && (
+                            <span className="block text-[10px] text-amber-600 font-sans font-medium">
+                              Low (min {p.reorderLevel})
+                            </span>
+                          )}
+                        </td>
+                        <td className="py-3 px-4 text-center">
+                          <span
+                            className={`inline-block px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider font-sans ${
+                              p.status === "ACTIVE"
+                                ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
+                                : "bg-slate-100 text-slate-500 border border-slate-200"
+                            }`}
                           >
-                            <Trash2 className="h-3.5 w-3.5" />
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })}
+                            {p.status}
+                          </span>
+                        </td>
+                        <td className="py-3 px-4 text-right font-sans">
+                          <div className="inline-flex items-center gap-1.5">
+                            {/* 1-Click Quick Restock */}
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setRestockProduct(p);
+                                setRestockQuantity("10");
+                              }}
+                              className="p-1.5 rounded-lg border border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 transition cursor-pointer"
+                              title="Quick Restock Stock"
+                            >
+                              <Truck className="h-3.5 w-3.5" />
+                            </button>
+
+                            {/* Barcode Sticker Label Printing */}
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setBarcodePrintProduct(p);
+                                setBarcodeLabelCount(4);
+                              }}
+                              className="p-1.5 rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-100 transition cursor-pointer"
+                              title="Print Barcode Labels"
+                            >
+                              <Barcode className="h-3.5 w-3.5" />
+                            </button>
+
+                            <button
+                              onClick={() => openEditModal(p)}
+                              className="p-1.5 rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-100 hover:text-blue-600 transition cursor-pointer"
+                              title="Edit Product"
+                            >
+                              <Edit2 className="h-3.5 w-3.5" />
+                            </button>
+                            <button
+                              onClick={() => handleToggleArchive(p)}
+                              className={`p-1.5 rounded-lg border transition cursor-pointer ${
+                                p.status === "ACTIVE"
+                                  ? "border-slate-200 text-slate-600 hover:bg-amber-50 hover:text-amber-600"
+                                  : "border-emerald-200 text-emerald-700 hover:bg-emerald-50"
+                              }`}
+                              title={p.status === "ACTIVE" ? "Archive Product" : "Restore Product"}
+                            >
+                              <Archive className="h-3.5 w-3.5" />
+                            </button>
+                            <button
+                              onClick={() => handleDeleteProduct(p)}
+                              className="p-1.5 rounded-lg border border-slate-200 text-slate-500 hover:bg-red-50 hover:text-red-600 hover:border-red-200 transition cursor-pointer"
+                              title="Delete Product"
+                            >
+                              <Trash2 className="h-3.5 w-3.5" />
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
               </tbody>
             </table>
           </div>
@@ -514,7 +705,17 @@ export default function ProductsPage() {
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">SKU Code</label>
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="block text-xs font-semibold text-slate-700">SKU Code</label>
+                    <button
+                      type="button"
+                      onClick={() => setFormSku(generateSku(formName, formCategoryId))}
+                      className="text-[10px] text-blue-600 font-bold hover:underline inline-flex items-center gap-0.5 cursor-pointer"
+                    >
+                      <Wand2 className="h-2.5 w-2.5" />
+                      <span>Auto</span>
+                    </button>
+                  </div>
                   <input
                     type="text"
                     placeholder="e.g. BEV-001"
@@ -524,7 +725,17 @@ export default function ProductsPage() {
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">Barcode (Optional)</label>
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="block text-xs font-semibold text-slate-700">Barcode</label>
+                    <button
+                      type="button"
+                      onClick={() => setFormBarcode(generateBarcode())}
+                      className="text-[10px] text-blue-600 font-bold hover:underline inline-flex items-center gap-0.5 cursor-pointer"
+                    >
+                      <Wand2 className="h-2.5 w-2.5" />
+                      <span>Generate</span>
+                    </button>
+                  </div>
                   <input
                     type="text"
                     placeholder="Scan or enter barcode"
@@ -594,6 +805,32 @@ export default function ProductsPage() {
                   />
                 </div>
               </div>
+
+              {/* Live Profit Margin & Markup Indicator */}
+              {calculateMargin(formCostPrice, formSellingPrice) && (
+                <div
+                  className={`p-2.5 rounded-xl border text-xs flex items-center justify-between ${
+                    calculateMargin(formCostPrice, formSellingPrice)?.isLoss
+                      ? "bg-red-50 border-red-200 text-red-700"
+                      : "bg-emerald-50 border-emerald-200 text-emerald-800"
+                  }`}
+                >
+                  <div className="flex items-center gap-1.5 font-bold">
+                    <TrendingUp className="h-3.5 w-3.5" />
+                    <span>
+                      Unit Profit: {formatMoney(calculateMargin(formCostPrice, formSellingPrice)!.profit)}
+                    </span>
+                    {calculateMargin(formCostPrice, formSellingPrice)?.isLoss && (
+                      <span className="font-extrabold text-red-600">(Loss!)</span>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-2 font-mono font-bold text-[11px]">
+                    <span>Margin: {calculateMargin(formCostPrice, formSellingPrice)!.marginPct}%</span>
+                    <span>•</span>
+                    <span>Markup: {calculateMargin(formCostPrice, formSellingPrice)!.markupPct}%</span>
+                  </div>
+                </div>
+              )}
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
@@ -678,7 +915,17 @@ export default function ProductsPage() {
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">SKU</label>
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="block text-xs font-semibold text-slate-700">SKU Code</label>
+                    <button
+                      type="button"
+                      onClick={() => setFormSku(generateSku(formName, formCategoryId))}
+                      className="text-[10px] text-blue-600 font-bold hover:underline inline-flex items-center gap-0.5 cursor-pointer"
+                    >
+                      <Wand2 className="h-2.5 w-2.5" />
+                      <span>Auto</span>
+                    </button>
+                  </div>
                   <input
                     type="text"
                     value={formSku}
@@ -687,7 +934,17 @@ export default function ProductsPage() {
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">Barcode</label>
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="block text-xs font-semibold text-slate-700">Barcode</label>
+                    <button
+                      type="button"
+                      onClick={() => setFormBarcode(generateBarcode())}
+                      className="text-[10px] text-blue-600 font-bold hover:underline inline-flex items-center gap-0.5 cursor-pointer"
+                    >
+                      <Wand2 className="h-2.5 w-2.5" />
+                      <span>Generate</span>
+                    </button>
+                  </div>
                   <input
                     type="text"
                     value={formBarcode}
@@ -743,6 +1000,32 @@ export default function ProductsPage() {
                 </div>
               </div>
 
+              {/* Live Profit Margin & Markup Indicator */}
+              {calculateMargin(formCostPrice, formSellingPrice) && (
+                <div
+                  className={`p-2.5 rounded-xl border text-xs flex items-center justify-between ${
+                    calculateMargin(formCostPrice, formSellingPrice)?.isLoss
+                      ? "bg-red-50 border-red-200 text-red-700"
+                      : "bg-emerald-50 border-emerald-200 text-emerald-800"
+                  }`}
+                >
+                  <div className="flex items-center gap-1.5 font-bold">
+                    <TrendingUp className="h-3.5 w-3.5" />
+                    <span>
+                      Unit Profit: {formatMoney(calculateMargin(formCostPrice, formSellingPrice)!.profit)}
+                    </span>
+                    {calculateMargin(formCostPrice, formSellingPrice)?.isLoss && (
+                      <span className="font-extrabold text-red-600">(Loss!)</span>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-2 font-mono font-bold text-[11px]">
+                    <span>Margin: {calculateMargin(formCostPrice, formSellingPrice)!.marginPct}%</span>
+                    <span>•</span>
+                    <span>Markup: {calculateMargin(formCostPrice, formSellingPrice)!.markupPct}%</span>
+                  </div>
+                </div>
+              )}
+
               <div>
                 <label className="block text-xs font-semibold text-slate-700 mb-1">
                   Reorder Alert Threshold
@@ -770,6 +1053,184 @@ export default function ProductsPage() {
                   className="rounded-xl bg-blue-600 px-5 py-2 text-xs font-semibold text-white hover:bg-blue-700 shadow-sm disabled:opacity-50"
                 >
                   {submitting ? "Updating..." : "Update Product"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL 3: Barcode Label Sticker Print Modal */}
+      {barcodePrintProduct && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-xs p-4">
+          <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl border border-slate-200 animate-in fade-in zoom-in-95 space-y-4">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+              <div className="flex items-center gap-2">
+                <Barcode className="h-5 w-5 text-blue-600" />
+                <h3 className="font-bold text-slate-900 text-base">Print Barcode Labels</h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setBarcodePrintProduct(null)}
+                className="rounded-lg p-1 text-slate-400 hover:bg-slate-100 cursor-pointer"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            <p className="text-xs text-slate-500">
+              Print shelf tags or product barcode stickers for <strong>{barcodePrintProduct.name}</strong>.
+            </p>
+
+            {/* Label Quantity Selector */}
+            <div className="flex items-center justify-between p-3 rounded-xl bg-slate-50 border border-slate-200 text-xs">
+              <span className="font-bold text-slate-700">Number of Stickers:</span>
+              <div className="flex items-center gap-1">
+                {[1, 4, 8, 12, 24].map((cnt) => (
+                  <button
+                    key={cnt}
+                    type="button"
+                    onClick={() => setBarcodeLabelCount(cnt)}
+                    className={`px-2.5 py-1 rounded-lg font-bold text-xs transition cursor-pointer ${
+                      barcodeLabelCount === cnt
+                        ? "bg-slate-900 text-white"
+                        : "bg-white border border-slate-200 text-slate-700 hover:bg-slate-100"
+                    }`}
+                  >
+                    {cnt}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Print Preview Area */}
+            <div
+              id="pos-barcode-print"
+              className="p-4 rounded-xl border border-dashed border-slate-300 bg-white space-y-3"
+            >
+              <div className="grid grid-cols-2 gap-2">
+                {Array.from({ length: barcodeLabelCount }).map((_, idx) => (
+                  <div
+                    key={idx}
+                    className="p-3 rounded-lg border border-slate-300 text-center font-mono space-y-1 bg-white"
+                  >
+                    <p className="text-[10px] font-sans font-bold text-slate-900 truncate uppercase">
+                      {barcodePrintProduct.name}
+                    </p>
+                    {/* Simulated 1D Barcode */}
+                    <div className="flex items-center justify-center gap-[1.5px] h-6 w-full max-w-[140px] mx-auto opacity-90 overflow-hidden">
+                      {[2, 1, 3, 1, 2, 4, 1, 3, 2, 1, 4, 2, 1, 3, 1, 2, 3, 1, 4, 1, 2, 3, 2, 1].map(
+                        (w, i) => (
+                          <span
+                            key={i}
+                            className="bg-black inline-block h-full"
+                            style={{ width: `${w}px` }}
+                          />
+                        )
+                      )}
+                    </div>
+                    <p className="text-[9px] text-slate-500 font-bold tracking-wider">
+                      {barcodePrintProduct.barcode || barcodePrintProduct.sku}
+                    </p>
+                    <p className="text-xs font-black text-slate-900 font-sans">
+                      {formatMoney(barcodePrintProduct.price)}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="flex items-center justify-end gap-2 pt-2">
+              <button
+                type="button"
+                onClick={() => setBarcodePrintProduct(null)}
+                className="px-4 py-2 text-xs font-bold rounded-xl border border-slate-200 text-slate-600 hover:bg-slate-50 cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={() => window.print()}
+                className="px-4 py-2 text-xs font-bold rounded-xl bg-blue-600 hover:bg-blue-700 text-white flex items-center gap-1.5 shadow-sm cursor-pointer"
+              >
+                <Printer className="h-3.5 w-3.5" />
+                <span>Print Labels</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL 4: Quick Restock Modal */}
+      {restockProduct && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-xs p-4">
+          <div className="w-full max-w-sm rounded-2xl bg-white p-6 shadow-2xl border border-slate-200 animate-in fade-in zoom-in-95 space-y-4">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+              <div className="flex items-center gap-2">
+                <Truck className="h-5 w-5 text-[#0D9668]" />
+                <h3 className="font-bold text-slate-900 text-base">Quick Restock</h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setRestockProduct(null)}
+                className="rounded-lg p-1 text-slate-400 hover:bg-slate-100 cursor-pointer"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            <div className="p-3 rounded-xl bg-slate-50 border border-slate-200 text-xs space-y-1">
+              <p className="font-bold text-slate-900 text-sm truncate">{restockProduct.name}</p>
+              <p className="text-slate-500 font-mono">
+                Current Stock:{" "}
+                <span className="font-bold text-slate-900">{restockProduct.stock} units</span>
+              </p>
+            </div>
+
+            <form onSubmit={handleQuickRestock} className="space-y-4">
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 mb-1">
+                  Units Received to Add <span className="text-red-500">*</span>
+                </label>
+                <div className="flex items-center gap-2">
+                  <input
+                    type="number"
+                    min="1"
+                    required
+                    value={restockQuantity}
+                    onChange={(e) => setRestockQuantity(e.target.value)}
+                    className="flex-1 rounded-xl border border-slate-200 p-2.5 text-base font-mono font-bold text-slate-900 focus:border-emerald-600 focus:ring-1 focus:ring-emerald-600"
+                  />
+                  <div className="flex gap-1">
+                    {[10, 25, 50].map((inc) => (
+                      <button
+                        key={inc}
+                        type="button"
+                        onClick={() => setRestockQuantity(String(inc))}
+                        className="px-2.5 py-2 text-xs font-bold rounded-lg border border-slate-200 hover:bg-slate-50 text-slate-700 cursor-pointer"
+                      >
+                        +{inc}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex items-center justify-end gap-2 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setRestockProduct(null)}
+                  disabled={restockSubmitting}
+                  className="px-4 py-2 text-xs font-bold rounded-xl border border-slate-200 text-slate-600 hover:bg-slate-50 cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={restockSubmitting}
+                  className="px-4 py-2 text-xs font-bold rounded-xl bg-[#0D9668] hover:bg-emerald-700 text-white flex items-center gap-1.5 shadow-sm disabled:opacity-50 cursor-pointer"
+                >
+                  {restockSubmitting ? "Restocking..." : "Receive Stock"}
                 </button>
               </div>
             </form>

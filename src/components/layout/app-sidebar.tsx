@@ -6,10 +6,10 @@ import { usePathname } from "next/navigation";
 import {
   Store,
   ChevronDown,
+  ChevronRight,
   Check,
   X,
   LogOut,
-  Smartphone,
   PanelLeftClose,
   PanelLeftOpen,
 } from "lucide-react";
@@ -181,6 +181,8 @@ export function AppSidebar({ isOpen = false, onClose }: AppSidebarProps) {
   const branchLocation = businessData?.settings?.subcity
     ? `${businessData.settings.subcity}, ${businessData.settings.city || "Addis Ababa"}`
     : businessData?.settings?.city || "Addis Ababa";
+  const taxNumber = businessData?.settings?.tin || businessData?.settings?.taxNumber;
+  const businessStatus = businessData?.settings?.status || "ACTIVE";
 
   const availableBusinesses: Array<{ id: string; name: string; role: string }> =
     user?.availableBusinesses || [];
@@ -247,13 +249,6 @@ export function AppSidebar({ isOpen = false, onClose }: AppSidebarProps) {
     } catch (error) {
       window.alert(error instanceof Error ? error.message : "Unable to log out. Please try again.");
       setIsLoggingOut(false);
-    }
-  };
-
-  const handleInstallClick = () => {
-    if (typeof window !== "undefined") {
-      const event = new CustomEvent("bizflow:open-install-prompt");
-      window.dispatchEvent(event);
     }
   };
 
@@ -344,7 +339,7 @@ export function AppSidebar({ isOpen = false, onClose }: AppSidebarProps) {
               onClick={() => {
                 if (hasMultipleBusinesses) setBusinessDropdownOpen((prev) => !prev);
               }}
-              className="h-10 w-10 rounded-xl bg-[#0B212D] border border-[#143547] hover:border-[#0D9668] flex items-center justify-center text-[#00D287] font-bold text-xs shadow-xs transition relative cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#00D287]"
+              className="h-10 w-10 rounded-xl bg-[#0e2736] border border-[#184257] hover:border-[#0D9668] flex items-center justify-center text-[#00D287] font-bold text-xs shadow-xs transition relative cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#00D287]"
               title={`${businessName} (${roleDisplay}) • ${currency}`}
               aria-label={`Active store: ${businessName}`}
               aria-haspopup={hasMultipleBusinesses ? "listbox" : undefined}
@@ -354,7 +349,7 @@ export function AppSidebar({ isOpen = false, onClose }: AppSidebarProps) {
               <span className="absolute -bottom-0.5 -right-0.5 h-2 w-2 rounded-full bg-[#00D287] ring-2 ring-[#071924]" />
             </button>
 
-            {/* Accessible tooltip for collapsed store icon (visible on hover and keyboard focus) */}
+            {/* Accessible tooltip for collapsed store icon */}
             <div
               role="tooltip"
               className="pointer-events-none fixed left-[80px] z-50 hidden group-hover:flex group-focus-visible:flex items-center gap-2 px-3 py-1.5 rounded-lg bg-[#06161F] text-white text-xs font-semibold border border-slate-700 shadow-xl whitespace-nowrap animate-in fade-in zoom-in-95 duration-100"
@@ -368,7 +363,7 @@ export function AppSidebar({ isOpen = false, onClose }: AppSidebarProps) {
               <div
                 role="listbox"
                 aria-label="Select active business"
-                className="fixed left-[76px] top-14 w-60 z-50 rounded-xl bg-[#09222C] border border-[#14484A] shadow-2xl p-1.5 space-y-1 animate-in fade-in zoom-in-95 duration-100"
+                className="fixed left-[76px] top-14 w-60 z-50 rounded-xl bg-[#0e2736] border border-[#184257] shadow-2xl p-1.5 space-y-1 animate-in fade-in zoom-in-95 duration-100"
               >
                 <div className="px-2 py-1 text-[10px] font-bold text-slate-400 uppercase tracking-wider">
                   Switch Business
@@ -409,9 +404,9 @@ export function AppSidebar({ isOpen = false, onClose }: AppSidebarProps) {
                 if (hasMultipleBusinesses) setBusinessDropdownOpen((prev) => !prev);
               }}
               className={cn(
-                "w-full text-left rounded-xl border border-[#143547] bg-[#0B212D]/90 p-2.5 shadow-xs transition-all flex items-center justify-between group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#00D287]",
+                "w-full text-left rounded-xl border border-[#184257] bg-[#0e2736] p-2.5 shadow-xs transition-all flex flex-col gap-1.5 group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#00D287]",
                 hasMultipleBusinesses
-                  ? "hover:border-[#0D9668] hover:bg-[#0c2837] cursor-pointer"
+                  ? "hover:border-[#0D9668] hover:bg-[#113144] cursor-pointer"
                   : "cursor-default"
               )}
               title={
@@ -422,32 +417,42 @@ export function AppSidebar({ isOpen = false, onClose }: AppSidebarProps) {
               aria-haspopup={hasMultipleBusinesses ? "listbox" : undefined}
               aria-expanded={hasMultipleBusinesses ? businessDropdownOpen : undefined}
             >
-              <div className="flex items-center gap-2.5 min-w-0">
-                <div className="h-8 w-8 rounded-lg bg-[#073228] border border-[#0D9668]/40 flex items-center justify-center text-[#00D287] font-bold text-xs shrink-0">
-                  <Store className="h-4 w-4" />
+              {/* Header Label + Status & Role Badge */}
+              <div className="flex items-center justify-between text-[10px] w-full">
+                <div className="flex items-center gap-1.5 font-bold uppercase tracking-wider text-slate-400">
+                  <span className="h-1.5 w-1.5 rounded-full bg-[#00D287] animate-pulse" />
+                  <span>CURRENT BUSINESS</span>
                 </div>
-                <div className="min-w-0 flex-1">
-                  <div className="flex items-center gap-1.5">
-                    <p className="font-bold text-white text-xs truncate max-w-[110px]">
+                <span className="text-[9px] font-extrabold px-1.5 py-0.2 rounded bg-[#0D382E] text-[#00D287] border border-[#0D9668]/40 shrink-0">
+                  {roleDisplay}
+                </span>
+              </div>
+
+              {/* Main Store Line */}
+              <div className="flex items-center justify-between gap-2 min-w-0 w-full">
+                <div className="flex items-center gap-2.5 min-w-0">
+                  <div className="h-8 w-8 rounded-lg bg-[#073228] border border-[#0D9668]/40 flex items-center justify-center text-[#00D287] font-bold text-xs shrink-0 group-hover:scale-105 transition-transform">
+                    <Store className="h-4 w-4" />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="font-bold text-white text-xs truncate max-w-[140px]">
                       {businessName}
                     </p>
-                    <span className="text-[9px] font-extrabold px-1.5 py-0.2 rounded bg-[#0D382E] text-[#00D287] border border-[#0D9668]/40 shrink-0">
-                      {roleDisplay}
-                    </span>
+                    <p className="text-[10px] text-slate-400 truncate mt-0.5 font-mono">
+                      <span className="text-slate-300 font-semibold">{currency}</span>
+                      {taxNumber ? ` • ${taxNumber}` : ` • ${branchLocation}`}
+                    </p>
                   </div>
-                  <p className="text-[10px] text-slate-400 truncate mt-0.5">
-                    <span className="font-mono text-slate-300">{currency}</span> • {branchLocation}
-                  </p>
                 </div>
+                {hasMultipleBusinesses && (
+                  <ChevronDown
+                    className={cn(
+                      "h-4 w-4 text-slate-400 group-hover:text-white transition-transform shrink-0",
+                      businessDropdownOpen && "rotate-180"
+                    )}
+                  />
+                )}
               </div>
-              {hasMultipleBusinesses && (
-                <ChevronDown
-                  className={cn(
-                    "h-4 w-4 text-slate-400 group-hover:text-white transition-transform shrink-0",
-                    businessDropdownOpen && "rotate-180"
-                  )}
-                />
-              )}
             </button>
 
             {/* Multi-Tenant Business Switcher Dropdown */}
@@ -607,28 +612,13 @@ export function AppSidebar({ isOpen = false, onClose }: AppSidebarProps) {
           collapsed ? "p-2" : "p-3"
         )}
       >
-        {!collapsed && (
-          <div className="flex items-center justify-between pb-2 mb-2 border-b border-[#122B38]/60 text-[11px] text-slate-400">
-            <button
-              type="button"
-              onClick={handleInstallClick}
-              className="flex items-center gap-1.5 text-slate-300 hover:text-[#00D287] transition cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#00D287] rounded px-1.5 py-0.5"
-              title="Install BizFlow App (PWA)"
-            >
-              <Smartphone className="h-3.5 w-3.5 text-[#00D287]" />
-              <span>Install App</span>
-            </button>
-            <span className="text-[10px] text-slate-400 font-mono">v1.0</span>
-          </div>
-        )}
-
         {/* User Account / Profile Section */}
         {collapsed ? (
           <div className="flex flex-col items-center gap-2">
             <Link
               href="/profile"
               onClick={() => onClose?.()}
-              className="h-9 w-9 rounded-full bg-[#06161F] border-2 border-[#0D9668] flex items-center justify-center font-extrabold text-white text-xs hover:scale-105 transition-transform focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#00D287]"
+              className="h-9 w-9 rounded-full bg-[#0E2736] border border-[#0D9668] flex items-center justify-center font-extrabold text-white text-xs hover:scale-105 transition-transform focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#00D287]"
               title={`${userName} (${roleDisplay}) • View Profile`}
               aria-label="View Profile"
             >
@@ -646,33 +636,36 @@ export function AppSidebar({ isOpen = false, onClose }: AppSidebarProps) {
             </button>
           </div>
         ) : (
-          <div className="space-y-1">
+          <div className="space-y-1.5">
             <Link
               href="/profile"
               onClick={() => onClose?.()}
-              className="flex items-center justify-between rounded-xl p-1.5 hover:bg-white/[0.06] transition group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#00D287]"
+              className="flex items-center justify-between rounded-xl p-2 bg-[#0A1F2C]/60 hover:bg-[#0E2736] border border-[#122B38] transition group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#00D287]"
               title="View & Edit My Profile"
             >
               <div className="flex items-center gap-2.5 min-w-0">
-                <div className="h-8 w-8 shrink-0 rounded-full bg-[#06161F] border-2 border-[#0D9668] flex items-center justify-center font-extrabold text-white text-xs group-hover:scale-105 transition-transform">
+                <div className="h-8 w-8 shrink-0 rounded-full bg-[#071924] border border-[#00D287]/50 flex items-center justify-center font-bold text-white text-xs group-hover:border-[#00D287] transition-colors">
                   {initials}
                 </div>
                 <div className="min-w-0">
-                  <p className="text-xs font-bold text-white group-hover:text-[#00D287] transition-colors truncate">
+                  <p className="text-xs font-semibold text-white group-hover:text-[#00D287] transition-colors truncate">
                     {userName}
                   </p>
-                  <p className="text-[10px] text-slate-400 truncate">
-                    <span className="text-[#00D287] font-bold">{roleDisplay}</span> • My Profile
+                  <p className="text-[10px] text-slate-400 truncate flex items-center gap-1.5">
+                    <span className="text-[#00D287] font-bold uppercase tracking-wider">{roleDisplay}</span>
+                    <span className="text-slate-600">·</span>
+                    <span>My Profile</span>
                   </p>
                 </div>
               </div>
+              <ChevronRight className="h-4 w-4 text-slate-400 group-hover:text-white group-hover:translate-x-0.5 transition-all shrink-0" />
             </Link>
 
             <button
               type="button"
               onClick={handleLogout}
               disabled={isLoggingOut}
-              className="flex w-full items-center gap-2 px-2.5 py-1.5 rounded-lg text-xs font-semibold text-slate-400 hover:text-red-400 hover:bg-white/[0.04] transition disabled:opacity-60 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-400"
+              className="flex w-full items-center gap-2 px-2.5 py-1.5 rounded-lg text-xs font-medium text-slate-400 hover:text-red-400 hover:bg-white/[0.04] transition disabled:opacity-60 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-400"
             >
               <LogOut className="h-3.5 w-3.5 shrink-0" />
               <span>{isLoggingOut ? "Logging out…" : "Log out"}</span>

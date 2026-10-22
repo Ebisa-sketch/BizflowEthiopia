@@ -194,56 +194,6 @@ export function SalesTrendChart({
               <span className="hidden sm:inline">Bar</span>
             </button>
           </div>
-
-          {/* Range Buttons (Today, 7 Days, 30 Days, This Month) */}
-          {onRangeChange && (
-            <div className="inline-flex items-center rounded-xl bg-slate-100 dark:bg-slate-800 p-0.5 text-xs font-bold shadow-2xs">
-              <button
-                type="button"
-                onClick={() => onRangeChange("today")}
-                className={`px-2.5 py-1 rounded-lg transition-all cursor-pointer ${
-                  dateRange === "today"
-                    ? "bg-[#101827] dark:bg-emerald-600 text-white shadow-xs"
-                    : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100"
-                }`}
-              >
-                Today
-              </button>
-              <button
-                type="button"
-                onClick={() => onRangeChange("7d")}
-                className={`px-2.5 py-1 rounded-lg transition-all cursor-pointer ${
-                  dateRange === "7d"
-                    ? "bg-[#101827] dark:bg-emerald-600 text-white shadow-xs"
-                    : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100"
-                }`}
-              >
-                7 Days
-              </button>
-              <button
-                type="button"
-                onClick={() => onRangeChange("30d")}
-                className={`px-2.5 py-1 rounded-lg transition-all cursor-pointer ${
-                  dateRange === "30d"
-                    ? "bg-[#101827] dark:bg-emerald-600 text-white shadow-xs"
-                    : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100"
-                }`}
-              >
-                30 Days
-              </button>
-              <button
-                type="button"
-                onClick={() => onRangeChange("month")}
-                className={`px-2.5 py-1 rounded-lg transition-all cursor-pointer ${
-                  dateRange === "month"
-                    ? "bg-[#101827] dark:bg-emerald-600 text-white shadow-xs"
-                    : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100"
-                }`}
-              >
-                Month
-              </button>
-            </div>
-          )}
         </div>
       </div>
 

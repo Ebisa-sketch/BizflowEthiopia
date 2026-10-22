@@ -662,6 +662,54 @@ export default function DashboardPage() {
               </Link>
             </div>
 
+            {/* Secondary Financial Metrics Strip */}
+            {(financialSummary.paymentsCollected > 0 || financialSummary.cogs > 0 || financialSummary.outstandingBalance > 0) && (
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                {/* Payments Collected */}
+                <div className="flex items-center gap-3 p-3.5 rounded-2xl bg-white dark:bg-slate-850 border border-slate-200/80 dark:border-slate-750 shadow-2xs">
+                  <div className="h-9 w-9 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-100 dark:border-emerald-800/40 flex items-center justify-center shrink-0">
+                    <Banknote className="h-4 w-4 text-[#00A86B]" />
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-[11px] font-semibold text-slate-500 dark:text-slate-400">Payments Collected</p>
+                    <p className="text-sm font-bold text-slate-900 dark:text-slate-100 font-mono tracking-tight">
+                      {formatStoreMoney(financialSummary.paymentsCollected)}
+                    </p>
+                  </div>
+                </div>
+
+                {/* Cost of Goods Sold */}
+                <div className="flex items-center gap-3 p-3.5 rounded-2xl bg-white dark:bg-slate-850 border border-slate-200/80 dark:border-slate-750 shadow-2xs">
+                  <div className="h-9 w-9 rounded-xl bg-blue-50 dark:bg-blue-950/40 border border-blue-100 dark:border-blue-800/40 flex items-center justify-center shrink-0">
+                    <Package className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-[11px] font-semibold text-slate-500 dark:text-slate-400">Cost of Goods Sold</p>
+                    <p className="text-sm font-bold text-slate-900 dark:text-slate-100 font-mono tracking-tight">
+                      {formatStoreMoney(financialSummary.cogs)}
+                    </p>
+                  </div>
+                </div>
+
+                {/* Outstanding Credit */}
+                <div className="flex items-center gap-3 p-3.5 rounded-2xl bg-white dark:bg-slate-850 border border-slate-200/80 dark:border-slate-750 shadow-2xs">
+                  <div className="h-9 w-9 rounded-xl bg-amber-50 dark:bg-amber-950/40 border border-amber-100 dark:border-amber-800/40 flex items-center justify-center shrink-0">
+                    <Receipt className="h-4 w-4 text-amber-600 dark:text-amber-400" />
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-[11px] font-semibold text-slate-500 dark:text-slate-400">Outstanding Credit</p>
+                    <p className={`text-sm font-bold font-mono tracking-tight ${
+                      financialSummary.outstandingBalance > 0
+                        ? "text-amber-600 dark:text-amber-400"
+                        : "text-slate-900 dark:text-slate-100"
+                    }`}>
+                      {formatStoreMoney(financialSummary.outstandingBalance)}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
+
             {/* Middle Row: Sales Trend (7 Cols) & Inventory Alerts (5 Cols) */}
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-stretch">
               {/* Sales Trend Chart (7 Cols) */}

@@ -23,6 +23,7 @@ const parsedEnv = envSchema.parse({
 
 export function assertProductionEnv(source: NodeJS.ProcessEnv): void {
   if (source.NODE_ENV !== "production") return;
+  if (source.NEXT_PHASE === "phase-production-build") return;
 
   const errors: string[] = [];
   if (!source.DATABASE_URL) {

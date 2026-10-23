@@ -31,4 +31,13 @@ describe("production environment validation", () => {
   it("does not require production credentials in development", () => {
     expect(() => assertProductionEnv({ NODE_ENV: "development" })).not.toThrow();
   });
+
+  it("permits build-time phase without failing page data collection", () => {
+    expect(() =>
+      assertProductionEnv({
+        NODE_ENV: "production",
+        NEXT_PHASE: "phase-production-build",
+      })
+    ).not.toThrow();
+  });
 });

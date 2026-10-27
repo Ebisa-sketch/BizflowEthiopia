@@ -4,6 +4,9 @@ import { isValidEdgeSessionToken } from "@/lib/auth/edge-session";
 
 export const SESSION_COOKIE_NAME = "bizflow_session";
 
+// Must match the fallback in src/lib/env.ts so signing & verification always use the same secret
+const JWT_SECRET_FALLBACK = "bizflow_development_super_secret_jwt_key_change_in_production_min_32_chars";
+
 // Routes that require authentication
 const PROTECTED_PREFIXES = [
   "/dashboard",
@@ -37,7 +40,7 @@ export async function middleware(request: NextRequest) {
   const sessionCookie = request.cookies.get(SESSION_COOKIE_NAME)?.value;
   const isAuthenticated = await isValidEdgeSessionToken(
     sessionCookie,
-    process.env.JWT_SECRET
+    process.env.JWT_SECRET || JWT_SECRET_FALLBACK
   );
 
   // Check protected routes

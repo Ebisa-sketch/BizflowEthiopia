@@ -856,7 +856,7 @@ export default function PosCheckoutPage() {
           reference: effectiveRef,
           tendered: paymentMethod === "CASH" ? cashTendered : grandTotal,
         },
-        managerApprovalToken,
+        managerApprovalToken: managerApprovalToken || undefined,
       };
 
       const fingerprint = JSON.stringify(payloadWithoutKey);

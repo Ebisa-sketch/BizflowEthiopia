@@ -30,14 +30,42 @@ const posCheckoutSchema = z.object({
     ),
   discountTotal: z.number().finite().nonnegative().default(0),
   applyVat: z.boolean().default(false),
-  customerName: z.string().trim().max(200).optional(),
+  customerName: z
+    .string()
+    .trim()
+    .max(200)
+    .optional()
+    .nullable()
+    .transform((value) => value ?? undefined),
   payment: z.object({
     paymentMethod: z.nativeEnum(PaymentMethod),
-    reference: z.string().max(200).optional().nullable().transform((value) => value ?? undefined),
-    tendered: z.number().finite().nonnegative().optional(),
+    reference: z
+      .string()
+      .max(200)
+      .optional()
+      .nullable()
+      .transform((value) => value ?? undefined),
+    tendered: z
+      .number()
+      .finite()
+      .nonnegative()
+      .optional()
+      .nullable()
+      .transform((value) => value ?? undefined),
   }),
-  managerApprovalToken: z.string().max(4096).optional(),
-  idempotencyKey: z.string().min(16).max(128).optional(),
+  managerApprovalToken: z
+    .string()
+    .max(4096)
+    .optional()
+    .nullable()
+    .transform((value) => value ?? undefined),
+  idempotencyKey: z
+    .string()
+    .min(16)
+    .max(128)
+    .optional()
+    .nullable()
+    .transform((value) => value ?? undefined),
 });
 
 export async function GET(request: NextRequest) {

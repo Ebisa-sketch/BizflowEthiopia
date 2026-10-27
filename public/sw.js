@@ -1,10 +1,10 @@
 /* ==========================================================================
-   BizFlow Ethiopia - Service Worker
-   Safe offline fallback & static asset caching.
-   Strict rule: ZERO caching of /api/* routes, auth pages, or financial data.
+   BizFlow Ethiopia - Service Worker (v3)
+   Lightweight offline fallback & critical asset precaching.
+   Strict rule: ZERO interception of /api/*, /_next/*, auth routes, or dynamic pages.
    ========================================================================== */
 
-const CACHE_NAME = 'bizflow-static-v2';
+const CACHE_NAME = 'bizflow-static-v3';
 const OFFLINE_FALLBACK_URL = '/offline.html';
 
 // Critical static assets for offline fallback & PWA shell
@@ -48,20 +48,31 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // 2. API ROUTES & AUTHENTICATION: Strictly Network-Only (Bypass Service Worker)
-  // Completely bypass service worker interception so the browser handles authentication,
-  // login redirects, and API calls natively without SW wrapper promise rejections.
+  // 2. CRITICAL BYPASS: Never intercept Next.js chunks, API calls, auth routes, or app dashboards.
+  // Allowing native browser network handling prevents Service Worker thread latency,
+  // stops image deferral interventions, and prevents fetch promise rejections.
   if (
     url.pathname.startsWith('/api/') ||
+    url.pathname.startsWith('/_next/') ||
     url.pathname.startsWith('/login') ||
     url.pathname.startsWith('/register') ||
     url.pathname.startsWith('/forgot-password') ||
-    url.pathname.startsWith('/reset-password')
+    url.pathname.startsWith('/reset-password') ||
+    url.pathname.startsWith('/dashboard') ||
+    url.pathname.startsWith('/admin') ||
+    url.pathname.startsWith('/sales') ||
+    url.pathname.startsWith('/products') ||
+    url.pathname.startsWith('/inventory') ||
+    url.pathname.startsWith('/customers') ||
+    url.pathname.startsWith('/expenses') ||
+    url.pathname.startsWith('/reports') ||
+    url.pathname.startsWith('/staff') ||
+    url.pathname.startsWith('/settings')
   ) {
-    return; // Do NOT call event.respondWith - allow native browser network stack to handle directly
+    return;
   }
 
-  // 3. Navigation requests (User browsing pages)
+  // 3. Navigation requests (Only show offline fallback if user loses connection)
   if (request.mode === 'navigate') {
     event.respondWith(
       fetch(request).catch(async () => {
@@ -80,19 +91,13 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // 4. Safe Static Assets (Images, Icons, Fonts)
-  const isStaticAsset =
+  // 4. Precached Static App Assets (Manifest, Icons)
+  const isPrecachedAsset =
     url.pathname.startsWith('/icons/') ||
-    url.pathname.startsWith('/images/') ||
-    url.pathname.endsWith('.png') ||
-    url.pathname.endsWith('.jpg') ||
-    url.pathname.endsWith('.jpeg') ||
-    url.pathname.endsWith('.svg') ||
     url.pathname.endsWith('.webmanifest') ||
-    url.hostname.includes('fonts.googleapis.com') ||
-    url.hostname.includes('fonts.gstatic.com');
+    url.pathname === '/store-owner.svg';
 
-  if (isStaticAsset) {
+  if (isPrecachedAsset) {
     event.respondWith(
       caches.match(request).then((cachedResponse) => {
         if (cachedResponse) {
@@ -106,27 +111,14 @@ self.addEventListener('fetch', (event) => {
             });
           }
           return networkResponse;
-        }).catch(() => {
-          // Return empty or fallback if asset unavailable offline
-          return caches.match(OFFLINE_FALLBACK_URL);
         });
       })
     );
     return;
   }
 
-  // 5. Default: Network with graceful fail
-  event.respondWith(
-    fetch(request).catch(() => {
-      if (request.mode === 'navigate') {
-        return caches.match(OFFLINE_FALLBACK_URL);
-      }
-      return new Response(JSON.stringify({ error: "Network error" }), {
-        status: 503,
-        headers: { "Content-Type": "application/json" },
-      });
-    })
-  );
+  // 5. Default: Let browser handle all other requests natively with zero SW interference
+  return;
 });
 
 self.addEventListener('message', (event) => {

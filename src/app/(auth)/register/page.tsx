@@ -352,12 +352,9 @@ export default function RegisterPage() {
         return;
       }
 
-      // Success
+      // Success - immediate transition to workspace dashboard
       setSuccess(true);
-      setTimeout(() => {
-        router.push("/dashboard");
-        router.refresh();
-      }, 1200);
+      window.location.href = "/dashboard";
     } catch {
       setGeneralError("Unable to reach the server. Please check your connection and try again.");
       setLoading(false);

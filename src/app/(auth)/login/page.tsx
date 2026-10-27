@@ -224,8 +224,8 @@ function LoginFormContent() {
         callbackUrl === "/dashboard" && data.user?.globalRole === "SUPERADMIN"
           ? "/admin"
           : callbackUrl;
-      router.push(destination);
-      router.refresh();
+
+      window.location.href = destination;
     } catch {
       setErrorMessage(
         "Unable to reach the server. Please check your connection and try again."

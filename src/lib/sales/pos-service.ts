@@ -6,6 +6,7 @@ import { BusinessRole, hasPermission } from "../permissions";
 import { MovementType, PaymentMethod, SaleStatus } from "@prisma/client";
 import { calculatePosTotals } from "./pos-pricing";
 import { verifyManagerDiscountGrant } from "./manager-authorization";
+import { validatePaymentReference } from "../payments/ethiopian-payment-reference";
 
 export interface PosCartItemInput {
   productId: string;
@@ -318,6 +319,7 @@ export async function createPosSale(
   const method = payment.paymentMethod;
   let tendered = payment.tendered ?? grandTotal;
   let change = 0;
+  let effectiveReference: string | null = null;
 
   if (!Number.isFinite(tendered) || tendered < 0) {
     throw new AppError("Tendered amount must be a valid non-negative number.", 400);
@@ -332,14 +334,15 @@ export async function createPosSale(
     }
     change = roundMoney(tendered - grandTotal);
   } else {
-    // Electronic payments (TELEBIRR, CBE_BIRR, BANK_TRANSFER, etc.) require reference code
-    const ref = payment.reference?.trim();
-    if (!ref || ref.length < 3) {
+    // Validate Ethiopian payment reference (Telebirr, CBE Birr, Bank Transfer, Store Credit)
+    const validation = validatePaymentReference(method, payment.reference);
+    if (!validation.isValid) {
       throw new AppError(
-        `A valid transaction confirmation reference is required for ${method} payment.`,
+        validation.error || `A valid transaction confirmation reference is required for ${method} payment.`,
         400
       );
     }
+    effectiveReference = validation.normalizedReference;
 
     if (method === PaymentMethod.OTHER && normalizedCustomerName === "Walk-in Customer") {
       throw new AppError(
@@ -432,6 +435,46 @@ export async function createPosSale(
       });
     }
 
+    // For electronic payments (Telebirr, CBE Birr, Bank Transfer), ensure reference code is not reused in this business
+    if (
+      effectiveReference &&
+      (method === PaymentMethod.TELEBIRR ||
+        method === PaymentMethod.CBE_BIRR ||
+        method === PaymentMethod.BANK_TRANSFER)
+    ) {
+      const existingPayment = await tx.payment.findFirst({
+        where: {
+          businessId,
+          paymentMethod: method,
+          reference: effectiveReference,
+          status: "COMPLETED",
+        },
+        include: {
+          sale: {
+            select: {
+              saleNumber: true,
+              createdAt: true,
+            },
+          },
+        },
+      });
+
+      if (existingPayment) {
+        const saleRef = existingPayment.sale?.saleNumber || "a previous transaction";
+        const dateStr = existingPayment.sale?.createdAt
+          ? new Date(existingPayment.sale.createdAt).toLocaleDateString("en-US", {
+              month: "short",
+              day: "numeric",
+              year: "numeric",
+            })
+          : "an earlier date";
+        throw new AppError(
+          `Duplicate payment reference: '${effectiveReference}' was already used for sale #${saleRef} on ${dateStr}. Each electronic payment confirmation can only be used once.`,
+          409
+        );
+      }
+    }
+
     // Create Payment record
     await tx.payment.create({
       data: {
@@ -439,7 +482,7 @@ export async function createPosSale(
         saleId: sale.id,
         amount: grandTotal,
         paymentMethod: method,
-        reference: payment.reference?.trim() || null,
+        reference: effectiveReference,
         status: "COMPLETED",
         tendered,
         change,
@@ -516,7 +559,7 @@ export async function createPosSale(
     payment: {
       method,
       amount: grandTotal,
-      reference: payment.reference?.trim() || null,
+      reference: effectiveReference,
       tendered,
       change,
     },

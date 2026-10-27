@@ -16,6 +16,7 @@ vi.mock("@/lib/db/prisma", () => {
   const mockCreateSaleItem = vi.fn();
   const mockCreateStockMovement = vi.fn();
   const mockCreatePayment = vi.fn();
+  const mockFindFirstPayment = vi.fn().mockResolvedValue(null);
   const mockCreateAuditLog = vi.fn();
   const mockFindUniqueMembership = vi.fn();
 
@@ -37,6 +38,7 @@ vi.mock("@/lib/db/prisma", () => {
       },
       payment: {
         create: mockCreatePayment,
+        findFirst: mockFindFirstPayment,
       },
       auditLog: {
         create: mockCreateAuditLog,
@@ -56,7 +58,7 @@ vi.mock("@/lib/db/prisma", () => {
         updateMany: mockUpdateManyProduct,
       },
       sale: { create: mockCreateSale, findFirst: mockFindFirstSale },
-      payment: { create: mockCreatePayment },
+      payment: { create: mockCreatePayment, findFirst: mockFindFirstPayment },
       $transaction: mockTransaction,
     },
   };
@@ -129,6 +131,7 @@ describe("POS Checkout Service & Validation Engine", () => {
     });
     (prisma.product.updateMany as any).mockResolvedValue({ count: 1 });
     (prisma.sale.findFirst as any).mockResolvedValue(null);
+    (prisma.payment.findFirst as any).mockResolvedValue(null);
   });
 
   it("successfully completes a standard Cash sale with correct change and decimal math", async () => {
@@ -400,6 +403,47 @@ describe("POS Checkout Service & Validation Engine", () => {
     expect(receipt.payment.method).toBe(PaymentMethod.TELEBIRR);
     expect(receipt.payment.reference).toBe("TB-REC-89217342");
     expect(receipt.payment.change).toBe(0);
+  });
+
+  it("rejects electronic payment (Telebirr) when transaction reference code is a placeholder", async () => {
+    const input: CreatePosSaleInput = {
+      businessId: "biz-test-1",
+      cashierId: "usr-cashier-1",
+      role: "CASHIER",
+      items: [{ productId: "prod-1", quantity: 1 }],
+      payment: {
+        paymentMethod: PaymentMethod.TELEBIRR,
+        reference: "12345678", // Blacklisted fake code
+      },
+    };
+
+    await expect(createPosSale(input)).rejects.toThrow(/actual .* confirmation reference code/i);
+  });
+
+  it("blocks duplicate electronic payment references to prevent cashier fraud", async () => {
+    // Mock that this reference code was already recorded for a completed sale in this business
+    (prisma.payment.findFirst as any).mockResolvedValueOnce({
+      id: "pay-existing-1",
+      reference: "TB2410279821",
+      status: "COMPLETED",
+      sale: {
+        saleNumber: "INV-20261026-9042",
+        createdAt: new Date("2026-10-26T10:00:00Z"),
+      },
+    });
+
+    const input: CreatePosSaleInput = {
+      businessId: "biz-test-1",
+      cashierId: "usr-cashier-1",
+      role: "CASHIER",
+      items: [{ productId: "prod-1", quantity: 1 }],
+      payment: {
+        paymentMethod: PaymentMethod.TELEBIRR,
+        reference: "TB2410279821",
+      },
+    };
+
+    await expect(createPosSale(input)).rejects.toThrow(/Duplicate payment reference: 'TB2410279821'/i);
   });
 
   it("prevents double submission using idempotency key deduplication", async () => {

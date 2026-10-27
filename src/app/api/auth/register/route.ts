@@ -6,25 +6,11 @@ import { setSessionCookie } from "@/lib/auth/session";
 import { handleApiError, AppError } from "@/lib/errors";
 import { validateEthiopianPhone } from "@/lib/auth/phone";
 
-// In-memory rate limiting map: IP -> timestamp array
-const rateLimitMap = new Map<string, number[]>();
-const RATE_LIMIT_WINDOW_MS = 15 * 60 * 1000; // 15 minutes
-const MAX_REGISTRATIONS_PER_WINDOW = 6; // max 6 attempts per 15 mins
-
-function checkRateLimit(ip: string): boolean {
-  const now = Date.now();
-  const timestamps = rateLimitMap.get(ip) || [];
-  const validTimestamps = timestamps.filter((t) => now - t < RATE_LIMIT_WINDOW_MS);
-
-  if (validTimestamps.length >= MAX_REGISTRATIONS_PER_WINDOW) {
-    rateLimitMap.set(ip, validTimestamps);
-    return false;
-  }
-
-  validTimestamps.push(now);
-  rateLimitMap.set(ip, validTimestamps);
-  return true;
-}
+import {
+  getClientIp,
+  registerRateLimiter,
+  createRateLimitResponse,
+} from "@/lib/rate-limit";
 
 const registerSchema = z.object({
   firstName: z.string().optional(),
@@ -46,17 +32,14 @@ const registerSchema = z.object({
 
 export async function POST(request: Request) {
   try {
-    // Rate limit check
-    const forwardedFor = request.headers.get("x-forwarded-for");
-    const clientIp = forwardedFor ? forwardedFor.split(",")[0].trim() : "127.0.0.1";
+    // Rate limit check per IP address
+    const clientIp = getClientIp(request);
+    const rateLimitStatus = registerRateLimiter.consume(`register:${clientIp}`);
 
-    if (!checkRateLimit(clientIp)) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: "Too many registration attempts from this IP address. Please wait a few minutes before trying again.",
-        },
-        { status: 429 }
+    if (!rateLimitStatus.allowed) {
+      return createRateLimitResponse(
+        rateLimitStatus,
+        `Too many registration attempts from this IP address. Please wait ${Math.ceil(rateLimitStatus.retryAfterSeconds / 60)} minutes before trying again.`
       );
     }
 

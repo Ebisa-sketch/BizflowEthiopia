@@ -44,6 +44,11 @@ import {
   formatPosReceiptDateTime,
   POS_VAT_RATE,
 } from "@/lib/sales/pos-pricing";
+import {
+  validatePaymentReference,
+  getPaymentFormatHint,
+  extractPaymentReferenceFromSms,
+} from "@/lib/payments/ethiopian-payment-reference";
 
 interface ProductItem {
   id: string;
@@ -767,6 +772,31 @@ export default function PosCheckoutPage() {
     showToast(`Selected customer: ${formatted}`);
   };
 
+  // Smart SMS reference extraction and input handler
+  const handleReferenceInputChange = (raw: string) => {
+    const extracted = extractPaymentReferenceFromSms(raw);
+    if (extracted) {
+      setPaymentRef(extracted.extractedReference);
+      if (
+        extracted.detectedProvider === "TELEBIRR" ||
+        extracted.detectedProvider === "CBE_BIRR" ||
+        extracted.detectedProvider === "BANK_TRANSFER"
+      ) {
+        setPaymentMethod(extracted.detectedProvider);
+      }
+      setPaymentManuallyConfirmed(true);
+      showToast(`Extracted ${extracted.detectedProvider} code: ${extracted.extractedReference}`);
+    } else {
+      setPaymentRef(raw);
+    }
+  };
+
+  // Real-time reference validation state
+  const refValidationResult = validatePaymentReference(
+    paymentMethod as any,
+    paymentRef
+  );
+
   // Execute Sale Submission with Idempotency Key
   const handleCompleteSale = async () => {
     if (cart.length === 0 || isSubmitting) return;
@@ -782,9 +812,14 @@ export default function PosCheckoutPage() {
         setSubmitError("Store Credit (Idda / ዕዳ) requires a registered customer with a phone number. Please select or add a named customer.");
         return;
       }
-    } else if (paymentMethod !== "CASH" && (!paymentRef || paymentRef.trim().length < 3)) {
-      setSubmitError(`A valid transaction confirmation reference is required for ${paymentMethod}.`);
-      return;
+    }
+
+    if (paymentMethod !== "CASH") {
+      const validation = validatePaymentReference(paymentMethod as any, paymentRef);
+      if (!validation.isValid) {
+        setSubmitError(validation.error || `A valid transaction confirmation reference is required for ${paymentMethod}.`);
+        return;
+      }
     }
 
     if (
@@ -1799,21 +1834,89 @@ export default function PosCheckoutPage() {
                 </div>
               </div>
             ) : (
-              <div className="space-y-2.5 bg-blue-50/50 p-4 rounded-2xl border border-blue-100">
-                <label className="text-xs font-bold text-slate-700 block">
-                  {paymentMethod} Confirmation Reference Number <span className="text-red-500">*</span>
-                </label>
-                <input
-                  type="text"
-                  placeholder="e.g. TL-8921034 or CBE-99120"
-                  value={paymentRef}
-                  onChange={(e) => setPaymentRef(e.target.value)}
-                  aria-label={`${paymentMethod} payment reference`}
-                  className="w-full text-sm font-mono font-bold rounded-xl border border-slate-300 p-2.5 text-slate-900 bg-white focus:border-blue-600 focus:ring-2 focus:ring-blue-600/20"
-                />
-                <p className="text-[11px] text-amber-800 leading-relaxed font-medium">
-                  Notice: Transaction reference is recorded for bookkeeping only. BizFlow does not connect to banking/telco APIs to verify receipt.
+              <div className="space-y-3 bg-blue-50/50 p-4 rounded-2xl border border-blue-100">
+                <div className="flex items-center justify-between">
+                  <label className="text-xs font-bold text-slate-700 block">
+                    {paymentMethod === "TELEBIRR"
+                      ? "Telebirr"
+                      : paymentMethod === "CBE_BIRR"
+                      ? "CBE Birr"
+                      : "Bank Transfer"}{" "}
+                    Confirmation Reference Number <span className="text-red-500">*</span>
+                  </label>
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      try {
+                        const text = await navigator.clipboard.readText();
+                        if (text) {
+                          handleReferenceInputChange(text);
+                        }
+                      } catch {
+                        const pasted = prompt("Paste the transaction SMS or reference here:");
+                        if (pasted) handleReferenceInputChange(pasted);
+                      }
+                    }}
+                    className="text-[10px] font-bold text-blue-700 hover:text-blue-900 bg-blue-100/70 hover:bg-blue-100 px-2 py-0.5 rounded-lg flex items-center gap-1 transition cursor-pointer shadow-2xs"
+                    title="Paste from customer SMS (auto-extracts transaction ID)"
+                  >
+                    <span>Paste / Extract SMS</span>
+                  </button>
+                </div>
+
+                <div className="relative">
+                  <input
+                    type="text"
+                    placeholder={
+                      paymentMethod === "TELEBIRR"
+                        ? "e.g. TB2410279184 or PB8821940"
+                        : paymentMethod === "CBE_BIRR"
+                        ? "e.g. FT2430198214 or CBE-991204"
+                        : "e.g. AWASH-892104 or TXN-449102"
+                    }
+                    value={paymentRef}
+                    onChange={(e) => handleReferenceInputChange(e.target.value)}
+                    aria-label={`${paymentMethod} payment reference`}
+                    className={`w-full text-sm font-mono font-bold rounded-xl border p-2.5 text-slate-900 bg-white transition pr-9 ${
+                      paymentRef.trim().length > 0 && refValidationResult.isValid
+                        ? "border-emerald-500 focus:border-emerald-600 focus:ring-2 focus:ring-emerald-500/20"
+                        : paymentRef.trim().length > 0 && !refValidationResult.isValid
+                        ? "border-amber-400 focus:border-amber-500 focus:ring-2 focus:ring-amber-500/20"
+                        : "border-slate-300 focus:border-blue-600 focus:ring-2 focus:ring-blue-600/20"
+                    }`}
+                  />
+                  {paymentRef.trim().length > 0 && refValidationResult.isValid && (
+                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-emerald-600 pointer-events-none">
+                      <CheckCircle2 className="h-4 w-4" />
+                    </span>
+                  )}
+                </div>
+
+                {/* Real-time validation feedback */}
+                {paymentRef.trim().length > 0 ? (
+                  refValidationResult.isValid ? (
+                    <div className="flex items-center gap-1.5 text-[11px] font-bold text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-lg border border-emerald-200">
+                      <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600 shrink-0" />
+                      <span>
+                        Valid format: <strong>{refValidationResult.normalizedReference}</strong>
+                      </span>
+                    </div>
+                  ) : (
+                    <div className="flex items-center gap-1.5 text-[11px] font-medium text-amber-800 bg-amber-50 px-2.5 py-1 rounded-lg border border-amber-200">
+                      <AlertTriangle className="h-3.5 w-3.5 text-amber-600 shrink-0" />
+                      <span>{refValidationResult.error}</span>
+                    </div>
+                  )
+                ) : (
+                  <p className="text-[10px] text-slate-500 font-mono">
+                    Format: {getPaymentFormatHint(paymentMethod as any)}
+                  </p>
+                )}
+
+                <p className="text-[11px] text-slate-600 leading-relaxed font-normal">
+                  Notice: Transaction reference is validated and checked against prior sales to prevent fraudulent reuse. BizFlow does not connect to banking APIs to settle funds.
                 </p>
+
                 <label className="flex items-start gap-2 text-[11px] font-bold text-slate-700 cursor-pointer pt-1">
                   <input
                     type="checkbox"

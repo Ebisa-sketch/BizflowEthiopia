@@ -2,6 +2,11 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db/prisma";
 import { handleApiError, AppError } from "@/lib/errors";
 import { createResetToken } from "@/lib/auth/password-reset";
+import {
+  getClientIp,
+  forgotPasswordRateLimiter,
+  createRateLimitResponse,
+} from "@/lib/rate-limit";
 
 export async function POST(request: NextRequest) {
   try {
@@ -13,6 +18,16 @@ export async function POST(request: NextRequest) {
     }
 
     const trimmedEmail = email.trim().toLowerCase();
+    const clientIp = getClientIp(request);
+    const rateLimitKey = `forgot:${clientIp}:${trimmedEmail}`;
+
+    const rateLimitStatus = forgotPasswordRateLimiter.consume(rateLimitKey);
+    if (!rateLimitStatus.allowed) {
+      return createRateLimitResponse(
+        rateLimitStatus,
+        `Too many password reset requests. Please wait ${Math.ceil(rateLimitStatus.retryAfterSeconds / 60)} minutes before requesting another reset.`
+      );
+    }
 
     // Look up user
     const user = await prisma.user.findUnique({

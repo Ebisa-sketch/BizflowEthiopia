@@ -5,6 +5,12 @@ import { verifyPassword } from "@/lib/auth";
 import { setSessionCookie } from "@/lib/auth/session";
 import { handleApiError, AppError } from "@/lib/errors";
 
+import {
+  getClientIp,
+  loginRateLimiter,
+  createRateLimitResponse,
+} from "@/lib/rate-limit";
+
 const loginSchema = z.object({
   email: z.string().email("Invalid email address"),
   password: z.string().min(1, "Password is required"),
@@ -24,9 +30,21 @@ export async function POST(request: Request) {
     }
 
     const { email, password, rememberMe } = parsed.data;
+    const normalizedEmail = email.toLowerCase().trim();
+    const clientIp = getClientIp(request);
+    const rateLimitKey = `login:${clientIp}:${normalizedEmail}`;
+
+    // 1. Check if this IP + email is currently locked out
+    const rateLimitStatus = loginRateLimiter.check(rateLimitKey);
+    if (!rateLimitStatus.allowed) {
+      return createRateLimitResponse(
+        rateLimitStatus,
+        `Too many failed login attempts. Please try again in ${Math.ceil(rateLimitStatus.retryAfterSeconds / 60)} minutes.`
+      );
+    }
 
     const user = await prisma.user.findUnique({
-      where: { email: email.toLowerCase().trim() },
+      where: { email: normalizedEmail },
       include: {
         memberships: {
           where: { status: "ACTIVE" },
@@ -38,6 +56,7 @@ export async function POST(request: Request) {
     });
 
     if (!user) {
+      loginRateLimiter.consume(rateLimitKey);
       throw new AppError("Invalid email or password", 401);
     }
 
@@ -47,8 +66,12 @@ export async function POST(request: Request) {
 
     const isValidPassword = await verifyPassword(password, user.passwordHash);
     if (!isValidPassword) {
+      loginRateLimiter.consume(rateLimitKey);
       throw new AppError("Invalid email or password", 401);
     }
+
+    // Clear failed attempts counter upon successful authentication
+    loginRateLimiter.reset(rateLimitKey);
 
     // Determine primary business and role
     let activeMembership = user.memberships[0];

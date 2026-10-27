@@ -35,14 +35,7 @@ const endpointMap: Record<string, string> = {
   "/staff": "/api/staff",
   "/settings": "/api/businesses/current",
   "/subscription": "/api/businesses/current",
-  "/admin": "/api/admin/tenants",
 };
-
-const additionalEndpoints = [
-  "/api/auth/me",
-  "/api/businesses/current",
-  "/api/dashboard/metrics?range=today",
-];
 
 const COLLAPSED_STORAGE_KEY = "bizflow_sidebar_collapsed";
 
@@ -87,23 +80,6 @@ export function AppSidebar({ isOpen = false, onClose }: AppSidebarProps) {
       setCurrentSearch(window.location.search || "");
     }
   }, [pathname]);
-
-  // Pre-warm endpoints on initial mount
-  useEffect(() => {
-    const allEndpoints = [
-      ...Object.values(endpointMap),
-      ...additionalEndpoints,
-    ];
-    allEndpoints.forEach((endpoint, index) => {
-      setTimeout(() => {
-        try {
-          preload(endpoint, swrFetcher);
-        } catch {
-          // Ignore prefetch error
-        }
-      }, index * 100);
-    });
-  }, []);
 
   // Lock body scroll when mobile drawer is open
   useEffect(() => {
@@ -258,6 +234,27 @@ export function AppSidebar({ isOpen = false, onClose }: AppSidebarProps) {
     rawRole,
     user?.globalRole === "SUPERADMIN"
   );
+
+  // Safe on-demand prefetch on hover (only for allowed routes, strictly catching any rejections)
+  const handlePrefetch = (href: string) => {
+    if (href === "/admin") {
+      if (user?.globalRole !== "SUPERADMIN") return;
+      try {
+        preload("/api/admin/tenants", swrFetcher).catch(() => {});
+      } catch {
+        // Ignore prefetch error
+      }
+      return;
+    }
+    const endpoint = endpointMap[href];
+    if (endpoint) {
+      try {
+        preload(endpoint, swrFetcher).catch(() => {});
+      } catch {
+        // Ignore prefetch error
+      }
+    }
+  };
 
   const renderSidebarContent = (collapsed: boolean) => (
     <div className="flex h-full flex-col bg-[#071924] text-white select-none relative overflow-hidden">
@@ -531,6 +528,7 @@ export function AppSidebar({ isOpen = false, onClose }: AppSidebarProps) {
                   key={item.key}
                   href={item.href}
                   onClick={() => onClose?.()}
+                  onMouseEnter={() => handlePrefetch(item.href)}
                   aria-current={active ? "page" : undefined}
                   className={cn(
                     "group relative flex items-center rounded-xl transition-all duration-150 border-l-[3px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#00D287]",

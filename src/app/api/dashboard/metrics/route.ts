@@ -312,7 +312,7 @@ export async function GET(request: NextRequest) {
     ).size;
 
     const quickStats = {
-      totalProducts: allProductCount,
+      totalProducts: allProducts.length,
       totalCustomers,
       totalStockValue,
       totalExpensesMonth: expenses,

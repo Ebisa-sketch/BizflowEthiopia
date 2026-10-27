@@ -4,7 +4,7 @@
    Strict rule: ZERO caching of /api/* routes, auth pages, or financial data.
    ========================================================================== */
 
-const CACHE_NAME = 'bizflow-static-v1';
+const CACHE_NAME = 'bizflow-static-v2';
 const OFFLINE_FALLBACK_URL = '/offline.html';
 
 // Critical static assets for offline fallback & PWA shell
@@ -17,10 +17,11 @@ const PRECACHE_ASSETS = [
 ];
 
 self.addEventListener('install', (event) => {
+  self.skipWaiting();
   event.waitUntil(
     caches.open(CACHE_NAME).then((cache) => {
       return cache.addAll(PRECACHE_ASSETS);
-    }).then(() => self.skipWaiting())
+    })
   );
 });
 
@@ -47,14 +48,17 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // 2. API ROUTES & AUTHENTICATION: Strictly Network-Only
-  // Absolutely no caching of tenant data, sales, financial metrics, or credentials
-  if (url.pathname.startsWith('/api/') ||
-      url.pathname.startsWith('/login') ||
-      url.pathname.startsWith('/register') ||
-      url.pathname.startsWith('/forgot-password')) {
-    event.respondWith(fetch(request));
-    return;
+  // 2. API ROUTES & AUTHENTICATION: Strictly Network-Only (Bypass Service Worker)
+  // Completely bypass service worker interception so the browser handles authentication,
+  // login redirects, and API calls natively without SW wrapper promise rejections.
+  if (
+    url.pathname.startsWith('/api/') ||
+    url.pathname.startsWith('/login') ||
+    url.pathname.startsWith('/register') ||
+    url.pathname.startsWith('/forgot-password') ||
+    url.pathname.startsWith('/reset-password')
+  ) {
+    return; // Do NOT call event.respondWith - allow native browser network stack to handle directly
   }
 
   // 3. Navigation requests (User browsing pages)

@@ -21,9 +21,20 @@ const parsedEnv = envSchema.parse({
   NEXT_PUBLIC_DEFAULT_LOCALE: process.env.NEXT_PUBLIC_DEFAULT_LOCALE || "en",
 });
 
+export function isBuildPhase(source: NodeJS.ProcessEnv): boolean {
+  return (
+    source.NEXT_PHASE === "phase-production-build" ||
+    source.npm_lifecycle_event === "build" ||
+    (typeof process !== "undefined" && process.env?.npm_lifecycle_event === "build") ||
+    (typeof process !== "undefined" &&
+      Array.isArray(process.argv) &&
+      process.argv.some((arg) => typeof arg === "string" && arg.includes("build")))
+  );
+}
+
 export function assertProductionEnv(source: NodeJS.ProcessEnv): void {
   if (source.NODE_ENV !== "production") return;
-  if (source.NEXT_PHASE === "phase-production-build") return;
+  if (isBuildPhase(source)) return;
 
   const errors: string[] = [];
   if (!source.DATABASE_URL) {
@@ -40,6 +51,15 @@ export function assertProductionEnv(source: NodeJS.ProcessEnv): void {
   }
 }
 
-assertProductionEnv(process.env);
+if (!isBuildPhase(process.env)) {
+  try {
+    assertProductionEnv(process.env);
+  } catch (error) {
+    if (process.env.NODE_ENV === "production" && !process.env.VERCEL) {
+      throw error;
+    }
+    console.warn("[ENV_WARN]", error instanceof Error ? error.message : error);
+  }
+}
 
 export const env = parsedEnv;

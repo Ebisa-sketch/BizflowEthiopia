@@ -313,7 +313,15 @@ export default function RegisterPage() {
     }
 
     setFieldErrors(errors);
-    return Object.keys(errors).length === 0;
+    if (Object.keys(errors).length > 0) {
+      if (errors.termsAccepted && Object.keys(errors).length === 1) {
+        setGeneralError("Please agree to the Terms of Service and Privacy Policy to continue.");
+      } else {
+        setGeneralError("Please fix the highlighted fields below to create your account.");
+      }
+      return false;
+    }
+    return true;
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -905,6 +913,22 @@ export default function RegisterPage() {
                 </p>
               )}
             </div>
+
+            {/* Error Banner directly above the action button for high visibility */}
+            {generalError && (
+              <div
+                className="p-3.5 rounded-xl text-sm flex items-start gap-2.5"
+                style={{
+                  background: "rgba(239, 68, 68, 0.08)",
+                  border: "1px solid rgba(239, 68, 68, 0.2)",
+                  color: "#dc2626",
+                }}
+                role="alert"
+              >
+                <AlertCircle className="h-4 w-4 shrink-0 mt-0.5 text-rose-600" />
+                <span className="text-xs sm:text-sm font-medium">{generalError}</span>
+              </div>
+            )}
 
             {/* 7. Primary Create Account Button */}
             <button

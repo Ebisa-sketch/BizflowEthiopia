@@ -26,18 +26,8 @@ export async function GET(request: NextRequest) {
     const now = new Date();
     const { startDate, previousStartDate, previousEndDate } = getEatDateBoundaries(range, now);
 
-    const [
-      sales,
-      expensesAgg,
-      allProducts,
-      recentSales,
-      historicalSalesCount,
-      allProductCount,
-      allExpenseCount,
-      allCreditSales,
-      prevSales,
-      prevExpensesAgg,
-    ] = await Promise.all([
+    // Batch 1: Current active period core datasets (3 queries)
+    const [sales, expensesAgg, allProducts] = await Promise.all([
       prisma.sale.findMany({
         where: {
           businessId,
@@ -53,6 +43,10 @@ export async function GET(request: NextRequest) {
           taxTotal: true,
           grandTotal: true,
           customerName: true,
+          status: true,
+          cashier: {
+            select: { name: true },
+          },
           items: {
             select: {
               quantity: true,
@@ -90,36 +84,10 @@ export async function GET(request: NextRequest) {
           costPrice: true,
         },
       }),
-      prisma.sale.findMany({
-        where: {
-          businessId,
-          createdAt: { gte: startDate, lte: now },
-          status: "COMPLETED",
-        },
-        select: {
-          id: true,
-          saleNumber: true,
-          createdAt: true,
-          grandTotal: true,
-          customerName: true,
-          status: true,
-          cashier: {
-            select: { name: true },
-          },
-          items: {
-            select: { quantity: true, productNameSnapshot: true },
-          },
-          payments: {
-            select: { paymentMethod: true, amount: true },
-            take: 1,
-          },
-        },
-        orderBy: { createdAt: "desc" },
-        take: 6,
-      }),
-      prisma.sale.count({ where: { businessId } }),
-      prisma.product.count({ where: { businessId } }),
-      prisma.expense.count({ where: { businessId } }),
+    ]);
+
+    // Batch 2: Comparisons & credit datasets (3 queries)
+    const [allCreditSales, prevSales, prevExpensesAgg] = await Promise.all([
       prisma.sale.findMany({
         where: {
           businessId,
@@ -279,24 +247,27 @@ export async function GET(request: NextRequest) {
       }))
       .sort((a, b) => (a.isOut === b.isOut ? a.stock - b.stock : a.isOut ? -1 : 1));
 
-    // Recent transactions with tenant isolation and products summary
-    const recentTransactions = recentSales.map((s) => ({
-      id: s.id,
-      saleNumber: s.saleNumber,
-      createdAt: s.createdAt.toISOString(),
-      customerName: s.customerName || "Walk-in Customer",
-      cashierName: s.cashier?.name || "Cashier",
-      grandTotal: roundMoney(Number(s.grandTotal)),
-      itemCount: s.items.reduce((sum, item) => sum + Number(item.quantity), 0),
-      productsSummary:
-        s.items
-          .map((i) => i.productNameSnapshot)
-          .filter(Boolean)
-          .slice(0, 3)
-          .join(", ") || "General Items",
-      paymentMethod: s.payments[0]?.paymentMethod || "CASH",
-      status: s.status,
-    }));
+    // Recent transactions derived directly from in-memory sales (avoids duplicate database query)
+    const recentTransactions = sales
+      .slice(-6)
+      .reverse()
+      .map((s) => ({
+        id: s.id,
+        saleNumber: s.saleNumber,
+        createdAt: s.createdAt.toISOString(),
+        customerName: s.customerName || "Walk-in Customer",
+        cashierName: s.cashier?.name || "Cashier",
+        grandTotal: roundMoney(Number(s.grandTotal)),
+        itemCount: s.items.reduce((sum, item) => sum + Number(item.quantity), 0),
+        productsSummary:
+          s.items
+            .map((i) => i.productNameSnapshot)
+            .filter(Boolean)
+            .slice(0, 3)
+            .join(", ") || "General Items",
+        paymentMethod: s.payments[0]?.paymentMethod || "CASH",
+        status: s.status,
+      }));
 
     // 5b. Previous period calculations and comparisons
     const comparisonLabel =
@@ -418,7 +389,10 @@ export async function GET(request: NextRequest) {
       businessInsights,
       paymentMethods: buildPaymentMethodBreakdown(paymentMethodsMap, paymentMethodsCountMap),
       hasBusinessActivity:
-        historicalSalesCount > 0 || allProductCount > 0 || allExpenseCount > 0,
+        allProducts.length > 0 ||
+        sales.length > 0 ||
+        Number(expensesAgg._sum.amount ?? 0) > 0 ||
+        prevSales.length > 0,
     });
   } catch (error) {
     return handleApiError(error);

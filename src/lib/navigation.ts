@@ -85,7 +85,7 @@ export const SIDEBAR_NAV_GROUPS: NavGroupDef[] = [
       {
         key: "nav.categories",
         name: "Categories",
-        href: "/products?view=categories",
+        href: "/categories",
         icon: Tag,
         permission: "products:view",
       },
@@ -99,7 +99,7 @@ export const SIDEBAR_NAV_GROUPS: NavGroupDef[] = [
       {
         key: "nav.stockMovements",
         name: "Stock Movements",
-        href: "/inventory?tab=movements",
+        href: "/stock-movements",
         icon: History,
         permission: "inventory:view",
       },
@@ -126,7 +126,7 @@ export const SIDEBAR_NAV_GROUPS: NavGroupDef[] = [
       {
         key: "nav.payments",
         name: "Payments & Till",
-        href: "/reports?tab=cash",
+        href: "/payments",
         icon: Banknote,
         permission: "reports:view_operational",
       },
@@ -230,6 +230,15 @@ export function isRouteActive(
     );
   }
 
+  // Categories route
+  if (baseHref === "/categories") {
+    return (
+      pathname === "/categories" ||
+      pathname.startsWith("/categories/") ||
+      (pathname === "/products" && new URLSearchParams(search).get("view") === "categories")
+    );
+  }
+
   // For /products, only active when not showing categories subview
   if (baseHref === "/products") {
     if (pathname !== "/products" && !pathname.startsWith("/products/")) return false;
@@ -237,18 +246,24 @@ export function isRouteActive(
     return activeParams.get("view") !== "categories";
   }
 
-  // For /inventory, only active when not showing movements subtab
+  // For /inventory, only active when NOT on the dedicated stock-movements page
   if (baseHref === "/inventory") {
-    if (pathname !== "/inventory" && !pathname.startsWith("/inventory/")) return false;
-    const activeParams = new URLSearchParams(search);
-    return activeParams.get("tab") !== "movements";
+    return pathname === "/inventory" || pathname.startsWith("/inventory/");
   }
 
-  // For /reports, only active when not showing payments/cash subtab
+  // For /reports, only active when NOT on the dedicated payments page
   if (baseHref === "/reports") {
-    if (pathname !== "/reports" && !pathname.startsWith("/reports/")) return false;
-    const activeParams = new URLSearchParams(search);
-    return activeParams.get("tab") !== "cash";
+    return pathname === "/reports" || pathname.startsWith("/reports/");
+  }
+
+  // Stock Movements dedicated route
+  if (baseHref === "/stock-movements") {
+    return pathname === "/stock-movements" || pathname.startsWith("/stock-movements/");
+  }
+
+  // Payments & Till dedicated route
+  if (baseHref === "/payments") {
+    return pathname === "/payments" || pathname.startsWith("/payments/");
   }
 
   // Generic nested match (e.g. /customers/[id], /expenses/[id], /settings/profile)

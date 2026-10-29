@@ -44,7 +44,7 @@ describe("Sidebar Navigation & Role-Based Access Control", () => {
     expect(allHrefs).toContain("/dashboard");
     expect(allHrefs).toContain("/products");
     expect(allHrefs).toContain("/inventory");
-    expect(allHrefs).toContain("/inventory?tab=movements");
+    expect(allHrefs).toContain("/stock-movements");
     expect(allHrefs).not.toContain("/sales/new");
     expect(allHrefs).not.toContain("/expenses");
     expect(allHrefs).not.toContain("/staff");
@@ -62,6 +62,7 @@ describe("Sidebar Navigation & Role-Based Access Control", () => {
     const financeHrefs = groups.find((g) => g.id === "finance")?.items.map((i) => i.href);
     expect(financeHrefs).toContain("/expenses");
     expect(financeHrefs).toContain("/reports");
+    expect(financeHrefs).toContain("/payments");
   });
 
   it("exposes platform Administration only to users with globalRole SUPERADMIN", () => {
@@ -96,15 +97,17 @@ describe("Sidebar Active Route Resolution", () => {
     expect(isRouteActive("/products?view=categories", "/products", "view=categories")).toBe(true);
     expect(isRouteActive("/products", "/products", "view=categories")).toBe(false);
 
-    // Inventory vs Stock movements
+    // Inventory vs dedicated Stock Movements page
     expect(isRouteActive("/inventory", "/inventory", "")).toBe(true);
-    expect(isRouteActive("/inventory?tab=movements", "/inventory", "tab=movements")).toBe(true);
-    expect(isRouteActive("/inventory", "/inventory", "tab=movements")).toBe(false);
+    expect(isRouteActive("/stock-movements", "/stock-movements", "")).toBe(true);
+    expect(isRouteActive("/inventory", "/stock-movements", "")).toBe(false);
+    expect(isRouteActive("/stock-movements", "/inventory", "")).toBe(false);
 
-    // Reports vs Cash till
+    // Reports vs dedicated Payments & Till page
     expect(isRouteActive("/reports", "/reports", "")).toBe(true);
-    expect(isRouteActive("/reports?tab=cash", "/reports", "tab=cash")).toBe(true);
-    expect(isRouteActive("/reports", "/reports", "tab=cash")).toBe(false);
+    expect(isRouteActive("/payments", "/payments", "")).toBe(true);
+    expect(isRouteActive("/reports", "/payments", "")).toBe(false);
+    expect(isRouteActive("/payments", "/reports", "")).toBe(false);
   });
 
   it("accurately highlights dashboard only when directly on /dashboard", () => {

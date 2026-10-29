@@ -7,12 +7,17 @@ import { BusinessRole, MembershipStatus } from "@prisma/client";
 
 export async function GET(request: NextRequest) {
   try {
-    const { businessId } = await requireTenant({
+    const { businessId, userId: currentUserId } = await requireTenant({
       requiredPermission: "staff:manage",
     });
 
     const memberships = await prisma.membership.findMany({
-      where: { businessId },
+      where: {
+        businessId,
+        // Exclude the currently logged-in user so the owner never sees
+        // their own record in the staff list they manage.
+        userId: { not: currentUserId },
+      },
       include: {
         user: {
           select: { id: true, name: true, email: true, createdAt: true },

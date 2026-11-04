@@ -96,9 +96,9 @@ interface RecentTransaction {
 
 interface QuickStats {
   totalProducts: number;
-  totalCustomers: number;
+  customersWithSales: number;
   totalStockValue: number;
-  totalExpensesMonth: number;
+  totalExpensesInRange: number;
 }
 
 interface BusinessInsights {
@@ -107,10 +107,9 @@ interface BusinessInsights {
     units: number;
     revenue: number;
   } | null;
-  slowMovingProduct: {
+  noSalesProduct: {
     name: string;
     units: number;
-    days: number;
   } | null;
   expenseTrendText: string;
 }
@@ -216,6 +215,7 @@ export default function DashboardPage() {
   const [isZReportOpen, setIsZReportOpen] = useState(false);
   const [isReconciliationOpen, setIsReconciliationOpen] = useState(false);
   const [countedCash, setCountedCash] = useState<number | undefined>(undefined);
+  const [openingFloat, setOpeningFloat] = useState(0);
   const [currentTime, setCurrentTime] = useState<Date>(new Date());
 
   // Update clock every minute for live Addis Ababa time display
@@ -223,6 +223,11 @@ export default function DashboardPage() {
     const timer = setInterval(() => setCurrentTime(new Date()), 60000);
     return () => clearInterval(timer);
   }, []);
+
+  useEffect(() => {
+    setCountedCash(undefined);
+    setOpeningFloat(0);
+  }, [dateRange]);
 
   const { data, error, isLoading, isValidating, mutate } = useSWR(
     `/api/dashboard/metrics?range=${dateRange}`,
@@ -253,13 +258,13 @@ export default function DashboardPage() {
   const recentTransactions: RecentTransaction[] = data?.recentTransactions || [];
   const quickStats: QuickStats = data?.quickStats || {
     totalProducts: 0,
-    totalCustomers: 0,
+    customersWithSales: 0,
     totalStockValue: 0,
-    totalExpensesMonth: 0,
+    totalExpensesInRange: 0,
   };
   const businessInsights: BusinessInsights = data?.businessInsights || {
     topProduct: null,
-    slowMovingProduct: null,
+    noSalesProduct: null,
     expenseTrendText: "No operating expenses recorded",
   };
 
@@ -383,18 +388,19 @@ export default function DashboardPage() {
             <button
               type="button"
               onClick={() => setIsReconciliationOpen(true)}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-slate-200/90 dark:border-slate-700 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-750 text-slate-700 dark:text-slate-200 text-xs font-semibold transition shadow-2xs cursor-pointer"
-              title="Open Cash Drawer Reconciliation"
+              disabled={!data || dateRange !== "today"}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-slate-200/90 dark:border-slate-700 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-750 text-slate-700 dark:text-slate-200 text-xs font-semibold transition shadow-2xs cursor-pointer disabled:cursor-not-allowed disabled:opacity-50"
+              title={dateRange === "today" ? "Reconcile today's cash sales against a physical drawer count" : "Select Today to reconcile the cash drawer"}
             >
               <Banknote className="h-3.5 w-3.5 text-[#0D9668]" />
-              <span>Cash Drawer</span>
+              <span>Cash Sales</span>
               {countedCash !== undefined ? (
                 <span className="text-[10px] font-mono font-bold text-emerald-600 bg-emerald-50 px-1.5 py-0.2 rounded border border-emerald-200">
                   Reconciled
                 </span>
-              ) : metrics.expectedCashInTill !== undefined && metrics.expectedCashInTill > 0 ? (
+              ) : metrics.cashCollected !== undefined && metrics.cashCollected > 0 ? (
                 <span className="text-[10px] font-mono font-bold text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-700 px-1.5 py-0.2 rounded">
-                  {formatStoreMoney(metrics.expectedCashInTill)}
+                  {formatStoreMoney(metrics.cashCollected)}
                 </span>
               ) : null}
             </button>
@@ -403,8 +409,9 @@ export default function DashboardPage() {
             <button
               type="button"
               onClick={() => setIsZReportOpen(true)}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#071924] dark:bg-slate-700 hover:bg-[#0c283a] dark:hover:bg-slate-600 text-white text-xs font-semibold transition shadow-2xs cursor-pointer"
-              title="Generate Daily Z-Report"
+              disabled={!data || dateRange !== "today"}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#071924] dark:bg-slate-700 hover:bg-[#0c283a] dark:hover:bg-slate-600 text-white text-xs font-semibold transition shadow-2xs cursor-pointer disabled:cursor-not-allowed disabled:opacity-50"
+              title={dateRange === "today" ? "Generate today's Z-Report" : "Select Today to generate the daily Z-Report"}
             >
               <Printer className="h-3.5 w-3.5 text-[#00D287]" />
               <span>Z-Report</span>
@@ -512,6 +519,24 @@ export default function DashboardPage() {
 
       {loading ? (
         <DashboardSkeleton />
+      ) : loadError && !data ? (
+        <div
+          className="rounded-2xl border border-red-200 bg-red-50 p-6 text-center dark:border-red-900 dark:bg-red-950/30"
+          role="alert"
+        >
+          <AlertTriangle className="mx-auto h-8 w-8 text-red-600" />
+          <h2 className="mt-3 font-semibold text-slate-900 dark:text-slate-100">
+            Dashboard data could not be loaded
+          </h2>
+          <p className="mt-1 text-sm text-slate-600 dark:text-slate-300">{loadError}</p>
+          <button
+            type="button"
+            onClick={() => mutate()}
+            className="mt-4 rounded-lg bg-red-700 px-4 py-2 text-sm font-semibold text-white hover:bg-red-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red-700"
+          >
+            Retry
+          </button>
+        </div>
       ) : (
         /* 2-Column Dashboard Grid: Main Left Content (~75%) + Right Action Sidebar (~25%) */
         <div className="grid grid-cols-1 xl:grid-cols-12 gap-6 items-start">
@@ -1030,19 +1055,19 @@ export default function DashboardPage() {
                   )}
                 </div>
 
-                {/* Insight 2: Slow Moving Stock */}
+                {/* Insight 2: Products without sales in this range */}
                 <div>
                   <p className="text-[11px] font-medium text-slate-400 mb-1.5">
-                    Slow Moving Stock
+                    No Sales in Selected Period
                   </p>
-                  {businessInsights.slowMovingProduct ? (
+                  {businessInsights.noSalesProduct ? (
                     <div className="flex items-center gap-2.5">
                       <div className="h-9 w-9 rounded-xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200/60 dark:border-amber-800/40 flex items-center justify-center shrink-0">
                         <Package className="h-4 w-4 text-amber-600 dark:text-amber-400" />
                       </div>
                       <div className="min-w-0">
                         <h4 className="text-xs font-bold text-slate-900 dark:text-slate-100 truncate">
-                          {businessInsights.slowMovingProduct.name}
+                          {businessInsights.noSalesProduct.name}
                         </h4>
                         <p className="text-[11px] text-slate-500 dark:text-slate-400 font-mono mt-0.5">
                           0 units sold in current period
@@ -1120,10 +1145,10 @@ export default function DashboardPage() {
                     <div className="p-1.5 rounded-lg bg-blue-50 text-blue-600">
                       <Users className="h-3.5 w-3.5" />
                     </div>
-                    <span>Total Customers</span>
+                    <span>Named Customers</span>
                   </div>
                   <div className="flex items-center gap-1 font-bold text-slate-900 dark:text-slate-100 font-mono">
-                    <span>{quickStats.totalCustomers}</span>
+                    <span>{quickStats.customersWithSales}</span>
                     <ChevronRight className="h-3.5 w-3.5 text-slate-400 group-hover:translate-x-0.5 transition-transform" />
                   </div>
                 </Link>
@@ -1157,7 +1182,7 @@ export default function DashboardPage() {
                     <span>Total Expenses (Period)</span>
                   </div>
                   <div className="flex items-center gap-1 font-bold text-slate-900 dark:text-slate-100 font-mono">
-                    <span>{formatStoreMoney(quickStats.totalExpensesMonth)}</span>
+                    <span>{formatStoreMoney(quickStats.totalExpensesInRange)}</span>
                     <ChevronRight className="h-3.5 w-3.5 text-slate-400 group-hover:translate-x-0.5 transition-transform" />
                   </div>
                 </Link>
@@ -1194,6 +1219,7 @@ export default function DashboardPage() {
           cashSalesCount: metrics.cashSalesCount ?? 0,
           digitalCollected: metrics.digitalCollected ?? 0,
           expectedCashInTill: metrics.expectedCashInTill ?? metrics.cashCollected ?? 0,
+          openingFloat,
           paymentMethods: [],
           countedCash,
         }}
@@ -1208,8 +1234,9 @@ export default function DashboardPage() {
         cashSalesCount={metrics.cashSalesCount ?? 0}
         expenses={financialSummary.operatingExpenses}
         expectedCashInTill={metrics.expectedCashInTill ?? metrics.cashCollected ?? 0}
-        onGenerateZReport={(counted) => {
+        onGenerateZReport={(counted, float) => {
           setCountedCash(counted);
+          setOpeningFloat(float);
           setIsZReportOpen(true);
         }}
       />

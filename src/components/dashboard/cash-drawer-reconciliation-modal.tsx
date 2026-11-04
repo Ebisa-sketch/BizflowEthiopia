@@ -22,7 +22,7 @@ interface CashDrawerReconciliationModalProps {
   cashSalesCount: number;
   expenses: number;
   expectedCashInTill: number;
-  onGenerateZReport: (countedCash: number) => void;
+  onGenerateZReport: (countedCash: number, startingFloat: number) => void;
 }
 
 export function CashDrawerReconciliationModal({
@@ -62,7 +62,7 @@ export function CashDrawerReconciliationModal({
 
   const totalCounted = useDenominations ? countedFromNotes : Number(manualCount) || 0;
 
-  // Expected cash in drawer = Starting float + Cash Sales - Expenses paid from till
+  // Expense records do not identify their payment method, so they cannot be deducted from cash.
   const totalExpectedCash = floatVal + expectedCashInTill;
   const variance = totalCounted - totalExpectedCash;
 
@@ -80,7 +80,7 @@ export function CashDrawerReconciliationModal({
   };
 
   const handleApplyToZReport = () => {
-    onGenerateZReport(totalCounted);
+    onGenerateZReport(totalCounted, floatVal);
     onClose();
   };
 
@@ -124,14 +124,14 @@ export function CashDrawerReconciliationModal({
               </p>
             </div>
             <div>
-              <p className="text-[10px] uppercase font-bold text-slate-400">Till Expenses</p>
-              <p className="text-sm font-black font-mono text-red-600 mt-0.5">
-                -{formatStoreMoney(expenses)}
+              <p className="text-[10px] uppercase font-bold text-slate-400">Recorded Expenses</p>
+              <p className="text-sm font-black font-mono text-slate-700 mt-0.5">
+                {formatStoreMoney(expenses)}
               </p>
-              <p className="text-[10px] text-slate-400 font-sans mt-0.5">Paid from drawer</p>
+              <p className="text-[10px] text-slate-400 font-sans mt-0.5">All payment methods</p>
             </div>
             <div>
-              <p className="text-[10px] uppercase font-bold text-[#0D9668]">Expected in Till</p>
+              <p className="text-[10px] uppercase font-bold text-[#0D9668]">Estimated in Till</p>
               <p className="text-sm font-black font-mono text-[#0D9668] mt-0.5">
                 {formatStoreMoney(totalExpectedCash)}
               </p>
@@ -140,6 +140,9 @@ export function CashDrawerReconciliationModal({
               </p>
             </div>
           </div>
+          <p className="text-[11px] text-slate-500">
+            Estimate includes cash sales and opening float only. Cash withdrawals and expenses are not deducted because their payment source is not tracked.
+          </p>
 
           {/* 2. Starting Float Input */}
           <div className="flex items-center justify-between gap-3 bg-white p-3 rounded-xl border border-slate-200 shadow-2xs">

@@ -43,6 +43,7 @@ export interface ZReportData {
   cashSalesCount: number;
   digitalCollected: number;
   expectedCashInTill: number;
+  openingFloat: number;
   paymentMethods: {
     method: string;
     amount: number;
@@ -77,7 +78,10 @@ export function DailyZReportModal({ isOpen, onClose, data }: DailyZReportModalPr
   const formattedTime = formatEatTime(now);
 
   const cashVariance =
-    data.countedCash !== undefined ? data.countedCash - data.expectedCashInTill : null;
+    data.countedCash !== undefined
+      ? data.countedCash - data.expectedCashInTill - data.openingFloat
+      : null;
+  const expectedClosingCash = data.expectedCashInTill + data.openingFloat;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs overflow-y-auto animate-fadeIn">
@@ -253,13 +257,16 @@ export function DailyZReportModal({ isOpen, onClose, data }: DailyZReportModalPr
                 <span className="font-bold text-slate-900">{formatStoreMoney(data.cashCollected)}</span>
               </div>
               <div className="flex justify-between text-red-600">
-                <span className="font-sans">Less Expenses Paid via Till (-):</span>
-                <span>-{formatStoreMoney(data.expenses)}</span>
+                <span className="font-sans">Recorded Expenses (all payment methods):</span>
+                <span>{formatStoreMoney(data.expenses)}</span>
               </div>
               <div className="flex justify-between pt-1 border-t border-slate-200 font-bold text-slate-900">
-                <span className="font-sans">Expected Closing Cash in Till:</span>
-                <span className="text-[#0D9668]">{formatStoreMoney(data.expectedCashInTill)}</span>
+                <span className="font-sans">Estimated Closing Cash (sales + float):</span>
+                <span className="text-[#0D9668]">{formatStoreMoney(expectedClosingCash)}</span>
               </div>
+              <p className="text-[10px] text-slate-500">
+                Cash withdrawals and expenses are not deducted because their payment source is not tracked.
+              </p>
               {data.countedCash !== undefined && (
                 <>
                   <div className="flex justify-between pt-1 border-t border-dashed border-slate-300">

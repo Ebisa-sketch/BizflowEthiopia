@@ -87,7 +87,7 @@ export async function GET(request: NextRequest) {
     ]);
 
     // Batch 2: Comparisons & credit datasets (3 queries)
-    const [allCreditSales, prevSales, prevExpensesAgg] = await Promise.all([
+    const [allCreditSales, customerNames, prevSales, prevExpensesAgg] = await Promise.all([
       prisma.sale.findMany({
         where: {
           businessId,
@@ -105,6 +105,14 @@ export async function GET(request: NextRequest) {
           grandTotal: true,
           customerName: true,
         },
+      }),
+      prisma.sale.findMany({
+        where: {
+          businessId,
+          customerName: { not: null },
+        },
+        select: { customerName: true },
+        distinct: ["customerName"],
       }),
       prisma.sale.findMany({
         where: {
@@ -304,21 +312,18 @@ export async function GET(request: NextRequest) {
         0
       )
     );
-    const totalCustomers = new Set(
-      allCreditSales
-        .concat(sales as any)
-        .map((s: any) => s.customerName)
-        .filter(Boolean)
-    ).size;
+    const customersWithSales = customerNames.filter(
+      ({ customerName }) => customerName?.trim()
+    ).length;
 
     const quickStats = {
       totalProducts: allProducts.length,
-      totalCustomers,
+      customersWithSales,
       totalStockValue,
-      totalExpensesMonth: expenses,
+      totalExpensesInRange: expenses,
     };
 
-    const slowMovingProduct =
+    const noSalesProduct =
       allProducts.find((p) => !productStats[p.name] || productStats[p.name].units === 0) || null;
 
     let expenseTrendText = "No operating expenses recorded";
@@ -338,11 +343,10 @@ export async function GET(request: NextRequest) {
 
     const businessInsights = {
       topProduct: topProducts[0] || null,
-      slowMovingProduct: slowMovingProduct
+      noSalesProduct: noSalesProduct
         ? {
-            name: slowMovingProduct.name,
+            name: noSalesProduct.name,
             units: 0,
-            days: range === "today" ? 1 : range === "7d" ? 7 : range === "30d" ? 30 : 30,
           }
         : null,
       expenseTrendText,
@@ -377,9 +381,8 @@ export async function GET(request: NextRequest) {
             (paymentMethodsMap.CBE_BIRR || 0) +
             (paymentMethodsMap.BANK_TRANSFER || 0)
         ),
-        expectedCashInTill: roundMoney(
-          Math.max(0, (paymentMethodsMap.CASH || 0) - expenses)
-        ),
+        // Expenses do not record payment method, so they cannot safely be deducted from cash.
+        expectedCashInTill: roundMoney(paymentMethodsMap.CASH || 0),
         comparisons,
       },
       lowStockItems,

@@ -465,10 +465,10 @@ export async function createPosSale(
       },
     });
 
-    // Create Sale Items
-    for (const prep of preparedItems) {
-      await tx.saleItem.create({
-        data: {
+    // Create Sale Items in bulk (fallback to sequential for test mock environments)
+    if (typeof tx.saleItem.createMany === "function") {
+      await tx.saleItem.createMany({
+        data: preparedItems.map((prep) => ({
           saleId: sale.id,
           productId: prep.product.id,
           productNameSnapshot: prep.product.name,
@@ -476,12 +476,28 @@ export async function createPosSale(
           unitCostSnapshot: prep.unitCost,
           quantity: prep.quantity,
           lineTotal: prep.lineTotal,
-        },
+        })),
       });
+    } else {
+      for (const prep of preparedItems) {
+        await tx.saleItem.create({
+          data: {
+            saleId: sale.id,
+            productId: prep.product.id,
+            productNameSnapshot: prep.product.name,
+            unitPrice: prep.unitPrice,
+            unitCostSnapshot: prep.unitCost,
+            quantity: prep.quantity,
+            lineTotal: prep.lineTotal,
+          },
+        });
+      }
+    }
 
-      // Create Stock Movement Ledger entry
-      await tx.stockMovement.create({
-        data: {
+    // Create Stock Movement Ledger entries in bulk (fallback to sequential for test mock environments)
+    if (typeof tx.stockMovement.createMany === "function") {
+      await tx.stockMovement.createMany({
+        data: preparedItems.map((prep) => ({
           businessId,
           productId: prep.product.id,
           movementType: MovementType.SALE,
@@ -490,8 +506,23 @@ export async function createPosSale(
           referenceType: "SALE",
           referenceId: sale.id,
           createdBy: cashierId,
-        },
+        })),
       });
+    } else {
+      for (const prep of preparedItems) {
+        await tx.stockMovement.create({
+          data: {
+            businessId,
+            productId: prep.product.id,
+            movementType: MovementType.SALE,
+            quantityChange: -prep.quantity,
+            reason: `POS Sale #${saleNumber}`,
+            referenceType: "SALE",
+            referenceId: sale.id,
+            createdBy: cashierId,
+          },
+        });
+      }
     }
 
     // For electronic payments (Telebirr, CBE Birr, Bank Transfer), ensure reference code is not reused in this business
@@ -594,6 +625,9 @@ export async function createPosSale(
     });
 
     return sale;
+    }, {
+      maxWait: 10000, // 10 seconds to acquire connection
+      timeout: 30000, // 30 seconds for complete transaction
     });
   } catch (error) {
     if (idempotencyKey && isUniqueConstraintError(error)) {

@@ -37,6 +37,8 @@ import {
   Info,
   Keyboard,
   QrCode,
+  Calculator,
+  Delete,
 } from "lucide-react";
 import { formatMoney, roundMoney } from "@/lib/money";
 import {
@@ -147,6 +149,7 @@ export default function PosCheckoutPage() {
   // Payment State
   const [paymentMethod, setPaymentMethod] = useState<"CASH" | "TELEBIRR" | "CBE_BIRR" | "BANK_TRANSFER" | "OTHER">("CASH");
   const [cashTendered, setCashTendered] = useState<number>(0);
+  const [showTouchKeypad, setShowTouchKeypad] = useState(true);
   const [paymentRef, setPaymentRef] = useState("");
   const [paymentManuallyConfirmed, setPaymentManuallyConfirmed] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -632,6 +635,37 @@ export default function PosCheckoutPage() {
   }, [grandTotal]);
 
   const cashChange = roundMoney(Math.max(0, cashTendered - grandTotal));
+
+  // Touch Keypad Handlers for Cashier POS
+  const handleKeypadDigit = (digit: string) => {
+    const cur = cashTendered === 0 ? "" : String(cashTendered);
+    if (digit === ".") {
+      if (!cur.includes(".")) {
+        const next = cur === "" ? "0." : cur + ".";
+        setCashTendered(parseFloat(next) || 0);
+      }
+      return;
+    }
+    const nextStr = (cur === "0" ? "" : cur) + digit;
+    const parsed = parseFloat(nextStr);
+    if (!isNaN(parsed)) {
+      setCashTendered(parsed);
+    }
+  };
+
+  const handleKeypadBackspace = () => {
+    const s = String(cashTendered);
+    if (s.length <= 1 || cashTendered === 0) {
+      setCashTendered(0);
+    } else {
+      const next = s.slice(0, -1);
+      setCashTendered(next === "" ? 0 : parseFloat(next) || 0);
+    }
+  };
+
+  const handleKeypadClear = () => {
+    setCashTendered(0);
+  };
 
   // Manager Approval Handlers
   const requestManagerAuth = (action: () => void, renewApproval = false) => {
@@ -1723,10 +1757,25 @@ export default function PosCheckoutPage() {
 
             {/* Payment Details Container */}
             {paymentMethod === "CASH" ? (
-              <div className="space-y-3 bg-[#DCEFE7]/30 p-4 rounded-2xl border border-emerald-200/60">
+              <div className="space-y-3 bg-[#DCEFE7]/30 dark:bg-emerald-950/20 p-4 rounded-2xl border border-emerald-200/60 dark:border-emerald-800/40">
                 <div className="space-y-2">
                   <div className="flex items-center justify-between">
-                    <label className="text-xs font-bold text-slate-700">Cash Tendered (ETB)</label>
+                    <div className="flex items-center gap-2">
+                      <label className="text-xs font-bold text-slate-700 dark:text-slate-200">Cash Tendered (ETB)</label>
+                      <button
+                        type="button"
+                        onClick={() => setShowTouchKeypad(!showTouchKeypad)}
+                        className={`px-2 py-0.5 text-[10px] font-bold rounded-lg border transition flex items-center gap-1 cursor-pointer ${
+                          showTouchKeypad
+                            ? "bg-slate-900 text-white border-slate-900 dark:bg-emerald-600 dark:border-emerald-600"
+                            : "bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700"
+                        }`}
+                        title="Toggle Touchscreen Number Pad"
+                      >
+                        <Calculator className="h-3 w-3" />
+                        <span>{showTouchKeypad ? "Keypad ON" : "Touch Keypad"}</span>
+                      </button>
+                    </div>
                     <button
                       type="button"
                       onClick={() => setCashTendered(grandTotal)}
@@ -1751,8 +1800,8 @@ export default function PosCheckoutPage() {
                         onClick={() => setCashTendered(item.val)}
                         className={`px-2 py-1 text-[10px] font-bold rounded-lg border transition cursor-pointer ${
                           cashTendered === item.val
-                            ? "bg-slate-900 text-white border-slate-900"
-                            : "bg-white border-slate-200 text-slate-700 hover:bg-slate-50"
+                            ? "bg-slate-900 text-white border-slate-900 dark:bg-emerald-600 dark:border-emerald-600"
+                            : "bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700"
                         }`}
                       >
                         {item.val} Br
@@ -1768,7 +1817,7 @@ export default function PosCheckoutPage() {
                         key={extra}
                         type="button"
                         onClick={() => setCashTendered((prev) => roundMoney((prev || grandTotal) + extra))}
-                        className="px-1.5 py-0.5 text-[10px] font-mono font-bold rounded-md bg-white border border-slate-200 text-slate-600 hover:bg-slate-50 shadow-2xs cursor-pointer"
+                        className="px-1.5 py-0.5 text-[10px] font-mono font-bold rounded-md bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 shadow-2xs cursor-pointer"
                       >
                         +{extra}
                       </button>
@@ -1784,17 +1833,145 @@ export default function PosCheckoutPage() {
                     onChange={(e) => setCashTendered(Number(e.target.value) || 0)}
                     aria-label="Cash tendered"
                     step="0.01"
-                    className="w-full text-xl font-mono font-black rounded-xl border border-slate-300 p-2.5 text-slate-900 bg-white focus:border-[#0D9668] focus:ring-2 focus:ring-[#0D9668]/20"
+                    className="w-full text-xl font-mono font-black rounded-xl border border-slate-300 dark:border-slate-700 p-2.5 text-slate-900 dark:text-white bg-white dark:bg-slate-800 focus:border-[#0D9668] focus:ring-2 focus:ring-[#0D9668]/20"
                   />
                   <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-400 font-mono">
                     ETB
                   </span>
                 </div>
 
+                {/* Cashier Touch Keypad for Touchscreen POS Devices */}
+                {showTouchKeypad && (
+                  <div className="grid grid-cols-4 gap-1.5 pt-1 animate-in fade-in-50 zoom-in-95 duration-150">
+                    {/* Row 1 */}
+                    <button
+                      type="button"
+                      onClick={() => handleKeypadDigit("7")}
+                      className="h-10 sm:h-11 rounded-xl bg-white dark:bg-slate-800 border border-slate-200/90 dark:border-slate-700 text-slate-900 dark:text-white font-mono font-bold text-base hover:bg-slate-50 dark:hover:bg-slate-700 active:scale-95 transition shadow-2xs cursor-pointer"
+                    >
+                      7
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleKeypadDigit("8")}
+                      className="h-10 sm:h-11 rounded-xl bg-white dark:bg-slate-800 border border-slate-200/90 dark:border-slate-700 text-slate-900 dark:text-white font-mono font-bold text-base hover:bg-slate-50 dark:hover:bg-slate-700 active:scale-95 transition shadow-2xs cursor-pointer"
+                    >
+                      8
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleKeypadDigit("9")}
+                      className="h-10 sm:h-11 rounded-xl bg-white dark:bg-slate-800 border border-slate-200/90 dark:border-slate-700 text-slate-900 dark:text-white font-mono font-bold text-base hover:bg-slate-50 dark:hover:bg-slate-700 active:scale-95 transition shadow-2xs cursor-pointer"
+                    >
+                      9
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setCashTendered(grandTotal)}
+                      className="h-10 sm:h-11 rounded-xl bg-emerald-600 text-white font-bold text-xs hover:bg-emerald-700 active:scale-95 transition shadow-2xs cursor-pointer"
+                      title="Pay Exact Total"
+                    >
+                      Exact
+                    </button>
+
+                    {/* Row 2 */}
+                    <button
+                      type="button"
+                      onClick={() => handleKeypadDigit("4")}
+                      className="h-10 sm:h-11 rounded-xl bg-white dark:bg-slate-800 border border-slate-200/90 dark:border-slate-700 text-slate-900 dark:text-white font-mono font-bold text-base hover:bg-slate-50 dark:hover:bg-slate-700 active:scale-95 transition shadow-2xs cursor-pointer"
+                    >
+                      4
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleKeypadDigit("5")}
+                      className="h-10 sm:h-11 rounded-xl bg-white dark:bg-slate-800 border border-slate-200/90 dark:border-slate-700 text-slate-900 dark:text-white font-mono font-bold text-base hover:bg-slate-50 dark:hover:bg-slate-700 active:scale-95 transition shadow-2xs cursor-pointer"
+                    >
+                      5
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleKeypadDigit("6")}
+                      className="h-10 sm:h-11 rounded-xl bg-white dark:bg-slate-800 border border-slate-200/90 dark:border-slate-700 text-slate-900 dark:text-white font-mono font-bold text-base hover:bg-slate-50 dark:hover:bg-slate-700 active:scale-95 transition shadow-2xs cursor-pointer"
+                    >
+                      6
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setCashTendered((prev) => roundMoney((prev || grandTotal) + 50))}
+                      className="h-10 sm:h-11 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 text-emerald-800 dark:text-emerald-300 font-mono font-bold text-xs hover:bg-emerald-100 dark:hover:bg-emerald-900/50 active:scale-95 transition cursor-pointer"
+                    >
+                      +50
+                    </button>
+
+                    {/* Row 3 */}
+                    <button
+                      type="button"
+                      onClick={() => handleKeypadDigit("1")}
+                      className="h-10 sm:h-11 rounded-xl bg-white dark:bg-slate-800 border border-slate-200/90 dark:border-slate-700 text-slate-900 dark:text-white font-mono font-bold text-base hover:bg-slate-50 dark:hover:bg-slate-700 active:scale-95 transition shadow-2xs cursor-pointer"
+                    >
+                      1
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleKeypadDigit("2")}
+                      className="h-10 sm:h-11 rounded-xl bg-white dark:bg-slate-800 border border-slate-200/90 dark:border-slate-700 text-slate-900 dark:text-white font-mono font-bold text-base hover:bg-slate-50 dark:hover:bg-slate-700 active:scale-95 transition shadow-2xs cursor-pointer"
+                    >
+                      2
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleKeypadDigit("3")}
+                      className="h-10 sm:h-11 rounded-xl bg-white dark:bg-slate-800 border border-slate-200/90 dark:border-slate-700 text-slate-900 dark:text-white font-mono font-bold text-base hover:bg-slate-50 dark:hover:bg-slate-700 active:scale-95 transition shadow-2xs cursor-pointer"
+                    >
+                      3
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setCashTendered((prev) => roundMoney((prev || grandTotal) + 100))}
+                      className="h-10 sm:h-11 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 text-emerald-800 dark:text-emerald-300 font-mono font-bold text-xs hover:bg-emerald-100 dark:hover:bg-emerald-900/50 active:scale-95 transition cursor-pointer"
+                    >
+                      +100
+                    </button>
+
+                    {/* Row 4 */}
+                    <button
+                      type="button"
+                      onClick={handleKeypadClear}
+                      className="h-10 sm:h-11 rounded-xl bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-800 text-rose-700 dark:text-rose-400 font-bold text-xs hover:bg-rose-100 dark:hover:bg-rose-900/50 active:scale-95 transition cursor-pointer"
+                      title="Clear Tendered Amount"
+                    >
+                      C
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleKeypadDigit("0")}
+                      className="h-10 sm:h-11 rounded-xl bg-white dark:bg-slate-800 border border-slate-200/90 dark:border-slate-700 text-slate-900 dark:text-white font-mono font-bold text-base hover:bg-slate-50 dark:hover:bg-slate-700 active:scale-95 transition shadow-2xs cursor-pointer"
+                    >
+                      0
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleKeypadBackspace}
+                      className="h-10 sm:h-11 rounded-xl bg-slate-100 dark:bg-slate-700/70 border border-slate-200 dark:border-slate-600 text-slate-700 dark:text-slate-200 flex items-center justify-center hover:bg-slate-200 dark:hover:bg-slate-700 active:scale-95 transition cursor-pointer"
+                      title="Backspace"
+                    >
+                      <Delete className="h-4 w-4" />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setCashTendered((prev) => roundMoney((prev || grandTotal) + 200))}
+                      className="h-10 sm:h-11 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 text-emerald-800 dark:text-emerald-300 font-mono font-bold text-xs hover:bg-emerald-100 dark:hover:bg-emerald-900/50 active:scale-95 transition cursor-pointer"
+                    >
+                      +200
+                    </button>
+                  </div>
+                )}
+
                 {/* Change Calculation Display */}
-                <div className="flex items-center justify-between pt-2 border-t border-emerald-200/60">
-                  <span className="text-xs font-bold text-slate-600">Change to Return:</span>
-                  <span className="text-xl font-black text-[#0D9668] font-mono">
+                <div className="flex items-center justify-between pt-2 border-t border-emerald-200/60 dark:border-emerald-800/40">
+                  <span className="text-xs font-bold text-slate-600 dark:text-slate-300">Change to Return:</span>
+                  <span className="text-xl font-black text-[#0D9668] dark:text-emerald-400 font-mono">
                     {formatMoney(cashChange)}
                   </span>
                 </div>

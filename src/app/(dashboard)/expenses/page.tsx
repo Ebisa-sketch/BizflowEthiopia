@@ -181,15 +181,15 @@ export default function ExpensesPage() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight text-slate-900">Operating Expenses</h1>
-          <p className="text-sm text-slate-500">
+          <h1 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-white">Operating Expenses</h1>
+          <p className="text-sm text-slate-500 dark:text-slate-400">
             Record overhead, store rent, utilities, transport, and supplies to track true net profit
           </p>
         </div>
         <div className="flex items-center gap-2">
           <button
             onClick={() => fetchExpenses()}
-            className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 transition"
+            className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-2 text-xs font-semibold text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700 transition"
             title="Refresh Expenses"
           >
             <RefreshCw className={`h-3.5 w-3.5 ${loading ? "animate-spin text-blue-600" : ""}`} />
@@ -207,7 +207,7 @@ export default function ExpensesPage() {
 
       {/* Error alert */}
       {error && (
-        <div className="flex items-center justify-between rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-800">
+        <div className="flex items-center justify-between rounded-xl border border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-950/40 p-4 text-sm text-red-800 dark:text-red-300">
           <div className="flex items-center gap-2">
             <AlertCircle className="h-5 w-5 text-red-600 shrink-0" />
             <span>{error}</span>
@@ -220,37 +220,37 @@ export default function ExpensesPage() {
 
       {/* Summary Stat Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        <div className="p-4 bg-white rounded-2xl border border-slate-200/90 shadow-xs flex items-center justify-between">
+        <div className="p-4 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/90 dark:border-slate-800 shadow-xs flex items-center justify-between">
           <div>
-            <span className="text-xs font-medium text-slate-500 uppercase tracking-wider block mb-1">
+            <span className="text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider block mb-1">
               Current Month Total
             </span>
-            <span className="text-2xl font-bold font-mono text-red-600">
+            <span className="text-2xl font-bold font-mono text-red-600 dark:text-red-400">
               {formatMoney(monthlyTotal)}
             </span>
           </div>
-          <div className="p-3 bg-red-50 text-red-600 rounded-xl">
+          <div className="p-3 bg-red-50 dark:bg-red-950/40 text-red-600 dark:text-red-400 rounded-xl">
             <CreditCard className="h-6 w-6" />
           </div>
         </div>
 
-        <div className="p-4 bg-white rounded-2xl border border-slate-200/90 shadow-xs flex items-center justify-between">
+        <div className="p-4 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/90 dark:border-slate-800 shadow-xs flex items-center justify-between">
           <div>
-            <span className="text-xs font-medium text-slate-500 uppercase tracking-wider block mb-1">
+            <span className="text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider block mb-1">
               Filtered Records Sum
             </span>
-            <span className="text-2xl font-bold font-mono text-slate-900">
+            <span className="text-2xl font-bold font-mono text-slate-900 dark:text-white">
               {formatMoney(totalAmount)}
             </span>
           </div>
-          <div className="p-3 bg-slate-100 text-slate-600 rounded-xl">
+          <div className="p-3 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 rounded-xl">
             <DollarSign className="h-6 w-6" />
           </div>
         </div>
       </div>
 
       {/* Filters and Search */}
-      <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 bg-white p-3 rounded-2xl border border-slate-200 shadow-xs">
+      <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 bg-white dark:bg-slate-900 p-3 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs">
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
           <input
@@ -258,16 +258,16 @@ export default function ExpensesPage() {
             placeholder="Search expense description or category..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full rounded-lg border-0 bg-transparent pl-9 pr-4 text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-0"
+            className="w-full rounded-lg border-0 bg-transparent pl-9 pr-4 text-sm text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:ring-0"
           />
         </div>
 
-        <div className="flex items-center gap-2 border-t sm:border-t-0 sm:border-l border-slate-200 pt-2 sm:pt-0 sm:pl-3">
+        <div className="flex items-center gap-2 border-t sm:border-t-0 sm:border-l border-slate-200 dark:border-slate-800 pt-2 sm:pt-0 sm:pl-3">
           <Filter className="h-3.5 w-3.5 text-slate-400" />
           <select
             value={selectedCategory}
             onChange={(e) => setSelectedCategory(e.target.value)}
-            className="rounded-lg border border-slate-200 bg-slate-50 py-1.5 px-2.5 text-xs font-semibold text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 py-1.5 px-2.5 text-xs font-semibold text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500"
           >
             <option value="ALL">All Categories</option>
             {COMMON_CATEGORIES.map((c) => (
@@ -280,15 +280,15 @@ export default function ExpensesPage() {
       </div>
 
       {/* Expense Table */}
-      <div className="bg-white rounded-2xl border border-slate-200/90 shadow-xs overflow-hidden">
+      <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/90 dark:border-slate-800 shadow-xs overflow-hidden">
         {loading && expenses.length === 0 ? (
           <div className="p-4">
             <TableSkeleton rows={6} cols={5} hasFilters={false} />
           </div>
         ) : expenses.length === 0 ? (
-          <div className="p-12 text-center text-slate-500 space-y-3">
-            <CreditCard className="h-10 w-10 mx-auto text-slate-300" />
-            <h3 className="font-semibold text-slate-700">No expenses recorded</h3>
+          <div className="p-12 text-center text-slate-500 dark:text-slate-400 space-y-3">
+            <CreditCard className="h-10 w-10 mx-auto text-slate-300 dark:text-slate-600" />
+            <h3 className="font-semibold text-slate-700 dark:text-slate-200">No expenses recorded</h3>
             <p className="text-xs text-slate-400 max-w-sm mx-auto">
               Track business expenses like store rent, electricity, transport, or supplies to keep an accurate financial ledger.
             </p>
@@ -303,7 +303,7 @@ export default function ExpensesPage() {
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-left text-xs">
-              <thead className="bg-slate-50 border-b border-slate-200 text-slate-500 uppercase tracking-wider font-semibold">
+              <thead className="bg-slate-50 dark:bg-slate-800/80 border-b border-slate-200 dark:border-slate-800 text-slate-500 dark:text-slate-400 uppercase tracking-wider font-semibold">
                 <tr>
                   <th className="py-3 px-4">Date</th>
                   <th className="py-3 px-4">Category</th>
@@ -313,26 +313,26 @@ export default function ExpensesPage() {
                   <th className="py-3 px-4 text-right">Action</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-100 font-mono">
+              <tbody className="divide-y divide-slate-100 dark:divide-slate-800 font-mono">
                 {expenses.map((e) => (
-                  <tr key={e.id} className="hover:bg-slate-50/70 transition">
-                    <td className="py-3 px-4 font-sans text-slate-500">{formatDate(e.date)}</td>
+                  <tr key={e.id} className="hover:bg-slate-50/70 dark:hover:bg-slate-800/50 transition">
+                    <td className="py-3 px-4 font-sans text-slate-500 dark:text-slate-400">{formatDate(e.date)}</td>
                     <td className="py-3 px-4 font-sans">
-                      <span className="inline-block px-2 py-0.5 rounded text-[11px] font-semibold bg-slate-100 text-slate-700">
+                      <span className="inline-block px-2 py-0.5 rounded text-[11px] font-semibold bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-transparent dark:border-slate-700">
                         {e.category}
                       </span>
                     </td>
-                    <td className="py-3 px-4 font-sans text-slate-700 font-medium">
+                    <td className="py-3 px-4 font-sans text-slate-700 dark:text-slate-200 font-medium">
                       {e.description || "—"}
                     </td>
-                    <td className="py-3 px-4 text-right font-bold text-red-600 text-sm">
+                    <td className="py-3 px-4 text-right font-bold text-red-600 dark:text-red-400 text-sm">
                       {formatMoney(e.amount)}
                     </td>
-                    <td className="py-3 px-4 text-right font-sans text-slate-600">{e.recordedBy}</td>
+                    <td className="py-3 px-4 text-right font-sans text-slate-600 dark:text-slate-400">{e.recordedBy}</td>
                     <td className="py-3 px-4 text-right font-sans">
                       <button
                         onClick={() => handleDeleteExpense(e)}
-                        className="p-1.5 rounded-lg border border-slate-200 text-slate-400 hover:text-red-600 hover:border-red-200 hover:bg-red-50 transition"
+                        className="p-1.5 rounded-lg border border-slate-200 dark:border-slate-700 text-slate-400 hover:text-red-600 dark:hover:text-red-400 hover:border-red-200 dark:hover:border-red-800 hover:bg-red-50 dark:hover:bg-red-950/40 transition"
                         title="Delete expense"
                       >
                         <Trash2 className="h-3.5 w-3.5" />
@@ -348,16 +348,16 @@ export default function ExpensesPage() {
 
       {/* Record Expense Modal */}
       {isModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-xs p-4">
-          <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl border border-slate-200 animate-in fade-in zoom-in-95">
-            <div className="flex items-center justify-between border-b border-slate-100 pb-4 mb-4">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-xs p-4">
+          <div className="w-full max-w-md rounded-2xl bg-white dark:bg-slate-900 p-6 shadow-2xl border border-slate-200 dark:border-slate-800 animate-in fade-in zoom-in-95">
+            <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-4 mb-4">
               <div>
-                <h2 className="text-lg font-bold text-slate-900">Record Operating Expense</h2>
-                <p className="text-xs text-slate-500">Log business expenditure with category</p>
+                <h2 className="text-lg font-bold text-slate-900 dark:text-white">Record Operating Expense</h2>
+                <p className="text-xs text-slate-500 dark:text-slate-400">Log business expenditure with category</p>
               </div>
               <button
                 onClick={() => setIsModalOpen(false)}
-                className="rounded-lg p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-600"
+                className="rounded-lg p-1 text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-600 dark:hover:text-slate-300"
               >
                 <X className="h-5 w-5" />
               </button>
@@ -365,11 +365,11 @@ export default function ExpensesPage() {
 
             <form onSubmit={handleRecordExpense} className="space-y-4">
               <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">Category</label>
+                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Category</label>
                 <select
                   value={formCategory}
                   onChange={(e) => setFormCategory(e.target.value)}
-                  className="w-full rounded-xl border border-slate-200 px-3.5 py-2.5 text-sm text-slate-900 focus:border-blue-600 focus:outline-none focus:ring-1 focus:ring-blue-600"
+                  className="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3.5 py-2.5 text-sm text-slate-900 dark:text-white focus:border-blue-600 focus:outline-none focus:ring-1 focus:ring-blue-600"
                 >
                   {COMMON_CATEGORIES.map((c) => (
                     <option key={c} value={c}>
@@ -381,7 +381,7 @@ export default function ExpensesPage() {
 
               {formCategory === "Other" && (
                 <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">
+                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
                     Custom Category Name
                   </label>
                   <input
@@ -390,13 +390,13 @@ export default function ExpensesPage() {
                     placeholder="e.g. Legal Fees"
                     value={formCustomCategory}
                     onChange={(e) => setFormCustomCategory(e.target.value)}
-                    className="w-full rounded-xl border border-slate-200 px-3.5 py-2.5 text-sm text-slate-900 focus:border-blue-600 focus:outline-none focus:ring-1 focus:ring-blue-600"
+                    className="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3.5 py-2.5 text-sm text-slate-900 dark:text-white focus:border-blue-600 focus:outline-none focus:ring-1 focus:ring-blue-600"
                   />
                 </div>
               )}
 
               <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">
+                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
                   Amount in ETB <span className="text-red-500">*</span>
                 </label>
                 <input
@@ -407,23 +407,23 @@ export default function ExpensesPage() {
                   placeholder="0.00"
                   value={formAmount}
                   onChange={(e) => setFormAmount(e.target.value)}
-                  className="w-full rounded-xl border border-slate-200 px-3.5 py-2.5 text-sm font-mono text-slate-900 focus:border-blue-600 focus:outline-none focus:ring-1 focus:ring-blue-600"
+                  className="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3.5 py-2.5 text-sm font-mono text-slate-900 dark:text-white focus:border-blue-600 focus:outline-none focus:ring-1 focus:ring-blue-600"
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">Date</label>
+                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Date</label>
                 <input
                   type="date"
                   required
                   value={formDate}
                   onChange={(e) => setFormDate(e.target.value)}
-                  className="w-full rounded-xl border border-slate-200 px-3.5 py-2.5 text-sm font-sans text-slate-900 focus:border-blue-600 focus:outline-none focus:ring-1 focus:ring-blue-600"
+                  className="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3.5 py-2.5 text-sm font-sans text-slate-900 dark:text-white focus:border-blue-600 focus:outline-none focus:ring-1 focus:ring-blue-600"
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">
+                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
                   Description / Reference
                 </label>
                 <textarea
@@ -431,15 +431,15 @@ export default function ExpensesPage() {
                   placeholder="e.g. Electricity bill for November / Invoice #4401"
                   value={formDescription}
                   onChange={(e) => setFormDescription(e.target.value)}
-                  className="w-full rounded-xl border border-slate-200 px-3.5 py-2.5 text-sm text-slate-900 focus:border-blue-600 focus:outline-none focus:ring-1 focus:ring-blue-600"
+                  className="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3.5 py-2.5 text-sm text-slate-900 dark:text-white focus:border-blue-600 focus:outline-none focus:ring-1 focus:ring-blue-600"
                 />
               </div>
 
-              <div className="flex items-center justify-end gap-3 pt-4 border-t border-slate-100">
+              <div className="flex items-center justify-end gap-3 pt-4 border-t border-slate-100 dark:border-slate-800">
                 <button
                   type="button"
                   onClick={() => setIsModalOpen(false)}
-                  className="rounded-xl border border-slate-200 px-4 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-50"
+                  className="rounded-xl border border-slate-200 dark:border-slate-700 px-4 py-2 text-xs font-semibold text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800"
                 >
                   Cancel
                 </button>

@@ -107,11 +107,11 @@ export default function ReportsPage() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight text-slate-900 flex items-center gap-2">
+          <h1 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-white flex items-center gap-2">
             <BarChart3 className="h-6 w-6 text-slate-400" />
             Reports & Financial Summary
           </h1>
-          <p className="text-sm text-slate-500">
+          <p className="text-sm text-slate-500 dark:text-slate-400">
             Gross profit estimates, COGS analysis, expense breakdown, and exportable statements
           </p>
         </div>
@@ -119,21 +119,21 @@ export default function ReportsPage() {
         <div className="flex items-center gap-2">
           <button
             onClick={() => fetchReports()}
-            className="p-2.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-600 transition"
+            className="p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 transition"
             title="Refresh Report Data"
           >
             <RefreshCw className={`h-4 w-4 ${loading ? "animate-spin text-blue-600" : ""}`} />
           </button>
           <button
             onClick={handleExportCSV}
-            className="inline-flex items-center gap-2 rounded-xl bg-slate-100 border border-slate-200 px-4 py-2.5 text-xs font-bold text-slate-700 hover:bg-slate-200 transition"
+            className="inline-flex items-center gap-2 rounded-xl bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 px-4 py-2.5 text-xs font-bold text-slate-700 dark:text-slate-200 hover:bg-slate-200 dark:hover:bg-slate-700 transition"
           >
             <FileSpreadsheet className="h-4 w-4" />
             Export CSV
           </button>
           <button
             onClick={() => window.print()}
-            className="inline-flex items-center gap-2 rounded-xl bg-[#101827] px-4 py-2.5 text-xs font-bold text-white hover:bg-slate-800 transition"
+            className="inline-flex items-center gap-2 rounded-xl bg-[#101827] dark:bg-slate-800 border border-transparent dark:border-slate-700 px-4 py-2.5 text-xs font-bold text-white hover:bg-slate-800 dark:hover:bg-slate-700 transition"
           >
             <Download className="h-4 w-4" />
             Print Report
@@ -142,7 +142,7 @@ export default function ReportsPage() {
       </div>
 
       {/* Period Selector */}
-      <div className="flex items-center gap-1.5 bg-white p-1 rounded-xl border border-slate-200 shadow-2xs self-start w-fit">
+      <div className="flex items-center gap-1.5 bg-white dark:bg-slate-900 p-1 rounded-xl border border-slate-200 dark:border-slate-800 shadow-2xs self-start w-fit">
         {(
           [
             { id: "today", label: "Today" },
@@ -154,10 +154,10 @@ export default function ReportsPage() {
           <button
             key={p.id}
             onClick={() => setPeriod(p.id)}
-            className={`px-4 py-2 rounded-lg text-xs font-bold transition ${
+            className={`px-4 py-2 rounded-lg text-xs font-bold transition cursor-pointer ${
               period === p.id
-                ? "bg-[#101827] text-white shadow-xs"
-                : "text-slate-600 hover:text-slate-900 hover:bg-slate-50"
+                ? "bg-[#101827] dark:bg-emerald-600 text-white shadow-xs"
+                : "text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white hover:bg-slate-50 dark:hover:bg-slate-800"
             }`}
           >
             {p.label}
@@ -172,23 +172,23 @@ export default function ReportsPage() {
           {/* 4 Financial KPI Cards */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {/* Gross Revenue */}
-        <div className="bg-white p-5 rounded-2xl border border-slate-200/90 shadow-2xs space-y-2">
+        <div className="bg-white dark:bg-slate-900 p-5 rounded-2xl border border-slate-200/90 dark:border-slate-800 shadow-2xs space-y-2">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold text-slate-500">Gross Revenue</span>
-            <div className="p-2 rounded-xl bg-blue-50 text-blue-600 border border-blue-100">
+            <span className="text-xs font-semibold text-slate-500 dark:text-slate-400">Gross Revenue</span>
+            <div className="p-2 rounded-xl bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400 border border-blue-100 dark:border-blue-900/40">
               <DollarSign className="h-4 w-4" />
             </div>
           </div>
-          <p className="text-2xl font-black text-slate-900 font-mono tracking-tight">
+          <p className="text-2xl font-black text-slate-900 dark:text-white font-mono tracking-tight">
             {formatMoney(financial.totalInvoiced)}
           </p>
           <div className="flex items-center gap-1 text-xs">
             {isPositiveGrowth ? (
-              <ArrowUpRight className="h-3.5 w-3.5 text-emerald-600" />
+              <ArrowUpRight className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" />
             ) : (
-              <ArrowDownRight className="h-3.5 w-3.5 text-red-600" />
+              <ArrowDownRight className="h-3.5 w-3.5 text-red-600 dark:text-red-400" />
             )}
-            <span className={`font-bold ${isPositiveGrowth ? "text-emerald-600" : "text-red-600"}`}>
+            <span className={`font-bold ${isPositiveGrowth ? "text-emerald-600 dark:text-emerald-400" : "text-red-600 dark:text-red-400"}`}>
               {isPositiveGrowth ? "+" : ""}
               {revenueChange}%
             </span>
@@ -197,14 +197,14 @@ export default function ReportsPage() {
         </div>
 
         {/* COGS */}
-        <div className="bg-white p-5 rounded-2xl border border-slate-200/90 shadow-2xs space-y-2">
+        <div className="bg-white dark:bg-slate-900 p-5 rounded-2xl border border-slate-200/90 dark:border-slate-800 shadow-2xs space-y-2">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold text-slate-500">Cost of Goods Sold</span>
-            <div className="p-2 rounded-xl bg-slate-100 text-slate-600 border border-slate-200">
+            <span className="text-xs font-semibold text-slate-500 dark:text-slate-400">Cost of Goods Sold</span>
+            <div className="p-2 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700">
               <Package className="h-4 w-4" />
             </div>
           </div>
-          <p className="text-2xl font-black text-slate-700 font-mono tracking-tight">
+          <p className="text-2xl font-black text-slate-700 dark:text-slate-300 font-mono tracking-tight">
             {formatMoney(financial.cogs)}
           </p>
           <p className="text-xs text-slate-400">
@@ -213,36 +213,36 @@ export default function ReportsPage() {
         </div>
 
         {/* Estimated Gross Profit */}
-        <div className="bg-white p-5 rounded-2xl border border-emerald-200 shadow-2xs space-y-2">
+        <div className="bg-white dark:bg-slate-900 p-5 rounded-2xl border border-emerald-200 dark:border-emerald-900/50 shadow-2xs space-y-2">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold text-emerald-800 flex items-center gap-1">
+            <span className="text-xs font-semibold text-emerald-800 dark:text-emerald-400 flex items-center gap-1">
               Gross Profit{" "}
-              <span className="text-[10px] bg-emerald-100 px-1 rounded font-mono">Est.</span>
+              <span className="text-[10px] bg-emerald-100 dark:bg-emerald-900/40 text-emerald-800 dark:text-emerald-300 px-1 rounded font-mono">Est.</span>
             </span>
-            <div className="p-2 rounded-xl bg-[#DCEFE7] text-[#0D9668] border border-[#0D9668]/20">
+            <div className="p-2 rounded-xl bg-[#DCEFE7] dark:bg-emerald-950/40 text-[#0D9668] dark:text-emerald-400 border border-[#0D9668]/20 dark:border-emerald-800/40">
               <TrendingUp className="h-4 w-4" />
             </div>
           </div>
-          <p className="text-2xl font-black text-[#0D9668] font-mono tracking-tight">
+          <p className="text-2xl font-black text-[#0D9668] dark:text-emerald-400 font-mono tracking-tight">
             {formatMoney(financial.grossProfit)}
           </p>
-          <p className="text-xs font-semibold text-emerald-700">
+          <p className="text-xs font-semibold text-emerald-700 dark:text-emerald-400">
             {financial.grossMarginPercentage}% gross margin
           </p>
         </div>
 
         {/* Net Operating Profit */}
-        <div className="bg-white p-5 rounded-2xl border border-blue-200 shadow-2xs space-y-2">
+        <div className="bg-white dark:bg-slate-900 p-5 rounded-2xl border border-blue-200 dark:border-blue-900/50 shadow-2xs space-y-2">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold text-blue-800">Net Operating Profit</span>
-            <div className="p-2 rounded-xl bg-blue-50 text-blue-600 border border-blue-100">
+            <span className="text-xs font-semibold text-blue-800 dark:text-blue-400">Net Operating Profit</span>
+            <div className="p-2 rounded-xl bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400 border border-blue-100 dark:border-blue-900/40">
               <CreditCard className="h-4 w-4" />
             </div>
           </div>
-          <p className="text-2xl font-black text-blue-700 font-mono tracking-tight">
+          <p className="text-2xl font-black text-blue-700 dark:text-blue-400 font-mono tracking-tight">
             {formatMoney(financial.netOperatingProfit)}
           </p>
-          <p className="text-xs text-slate-500">
+          <p className="text-xs text-slate-500 dark:text-slate-400">
             After -{formatMoney(financial.operatingExpenses)} expenses
           </p>
         </div>
@@ -251,17 +251,17 @@ export default function ReportsPage() {
       {/* Revenue Trend Chart & Payment Split */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
         {/* Revenue Trend (8 Cols) */}
-        <div className="lg:col-span-8 bg-white p-5 rounded-2xl border border-slate-200/90 shadow-2xs space-y-4">
-          <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+        <div className="lg:col-span-8 bg-white dark:bg-slate-900 p-5 rounded-2xl border border-slate-200/90 dark:border-slate-800 shadow-2xs space-y-4">
+          <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800">
             <div>
-              <h2 className="font-bold text-slate-900 text-sm">
+              <h2 className="font-bold text-slate-900 dark:text-white text-sm">
                 Revenue Trend ({PERIOD_LABELS[period]})
               </h2>
               <p className="text-xs text-slate-400">
                 {data.transactions} transactions • {formatMoney(avgBasket)} avg basket
               </p>
             </div>
-            <span className="text-xs font-mono font-bold text-[#0D9668] bg-[#DCEFE7] px-2.5 py-1 rounded-lg">
+            <span className="text-xs font-mono font-bold text-[#0D9668] dark:text-emerald-400 bg-[#DCEFE7] dark:bg-emerald-950/50 px-2.5 py-1 rounded-lg">
               Total: {formatMoney(data.revenue)}
             </span>
           </div>
@@ -284,13 +284,13 @@ export default function ReportsPage() {
                       <div className="text-[10px] font-mono text-slate-400 opacity-0 group-hover:opacity-100 transition-opacity">
                         {formatMoney(bar.amount)}
                       </div>
-                      <div className="w-full bg-slate-100 rounded-t-lg h-36 flex items-end p-1">
+                      <div className="w-full bg-slate-100 dark:bg-slate-800 rounded-t-lg h-36 flex items-end p-1">
                         <div
                           style={{ height: `${heightPct}%` }}
                           className="w-full bg-gradient-to-t from-[#101827] to-[#1e293b] group-hover:from-[#0D9668] group-hover:to-[#10b981] rounded-t-md transition-all duration-300 shadow-2xs"
                         />
                       </div>
-                      <span className="text-[11px] font-bold text-slate-500 font-mono">
+                      <span className="text-[11px] font-bold text-slate-500 dark:text-slate-400 font-mono">
                         {bar.label}
                       </span>
                     </div>
@@ -302,15 +302,15 @@ export default function ReportsPage() {
         </div>
 
         {/* Payment Split (4 Cols) */}
-        <div className="lg:col-span-4 bg-white p-5 rounded-2xl border border-slate-200/90 shadow-2xs space-y-4 flex flex-col justify-between">
+        <div className="lg:col-span-4 bg-white dark:bg-slate-900 p-5 rounded-2xl border border-slate-200/90 dark:border-slate-800 shadow-2xs space-y-4 flex flex-col justify-between">
           <div>
-            <div className="pb-3 border-b border-slate-100">
-              <h2 className="font-bold text-slate-900 text-sm">Payment Methods</h2>
+            <div className="pb-3 border-b border-slate-100 dark:border-slate-800">
+              <h2 className="font-bold text-slate-900 dark:text-white text-sm">Payment Methods</h2>
               <p className="text-xs text-slate-400">Revenue by collection channel</p>
             </div>
 
             {/* Stacked Horizontal Bar */}
-            <div className="mt-4 h-3 rounded-full bg-slate-100 overflow-hidden flex">
+            <div className="mt-4 h-3 rounded-full bg-slate-100 dark:bg-slate-800 overflow-hidden flex">
               {data.paymentSplit.map((pm) => (
                 <div
                   key={pm.method}
@@ -325,10 +325,10 @@ export default function ReportsPage() {
                 <div key={pm.method} className="flex items-center justify-between text-xs">
                   <div className="flex items-center gap-2">
                     <span className={`h-2.5 w-2.5 rounded-full ${pm.color}`} />
-                    <span className="font-semibold text-slate-700">{pm.method}</span>
+                    <span className="font-semibold text-slate-700 dark:text-slate-300">{pm.method}</span>
                   </div>
                   <div className="text-right">
-                    <span className="font-mono font-bold text-slate-900">{formatMoney(pm.amount)}</span>
+                    <span className="font-mono font-bold text-slate-900 dark:text-white">{formatMoney(pm.amount)}</span>
                     <span className="text-slate-400 ml-1.5">({pm.percentage}%)</span>
                   </div>
                 </div>
@@ -341,51 +341,51 @@ export default function ReportsPage() {
       {/* P&L Statement & Expense Breakdown */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
         {/* Profit & Loss Statement (7 Cols) */}
-        <div className="lg:col-span-7 bg-white p-5 rounded-2xl border border-slate-200/90 shadow-2xs space-y-4">
-          <div className="pb-3 border-b border-slate-100">
-            <h2 className="font-bold text-slate-900 text-sm">Estimated Profit & Loss Statement</h2>
+        <div className="lg:col-span-7 bg-white dark:bg-slate-900 p-5 rounded-2xl border border-slate-200/90 dark:border-slate-800 shadow-2xs space-y-4">
+          <div className="pb-3 border-b border-slate-100 dark:border-slate-800">
+            <h2 className="font-bold text-slate-900 dark:text-white text-sm">Estimated Profit & Loss Statement</h2>
             <p className="text-xs text-slate-400">
               {PERIOD_LABELS[period]} • Financial Accounting Overview
             </p>
           </div>
 
           <div className="space-y-0 text-xs">
-            <div className="py-3 flex justify-between font-bold text-slate-900 border-b border-slate-100">
+            <div className="py-3 flex justify-between font-bold text-slate-900 dark:text-white border-b border-slate-100 dark:border-slate-800">
               <span>Gross Sales Revenue</span>
               <span className="font-mono">{formatMoney(data.revenue)}</span>
             </div>
 
-            <div className="py-2.5 flex justify-between text-slate-600 pl-4">
+            <div className="py-2.5 flex justify-between text-slate-600 dark:text-slate-400 pl-4">
               <span>Less: Cost of Goods Sold (COGS)</span>
-              <span className="font-mono text-red-600">-{formatMoney(data.cogs)}</span>
+              <span className="font-mono text-red-600 dark:text-red-400">-{formatMoney(data.cogs)}</span>
             </div>
 
-            <div className="py-3 flex justify-between font-bold text-[#0D9668] border-t border-b border-slate-200 bg-[#DCEFE7]/30 px-3 -mx-3 rounded">
+            <div className="py-3 flex justify-between font-bold text-[#0D9668] dark:text-emerald-400 border-t border-b border-slate-200 dark:border-slate-800 bg-[#DCEFE7]/30 dark:bg-emerald-950/30 px-3 -mx-3 rounded">
               <span>Estimated Gross Profit</span>
               <span className="font-mono">{formatMoney(financial.grossProfit)}</span>
             </div>
 
-            <div className="py-2.5 flex justify-between text-slate-600 pl-4 mt-2">
+            <div className="py-2.5 flex justify-between text-slate-600 dark:text-slate-400 pl-4 mt-2">
               <span>Less: Operating Expenses</span>
-              <span className="font-mono text-red-600">-{formatMoney(data.expenses)}</span>
+              <span className="font-mono text-red-600 dark:text-red-400">-{formatMoney(data.expenses)}</span>
             </div>
 
             {data.expenseBreakdown.map((exp) => (
               <div
                 key={exp.category}
-                className="py-1.5 flex justify-between text-slate-400 pl-8 text-[11px]"
+                className="py-1.5 flex justify-between text-slate-400 dark:text-slate-500 pl-8 text-[11px]"
               >
                 <span>{exp.category}</span>
                 <span className="font-mono">-{formatMoney(exp.amount)}</span>
               </div>
             ))}
 
-            <div className="py-3 flex justify-between font-black text-blue-700 border-t-2 border-blue-200 mt-2 text-sm">
+            <div className="py-3 flex justify-between font-black text-blue-700 dark:text-blue-400 border-t-2 border-blue-200 dark:border-blue-800 mt-2 text-sm">
               <span>Estimated Net Operating Profit</span>
               <span className="font-mono">{formatMoney(financial.netOperatingProfit)}</span>
             </div>
 
-            <div className="py-2 flex justify-between text-[11px] text-slate-400">
+            <div className="py-2 flex justify-between text-[11px] text-slate-400 dark:text-slate-500">
               <span>Net Margin</span>
               <span className="font-mono font-semibold">{financial.netMarginPercentage}%</span>
             </div>
@@ -393,11 +393,11 @@ export default function ReportsPage() {
         </div>
 
         {/* Expense Breakdown (5 Cols) */}
-        <div className="lg:col-span-5 bg-white p-5 rounded-2xl border border-slate-200/90 shadow-2xs space-y-4">
-          <div className="pb-3 border-b border-slate-100">
-            <h2 className="font-bold text-slate-900 text-sm">Expense Breakdown</h2>
+        <div className="lg:col-span-5 bg-white dark:bg-slate-900 p-5 rounded-2xl border border-slate-200/90 dark:border-slate-800 shadow-2xs space-y-4">
+          <div className="pb-3 border-b border-slate-100 dark:border-slate-800">
+            <h2 className="font-bold text-slate-900 dark:text-white text-sm">Expense Breakdown</h2>
             <p className="text-xs text-slate-400">
-              Total: <span className="font-mono font-bold text-red-600">{formatMoney(data.expenses)}</span>
+              Total: <span className="font-mono font-bold text-red-600 dark:text-red-400">{formatMoney(data.expenses)}</span>
             </p>
           </div>
 
@@ -411,13 +411,13 @@ export default function ReportsPage() {
               data.expenseBreakdown.map((exp) => (
                 <div key={exp.category}>
                   <div className="flex justify-between text-xs mb-1">
-                    <span className="font-semibold text-slate-700">{exp.category}</span>
-                    <span className="font-mono font-bold text-slate-900">
+                    <span className="font-semibold text-slate-700 dark:text-slate-300">{exp.category}</span>
+                    <span className="font-mono font-bold text-slate-900 dark:text-white">
                       {formatMoney(exp.amount)}
                       <span className="text-slate-400 ml-1 font-sans">({exp.percentage}%)</span>
                     </span>
                   </div>
-                  <div className="w-full h-2.5 rounded-full bg-slate-100 overflow-hidden">
+                  <div className="w-full h-2.5 rounded-full bg-slate-100 dark:bg-slate-800 overflow-hidden">
                     <div
                       className={`h-full ${exp.color} rounded-full transition-all duration-500`}
                       style={{ width: `${Math.max(2, exp.percentage)}%` }}
@@ -431,10 +431,10 @@ export default function ReportsPage() {
       </div>
 
       {/* Top Performing Products Table */}
-      <div className="bg-white p-5 rounded-2xl border border-slate-200/90 shadow-2xs space-y-4">
-        <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+      <div className="bg-white dark:bg-slate-900 p-5 rounded-2xl border border-slate-200/90 dark:border-slate-800 shadow-2xs space-y-4">
+        <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800">
           <div>
-            <h2 className="font-bold text-slate-900 text-sm">
+            <h2 className="font-bold text-slate-900 dark:text-white text-sm">
               Top-Performing Products ({PERIOD_LABELS[period]})
             </h2>
             <p className="text-xs text-slate-400">
@@ -453,7 +453,7 @@ export default function ReportsPage() {
             </p>
           ) : (
             <table className="w-full text-left text-xs">
-              <thead className="bg-slate-50 text-slate-500 font-semibold uppercase tracking-wider">
+              <thead className="bg-slate-50 dark:bg-slate-800/80 text-slate-500 dark:text-slate-400 font-semibold uppercase tracking-wider">
                 <tr>
                   <th className="py-2.5 px-3 rounded-l-lg">#</th>
                   <th className="py-2.5 px-3">Product</th>
@@ -463,32 +463,32 @@ export default function ReportsPage() {
                   <th className="py-2.5 px-3 text-right rounded-r-lg">Margin</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-100">
+              <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
                 {data.topProducts.map((p, idx) => {
                   const share =
                     data.revenue > 0 ? ((p.revenue / data.revenue) * 100).toFixed(1) : "0.0";
                   return (
-                    <tr key={p.name} className="hover:bg-slate-50/80 transition">
+                    <tr key={p.name} className="hover:bg-slate-50/80 dark:hover:bg-slate-800/50 transition">
                       <td className="py-3 px-3 font-mono text-slate-400 font-bold">{idx + 1}</td>
-                      <td className="py-3 px-3 font-semibold text-slate-900">{p.name}</td>
-                      <td className="py-3 px-3 text-center font-mono font-bold text-slate-700">
+                      <td className="py-3 px-3 font-semibold text-slate-900 dark:text-white">{p.name}</td>
+                      <td className="py-3 px-3 text-center font-mono font-bold text-slate-700 dark:text-slate-300">
                         {p.units}
                       </td>
-                      <td className="py-3 px-3 text-right font-mono font-bold text-slate-900">
+                      <td className="py-3 px-3 text-right font-mono font-bold text-slate-900 dark:text-white">
                         {formatMoney(p.revenue)}
                       </td>
                       <td className="py-3 px-3 text-right">
                         <div className="inline-flex items-center gap-1.5">
-                          <div className="w-12 h-1.5 rounded-full bg-slate-100 overflow-hidden">
+                          <div className="w-12 h-1.5 rounded-full bg-slate-100 dark:bg-slate-800 overflow-hidden">
                             <div
                               className="h-full bg-[#0D9668] rounded-full"
                               style={{ width: `${Math.min(100, Number(share) * 3)}%` }}
                             />
                           </div>
-                          <span className="font-mono text-slate-600">{share}%</span>
+                          <span className="font-mono text-slate-600 dark:text-slate-400">{share}%</span>
                         </div>
                       </td>
-                      <td className="py-3 px-3 text-right font-mono font-bold text-[#0D9668]">
+                      <td className="py-3 px-3 text-right font-mono font-bold text-[#0D9668] dark:text-emerald-400">
                         {p.margin}
                       </td>
                     </tr>

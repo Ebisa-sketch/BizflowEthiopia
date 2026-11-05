@@ -30,6 +30,13 @@ const posCheckoutSchema = z.object({
     ),
   discountTotal: z.number().finite().nonnegative().default(0),
   applyVat: z.boolean().default(false),
+  customerId: z
+    .string()
+    .trim()
+    .max(128)
+    .optional()
+    .nullable()
+    .transform((value) => value ?? undefined),
   customerName: z
     .string()
     .trim()
@@ -180,6 +187,7 @@ export async function POST(request: NextRequest) {
       items: body.items,
       discountTotal: body.discountTotal,
       applyVat: body.applyVat,
+      customerId: body.customerId,
       customerName: body.customerName,
       payment: body.payment,
       idempotencyKey,

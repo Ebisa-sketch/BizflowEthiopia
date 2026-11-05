@@ -79,6 +79,11 @@ enum DebtTransactionType {
   ADJUSTMENT
 }
 
+enum ShiftStatus {
+  OPEN
+  CLOSED
+}
+
 model User {
   id            String     @id @default(uuid())
   name          String
@@ -97,6 +102,7 @@ model User {
   auditLogs           AuditLog[]
   passwordResetTokens PasswordResetToken[]
   debtTransactions    CustomerDebtTransaction[]
+  tillShifts          TillShift[]
 
   @@map("users")
 }
@@ -139,6 +145,7 @@ model Business {
   auditLogs      AuditLog[]
   customers      Customer[]
   debtTransactions CustomerDebtTransaction[]
+  tillShifts     TillShift[]
 
   @@map("businesses")
 }
@@ -394,4 +401,31 @@ model CustomerDebtTransaction {
   @@index([businessId, transactionDate])
   @@index([customerId, transactionDate])
   @@map("customer_debt_transactions")
+}
+
+model TillShift {
+  id                 String       @id @default(uuid())
+  businessId         String
+  cashierId          String
+  status             ShiftStatus  @default(OPEN)
+  openingFloat       Decimal      @default(0.00) @db.Decimal(12, 2)
+  cashSales          Decimal      @default(0.00) @db.Decimal(12, 2)
+  digitalSales       Decimal      @default(0.00) @db.Decimal(12, 2)
+  expensesPaid       Decimal      @default(0.00) @db.Decimal(12, 2)
+  expectedCash       Decimal      @default(0.00) @db.Decimal(12, 2)
+  actualCash         Decimal?     @db.Decimal(12, 2)
+  variance           Decimal?     @db.Decimal(12, 2)
+  denominationCounts Json?
+  notes              String?
+  openedAt           DateTime     @default(now())
+  closedAt           DateTime?
+  createdAt          DateTime     @default(now())
+  updatedAt          DateTime     @updatedAt
+
+  business           Business     @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  cashier            User         @relation(fields: [cashierId], references: [id], onDelete: Restrict)
+
+  @@index([businessId, status])
+  @@index([businessId, openedAt])
+  @@map("till_shifts")
 }

@@ -3,7 +3,7 @@ import { prisma } from "../db/prisma";
 import { AppError } from "../errors";
 import { roundMoney } from "../money";
 import { BusinessRole, hasPermission } from "../permissions";
-import { MovementType, PaymentMethod, SaleStatus } from "@prisma/client";
+import { DebtTransactionType, MovementType, PaymentMethod, SaleStatus } from "@prisma/client";
 import { calculatePosTotals } from "./pos-pricing";
 import { verifyManagerDiscountGrant } from "./manager-authorization";
 import { validatePaymentReference } from "../payments/ethiopian-payment-reference";
@@ -27,6 +27,7 @@ export interface CreatePosSaleInput {
   items: PosCartItemInput[];
   discountTotal?: number;
   applyVat?: boolean;
+  customerId?: string;
   customerName?: string;
   payment: PosPaymentInput;
   idempotencyKey?: string;
@@ -89,6 +90,7 @@ export async function createPosSale(
     items,
     discountTotal = 0,
     applyVat = false,
+    customerId,
     customerName = "Walk-in Customer",
     payment,
     idempotencyKey,
@@ -389,13 +391,70 @@ export async function createPosSale(
       }
     }
 
+    // Resolve customer entity if customerId or customerName is supplied
+    let resolvedCustomerId: string | null = null;
+    let targetCustomer: any = null;
+
+    if (customerId) {
+      targetCustomer = await tx.customer.findFirst({
+        where: { id: customerId, businessId, isActive: true },
+      });
+      if (targetCustomer) {
+        resolvedCustomerId = targetCustomer.id;
+      }
+    } else if (normalizedCustomerName && normalizedCustomerName !== "Walk-in Customer") {
+      targetCustomer = await tx.customer.findFirst({
+        where: { businessId, name: normalizedCustomerName, isActive: true },
+      });
+      if (targetCustomer) {
+        resolvedCustomerId = targetCustomer.id;
+      }
+    }
+
+    const isCreditSale =
+      method === PaymentMethod.OTHER &&
+      Boolean(
+        effectiveReference?.toUpperCase().includes("IDDA") ||
+          effectiveReference?.toUpperCase().includes("CREDIT")
+      );
+
+    if (isCreditSale) {
+      if (!targetCustomer) {
+        if (normalizedCustomerName && normalizedCustomerName !== "Walk-in Customer") {
+          targetCustomer = await tx.customer.create({
+            data: {
+              businessId,
+              name: normalizedCustomerName,
+              currentDebt: 0,
+            },
+          });
+          resolvedCustomerId = targetCustomer.id;
+        } else {
+          throw new AppError(
+            "Store Credit (Idda / ዕዳ) cannot be issued to an anonymous Walk-in Customer. Please select or enter a named customer.",
+            400
+          );
+        }
+      }
+
+      const creditLimit = Number(targetCustomer.creditLimit || 0);
+      const currentDebt = Number(targetCustomer.currentDebt || 0);
+      if (creditLimit > 0 && currentDebt + grandTotal > creditLimit) {
+        throw new AppError(
+          `Credit limit exceeded for "${targetCustomer.name}". Credit limit: ETB ${creditLimit.toFixed(2)}, current debt: ETB ${currentDebt.toFixed(2)}, sale total: ETB ${grandTotal.toFixed(2)}.`,
+          400
+        );
+      }
+    }
+
     // Create Sale record
     const sale = await tx.sale.create({
       data: {
         businessId,
         saleNumber,
         cashierId,
-        customerName: customerName.trim() || "Walk-in Customer",
+        customerId: resolvedCustomerId,
+        customerName: targetCustomer ? targetCustomer.name : (customerName.trim() || "Walk-in Customer"),
         subtotal,
         discountTotal: safeDiscount,
         taxTotal: safeTax,
@@ -489,6 +548,32 @@ export async function createPosSale(
         recordedBy: cashierId,
       },
     });
+
+    // If this was a Store Credit (Idda) transaction, update customer balance & append ledger
+    if (isCreditSale && targetCustomer) {
+      const prevDebt = Number(targetCustomer.currentDebt || 0);
+      const newDebt = prevDebt + grandTotal;
+
+      await tx.customer.update({
+        where: { id: targetCustomer.id },
+        data: { currentDebt: newDebt },
+      });
+
+      await tx.customerDebtTransaction.create({
+        data: {
+          businessId,
+          customerId: targetCustomer.id,
+          type: DebtTransactionType.SALE_CREDIT,
+          amount: grandTotal,
+          balanceAfter: newDebt,
+          saleId: sale.id,
+          paymentMethod: PaymentMethod.OTHER,
+          reference: effectiveReference,
+          notes: `POS Credit Sale #${saleNumber}`,
+          recordedBy: cashierId,
+        },
+      });
+    }
 
     // Create Audit Log
     await tx.auditLog.create({

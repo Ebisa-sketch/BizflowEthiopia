@@ -3,11 +3,17 @@ import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'core/api_client.dart';
 import 'providers/auth_provider.dart';
+import 'providers/categories_provider.dart';
 import 'providers/customers_provider.dart';
 import 'providers/dashboard_provider.dart';
+import 'providers/expenses_provider.dart';
+import 'providers/inventory_provider.dart';
 import 'providers/pos_provider.dart';
 import 'providers/products_provider.dart';
+import 'providers/reports_provider.dart';
+import 'providers/sales_provider.dart';
 import 'providers/shift_provider.dart';
+import 'providers/staff_provider.dart';
 import 'providers/theme_provider.dart';
 import 'screens/auth/login_screen.dart';
 import 'screens/home_shell.dart';
@@ -43,6 +49,12 @@ class BizFlowRoot extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => DashboardProvider()),
         ChangeNotifierProvider(create: (_) => ShiftProvider()),
         ChangeNotifierProvider(create: (_) => CustomersProvider()),
+        ChangeNotifierProvider(create: (_) => SalesProvider()),
+        ChangeNotifierProvider(create: (_) => ExpensesProvider()),
+        ChangeNotifierProvider(create: (_) => InventoryProvider()),
+        ChangeNotifierProvider(create: (_) => ReportsProvider()),
+        ChangeNotifierProvider(create: (_) => StaffProvider()),
+        ChangeNotifierProvider(create: (_) => CategoriesProvider()),
       ],
       child: const BizFlowApp(),
     );

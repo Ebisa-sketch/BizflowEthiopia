@@ -10,8 +10,13 @@ import '../../widgets/status_badge.dart';
 
 class DashboardScreen extends StatefulWidget {
   final Function(int index)? onNavigateTab;
+  final Function(String route)? onNavigateRoute;
 
-  const DashboardScreen({super.key, this.onNavigateTab});
+  const DashboardScreen({
+    super.key,
+    this.onNavigateTab,
+    this.onNavigateRoute,
+  });
 
   @override
   State<DashboardScreen> createState() => _DashboardScreenState();
@@ -27,12 +32,19 @@ class _DashboardScreenState extends State<DashboardScreen> {
     });
   }
 
+  void _nav(String route, int legacyIndex) {
+    if (widget.onNavigateRoute != null) {
+      widget.onNavigateRoute!(route);
+    } else if (widget.onNavigateTab != null) {
+      widget.onNavigateTab!(legacyIndex);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final auth = context.watch<AuthProvider>();
     final dashboard = context.watch<DashboardProvider>();
     final shift = context.watch<ShiftProvider>();
-    final isDark = Theme.of(context).brightness == Brightness.dark;
     final user = auth.user;
     final metrics = dashboard.metrics;
 
@@ -84,12 +96,15 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Text(
-                          user?.business?.name ?? 'BizFlow Store',
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 18,
-                            fontWeight: FontWeight.w800,
+                        Expanded(
+                          child: Text(
+                            user?.business?.name ?? 'BizFlow Store',
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 18,
+                              fontWeight: FontWeight.w800,
+                            ),
+                            overflow: TextOverflow.ellipsis,
                           ),
                         ),
                         Container(
@@ -111,7 +126,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     ),
                     const SizedBox(height: 8),
                     Text(
-                      'Cashier: ${user?.name ?? "Staff"}',
+                      'Cashier / Staff: ${user?.name ?? "Staff"}',
                       style: TextStyle(
                         color: Colors.white.withValues(alpha: 0.9),
                         fontSize: 13,
@@ -185,18 +200,16 @@ class _DashboardScreenState extends State<DashboardScreen> {
                           title: 'Low Stock Alert',
                           value: '${metrics.lowStockCount}',
                           icon: Icons.warning_amber_rounded,
-                          iconColor: metrics.lowStockCount > 0
-                              ? AppColors.danger
-                              : AppColors.success,
+                          iconColor: metrics.lowStockCount > 0 ? AppColors.danger : AppColors.success,
                           subtitle: 'Needs replenishment',
                         ),
                       ],
                     ),
               const SizedBox(height: 24),
 
-              // Quick Actions
+              // Quick Actions (Full suite matching Web App)
               const Text(
-                'Quick POS Actions',
+                'Quick Store Actions',
                 style: TextStyle(fontSize: 15, fontWeight: FontWeight.w800),
               ),
               const SizedBox(height: 10),
@@ -205,19 +218,19 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 children: [
                   Expanded(
                     child: _QuickActionButton(
-                      title: 'New Sale',
+                      title: 'New POS Sale',
                       icon: Icons.point_of_sale_rounded,
                       color: AppColors.primary,
-                      onTap: () => widget.onNavigateTab?.call(0), // POS tab
+                      onTap: () => _nav('pos', 0),
                     ),
                   ),
                   const SizedBox(width: 12),
                   Expanded(
                     child: _QuickActionButton(
-                      title: 'Inventory',
-                      icon: Icons.inventory_2_outlined,
+                      title: 'Sales History',
+                      icon: Icons.receipt_long_rounded,
                       color: AppColors.secondary,
-                      onTap: () => widget.onNavigateTab?.call(1), // Inventory tab
+                      onTap: () => _nav('sales', 2),
                     ),
                   ),
                 ],
@@ -227,19 +240,41 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 children: [
                   Expanded(
                     child: _QuickActionButton(
-                      title: 'Register Shift',
-                      icon: Icons.punch_clock_rounded,
-                      color: const Color(0xFF8B5CF6),
-                      onTap: () => widget.onNavigateTab?.call(2), // Shift tab
+                      title: 'Inventory & Stock',
+                      icon: Icons.inventory_2_outlined,
+                      color: const Color(0xFF0F766E),
+                      onTap: () => _nav('products', 1),
                     ),
                   ),
                   const SizedBox(width: 12),
                   Expanded(
                     child: _QuickActionButton(
-                      title: 'Store Settings',
-                      icon: Icons.tune_rounded,
-                      color: isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary,
-                      onTap: () => widget.onNavigateTab?.call(4), // Settings tab
+                      title: 'Customer Credit',
+                      icon: Icons.people_alt_rounded,
+                      color: AppColors.warning,
+                      onTap: () => _nav('customers', 0),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              Row(
+                children: [
+                  Expanded(
+                    child: _QuickActionButton(
+                      title: 'Operating Expenses',
+                      icon: Icons.credit_card_off_rounded,
+                      color: const Color(0xFFEF4444),
+                      onTap: () => _nav('expenses', 4),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: _QuickActionButton(
+                      title: 'Reports & P&L',
+                      icon: Icons.bar_chart_rounded,
+                      color: const Color(0xFF8B5CF6),
+                      onTap: () => _nav('reports', 3),
                     ),
                   ),
                 ],
@@ -272,28 +307,28 @@ class _QuickActionButton extends StatelessWidget {
         onTap: onTap,
         borderRadius: BorderRadius.circular(16),
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
           child: Row(
             children: [
               Container(
-                padding: const EdgeInsets.all(10),
+                padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
                   color: color.withValues(alpha: 0.15),
-                  borderRadius: BorderRadius.circular(12),
+                  borderRadius: BorderRadius.circular(10),
                 ),
-                child: Icon(icon, color: color, size: 22),
+                child: Icon(icon, color: color, size: 20),
               ),
-              const SizedBox(width: 12),
+              const SizedBox(width: 10),
               Expanded(
                 child: Text(
                   title,
                   style: const TextStyle(
-                    fontSize: 13,
+                    fontSize: 12,
                     fontWeight: FontWeight.w700,
                   ),
                 ),
               ),
-              const Icon(Icons.arrow_forward_ios_rounded, size: 14),
+              const Icon(Icons.arrow_forward_ios_rounded, size: 12),
             ],
           ),
         ),
@@ -301,4 +336,3 @@ class _QuickActionButton extends StatelessWidget {
     );
   }
 }
-

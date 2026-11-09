@@ -44,6 +44,8 @@ class ProductsProvider with ChangeNotifier {
     }).toList();
   }
 
+  Future<void> fetchProducts() => fetchProductsAndCategories();
+
   Future<void> fetchProductsAndCategories() async {
     _isLoading = true;
     _errorMessage = null;

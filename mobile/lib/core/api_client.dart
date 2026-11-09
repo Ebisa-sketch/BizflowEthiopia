@@ -128,6 +128,21 @@ class ApiClient {
     }
   }
 
+  Future<dynamic> patch(String endpoint, {Map<String, dynamic>? body}) async {
+    final uri = Uri.parse('$_baseUrl$endpoint');
+    try {
+      final response = await http.patch(
+        uri,
+        headers: _buildHeaders(),
+        body: body != null ? jsonEncode(body) : null,
+      );
+      return _processResponse(response);
+    } catch (e) {
+      if (e is AppException) rethrow;
+      throw AppException('Connection failed: Check network & server URL ($e)');
+    }
+  }
+
   Future<dynamic> delete(String endpoint) async {
     final uri = Uri.parse('$_baseUrl$endpoint');
     try {

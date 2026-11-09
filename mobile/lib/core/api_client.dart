@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'constants.dart';
@@ -26,7 +27,17 @@ class ApiClient {
 
   Future<void> init() async {
     final prefs = await SharedPreferences.getInstance();
-    _baseUrl = prefs.getString(AppConstants.keyApiUrl) ?? AppConstants.defaultApiUrl;
+    final savedUrl = prefs.getString(AppConstants.keyApiUrl);
+    if (savedUrl != null) {
+      if ((kIsWeb || defaultTargetPlatform != TargetPlatform.android) && savedUrl.contains('10.0.2.2')) {
+        _baseUrl = AppConstants.defaultApiUrl;
+        await prefs.setString(AppConstants.keyApiUrl, _baseUrl);
+      } else {
+        _baseUrl = savedUrl;
+      }
+    } else {
+      _baseUrl = AppConstants.defaultApiUrl;
+    }
     _sessionCookie = prefs.getString(AppConstants.keyAuthToken);
     final userJson = prefs.getString(AppConstants.keyUser);
     if (userJson != null) {
@@ -158,3 +169,4 @@ class ApiClient {
     throw AppException(errorMsg, response.statusCode);
   }
 }
+

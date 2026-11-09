@@ -39,3 +39,4 @@ class ThemeProvider with ChangeNotifier {
     await prefs.remove(AppConstants.keyThemeMode);
   }
 }
+

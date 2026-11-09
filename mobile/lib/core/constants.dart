@@ -1,8 +1,19 @@
+import 'package:flutter/foundation.dart';
+
 class AppConstants {
-  // Default API Base URL: 
-  // In development, Android emulator uses 10.0.2.2 to access host machine localhost.
-  // Physical device can configure the host IP in app settings.
-  static const String defaultApiUrl = 'http://10.0.2.2:3000';
+  // Dynamic Default API Base URL:
+  // - Android emulator requires 10.0.2.2 to access host machine localhost.
+  // - Chrome (web), iOS, and desktop need localhost:3000.
+  // - Physical devices can configure host IP in app settings.
+  static String get defaultApiUrl {
+    if (kIsWeb) {
+      return 'http://localhost:3000';
+    }
+    if (defaultTargetPlatform == TargetPlatform.android) {
+      return 'http://10.0.2.2:3000';
+    }
+    return 'http://localhost:3000';
+  }
 
   // Storage Keys
   static const String keyApiUrl = 'bizflow_api_url';

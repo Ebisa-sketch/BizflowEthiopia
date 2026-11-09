@@ -78,3 +78,4 @@ class ShiftProvider with ChangeNotifier {
     }
   }
 }
+

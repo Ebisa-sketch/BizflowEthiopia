@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../core/api_client.dart';
+import '../../core/constants.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/theme_provider.dart';
 import '../../theme/app_colors.dart';
@@ -163,9 +164,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     TextField(
                       controller: _serverUrlController,
                       style: const TextStyle(fontFamily: 'monospace', fontSize: 13),
-                      decoration: const InputDecoration(
-                        hintText: 'http://10.0.2.2:3000',
-                        prefixIcon: Icon(Icons.dns_rounded, size: 20),
+                      decoration: InputDecoration(
+                        hintText: AppConstants.defaultApiUrl,
+                        prefixIcon: const Icon(Icons.dns_rounded, size: 20),
                       ),
                     ),
                     const SizedBox(height: 10),
@@ -225,3 +226,4 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 }
+

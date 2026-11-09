@@ -41,3 +41,4 @@ class AppColors {
   static const Color cbeBirr = Color(0xFF6B1D73);
   static const Color cash = Color(0xFF0D9668);
 }
+

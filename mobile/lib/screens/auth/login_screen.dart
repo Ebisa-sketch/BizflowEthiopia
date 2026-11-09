@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../core/api_client.dart';
+import '../../core/constants.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/theme_provider.dart';
 import '../../theme/app_colors.dart';
@@ -252,9 +253,9 @@ class _LoginScreenState extends State<LoginScreen> {
                             TextField(
                               controller: _serverUrlController,
                               style: const TextStyle(fontFamily: 'monospace', fontSize: 13),
-                              decoration: const InputDecoration(
-                                hintText: 'http://10.0.2.2:3000',
-                                prefixIcon: Icon(Icons.link_rounded, size: 20),
+                              decoration: InputDecoration(
+                                hintText: AppConstants.defaultApiUrl,
+                                prefixIcon: const Icon(Icons.link_rounded, size: 20),
                               ),
                             ),
                             const SizedBox(height: 8),
@@ -279,3 +280,4 @@ class _LoginScreenState extends State<LoginScreen> {
     );
   }
 }
+

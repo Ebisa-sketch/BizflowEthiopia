@@ -185,6 +185,14 @@ class DashboardMetrics {
   final double outstandingCredit;
   final double cashCollected;
   final double digitalCollected;
+  final double subtotal;
+  final double discountTotal;
+  final double taxTotal;
+  final double expectedCashInTill;
+  final double creditDebtInRange;
+  final int creditSalesCount;
+  final int cashSalesCount;
+  final int totalCreditCustomers;
   final String comparisonLabel;
   final Map<String, DashboardComparison> comparisons;
   final List<DashboardChartPoint> chartData;
@@ -214,6 +222,14 @@ class DashboardMetrics {
     this.outstandingCredit = 0,
     this.cashCollected = 0,
     this.digitalCollected = 0,
+    this.subtotal = 0,
+    this.discountTotal = 0,
+    this.taxTotal = 0,
+    this.expectedCashInTill = 0,
+    this.creditDebtInRange = 0,
+    this.creditSalesCount = 0,
+    this.cashSalesCount = 0,
+    this.totalCreditCustomers = 0,
     this.comparisonLabel = '',
     this.comparisons = const {},
     this.chartData = const [],
@@ -274,6 +290,14 @@ class DashboardMetrics {
       outstandingCredit: _number(metrics['totalOutstandingCredit']),
       cashCollected: _number(metrics['cashCollected']),
       digitalCollected: _number(metrics['digitalCollected']),
+      subtotal: _number(metrics['subtotal']),
+      discountTotal: _number(metrics['discountTotal']),
+      taxTotal: _number(metrics['taxTotal']),
+      expectedCashInTill: _number(metrics['expectedCashInTill']),
+      creditDebtInRange: _number(metrics['creditDebtInRange']),
+      creditSalesCount: _integer(metrics['creditSalesCount']),
+      cashSalesCount: _integer(metrics['cashSalesCount']),
+      totalCreditCustomers: _integer(metrics['totalCreditCustomers']),
       comparisonLabel: comparisonsJson['label']?.toString() ?? '',
       comparisons: Map.fromEntries(
         ['sales', 'grossProfit', 'transactions']

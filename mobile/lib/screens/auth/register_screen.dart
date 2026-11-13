@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+
 import '../../core/api_client.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/theme_provider.dart';
@@ -22,6 +23,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
   bool _obscurePassword = true;
   bool _isLoading = false;
+  bool _termsAccepted = false;
 
   @override
   void dispose() {
@@ -41,37 +43,63 @@ class _RegisterScreenState extends State<RegisterScreen> {
     final password = _passwordController.text;
     final confirm = _confirmPasswordController.text;
 
-    if (businessName.isEmpty || ownerName.isEmpty || email.isEmpty || password.isEmpty) {
+    if (businessName.isEmpty ||
+        ownerName.isEmpty ||
+        email.isEmpty ||
+        password.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Please fill all required fields')),
       );
       return;
     }
 
-    if (password.length < 6) {
+    if (password.length < 8 ||
+        !RegExp(r'[0-9]').hasMatch(password) ||
+        !RegExp(r'[a-zA-Z]').hasMatch(password)) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Password must be at least 6 characters')),
+        const SnackBar(
+          content: Text(
+            'Password must be at least 8 characters and contain a letter and number',
+          ),
+        ),
+      );
+      return;
+    }
+
+    if (!_termsAccepted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Accept the Terms of Service and Privacy Policy to continue',
+          ),
+        ),
       );
       return;
     }
 
     if (password != confirm) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Passwords do not match')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Passwords do not match')));
       return;
     }
 
     setState(() => _isLoading = true);
 
     try {
-      await ApiClient().post('/api/auth/register', body: {
-        'businessName': businessName,
-        'name': ownerName,
-        'email': email,
-        'password': password,
-        if (_phoneController.text.trim().isNotEmpty) 'phone': _phoneController.text.trim(),
-      });
+      await ApiClient().post(
+        '/api/auth/register',
+        body: {
+          'businessName': businessName,
+          'name': ownerName,
+          'email': email,
+          'password': password,
+          'confirmPassword': confirm,
+          'termsAccepted': _termsAccepted,
+          if (_phoneController.text.trim().isNotEmpty)
+            'phone': _phoneController.text.trim(),
+        },
+      );
 
       if (!mounted) return;
 
@@ -85,7 +113,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
         } else {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
-              content: Text('Account registered! Please sign in with your credentials.'),
+              content: Text(
+                'Account registered! Please sign in with your credentials.',
+              ),
               backgroundColor: AppColors.primary,
             ),
           );
@@ -117,9 +147,12 @@ class _RegisterScreenState extends State<RegisterScreen> {
         actions: [
           IconButton(
             icon: Icon(
-              themeProvider.isDarkMode ? Icons.light_mode_outlined : Icons.dark_mode_outlined,
+              themeProvider.isDarkMode
+                  ? Icons.light_mode_outlined
+                  : Icons.dark_mode_outlined,
             ),
-            onPressed: () => themeProvider.toggleTheme(!themeProvider.isDarkMode),
+            onPressed: () =>
+                themeProvider.toggleTheme(!themeProvider.isDarkMode),
           ),
         ],
       ),
@@ -140,14 +173,19 @@ class _RegisterScreenState extends State<RegisterScreen> {
                         children: [
                           const Text(
                             'Create Store & Owner Account',
-                            style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w700,
+                            ),
                           ),
                           const SizedBox(height: 6),
                           Text(
                             'Get started with BizFlow Ethiopia multi-tenant POS',
                             style: TextStyle(
                               fontSize: 12,
-                              color: isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary,
+                              color: isDark
+                                  ? AppColors.darkTextSecondary
+                                  : AppColors.lightTextSecondary,
                             ),
                           ),
                           const SizedBox(height: 20),
@@ -158,7 +196,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
                             decoration: const InputDecoration(
                               labelText: 'Business / Store Name *',
                               hintText: 'e.g. Addis Supermarket & Bakery',
-                              prefixIcon: Icon(Icons.storefront_rounded, size: 20),
+                              prefixIcon: Icon(
+                                Icons.storefront_rounded,
+                                size: 20,
+                              ),
                             ),
                           ),
                           const SizedBox(height: 14),
@@ -203,14 +244,22 @@ class _RegisterScreenState extends State<RegisterScreen> {
                             controller: _passwordController,
                             obscureText: _obscurePassword,
                             decoration: InputDecoration(
-                              labelText: 'Password (min 6 chars) *',
-                              prefixIcon: const Icon(Icons.lock_outline_rounded, size: 20),
+                              labelText:
+                                  'Password (min 8 chars, include a number) *',
+                              prefixIcon: const Icon(
+                                Icons.lock_outline_rounded,
+                                size: 20,
+                              ),
                               suffixIcon: IconButton(
                                 icon: Icon(
-                                  _obscurePassword ? Icons.visibility_outlined : Icons.visibility_off_outlined,
+                                  _obscurePassword
+                                      ? Icons.visibility_outlined
+                                      : Icons.visibility_off_outlined,
                                   size: 20,
                                 ),
-                                onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
+                                onPressed: () => setState(
+                                  () => _obscurePassword = !_obscurePassword,
+                                ),
                               ),
                             ),
                           ),
@@ -222,10 +271,24 @@ class _RegisterScreenState extends State<RegisterScreen> {
                             obscureText: _obscurePassword,
                             decoration: const InputDecoration(
                               labelText: 'Confirm Password *',
-                              prefixIcon: Icon(Icons.lock_clock_rounded, size: 20),
+                              prefixIcon: Icon(
+                                Icons.lock_clock_rounded,
+                                size: 20,
+                              ),
                             ),
                           ),
-                          const SizedBox(height: 24),
+                          CheckboxListTile(
+                            contentPadding: EdgeInsets.zero,
+                            value: _termsAccepted,
+                            onChanged: (value) =>
+                                setState(() => _termsAccepted = value ?? false),
+                            controlAffinity: ListTileControlAffinity.leading,
+                            title: const Text(
+                              'I accept the Terms of Service and Privacy Policy',
+                              style: TextStyle(fontSize: 12),
+                            ),
+                          ),
+                          const SizedBox(height: 14),
 
                           ElevatedButton(
                             onPressed: _isLoading ? null : _handleRegister,
@@ -233,7 +296,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                 ? const SizedBox(
                                     height: 20,
                                     width: 20,
-                                    child: CircularProgressIndicator(strokeWidth: 2.5, color: Colors.white),
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2.5,
+                                      color: Colors.white,
+                                    ),
                                   )
                                 : const Text('Register Business'),
                           ),
@@ -250,12 +316,17 @@ class _RegisterScreenState extends State<RegisterScreen> {
                         'Already have an account? ',
                         style: TextStyle(
                           fontSize: 13,
-                          color: isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary,
+                          color: isDark
+                              ? AppColors.darkTextSecondary
+                              : AppColors.lightTextSecondary,
                         ),
                       ),
                       TextButton(
                         onPressed: () => Navigator.pop(context),
-                        child: const Text('Sign In', style: TextStyle(fontWeight: FontWeight.bold)),
+                        child: const Text(
+                          'Sign In',
+                          style: TextStyle(fontWeight: FontWeight.bold),
+                        ),
                       ),
                     ],
                   ),

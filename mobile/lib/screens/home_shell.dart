@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+
+import '../models/user.dart';
 import '../providers/auth_provider.dart';
+import '../providers/pos_provider.dart';
 import '../providers/shift_provider.dart';
 import '../providers/theme_provider.dart';
 import '../theme/app_colors.dart';
@@ -37,6 +40,79 @@ class _HomeShellState extends State<HomeShell> {
     setState(() => _activeRoute = route);
     if (_scaffoldKey.currentState?.isDrawerOpen ?? false) {
       Navigator.pop(context); // close drawer
+    }
+  }
+
+  Future<void> _showBusinessSwitcher(
+    List<AvailableBusiness> availableBusinesses,
+  ) async {
+    final auth = context.read<AuthProvider>();
+    final selectedBusiness = await showModalBottomSheet<AvailableBusiness>(
+      context: context,
+      showDragHandle: true,
+      builder: (context) => SafeArea(
+        child: ListView(
+          shrinkWrap: true,
+          children: [
+            const Padding(
+              padding: EdgeInsets.fromLTRB(20, 8, 20, 12),
+              child: Text(
+                'Switch business',
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800),
+              ),
+            ),
+            for (final business in availableBusinesses)
+              ListTile(
+                leading: const Icon(Icons.storefront_outlined),
+                title: Text(business.name),
+                subtitle: Text(business.role),
+                trailing: business.id == auth.user?.businessId
+                    ? const Icon(Icons.check_rounded, color: AppColors.primary)
+                    : null,
+                onTap: () => Navigator.pop(context, business),
+              ),
+          ],
+        ),
+      ),
+    );
+    if (selectedBusiness == null ||
+        selectedBusiness.id == auth.user?.businessId ||
+        !mounted) {
+      return;
+    }
+
+    final pos = context.read<PosProvider>();
+    if (pos.cart.isNotEmpty || pos.heldDrafts.isNotEmpty) {
+      final discard = await showDialog<bool>(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('Switch business?'),
+          content: const Text(
+            'Open and parked carts belong to the current business. '
+            'They will be cleared when you switch.',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton(
+              onPressed: () => Navigator.pop(context, true),
+              child: const Text('Switch'),
+            ),
+          ],
+        ),
+      );
+      if (discard != true || !mounted) return;
+    }
+
+    final switched = await auth.switchBusiness(selectedBusiness.id);
+    if (!mounted) return;
+    if (!switched) {
+      final message = auth.errorMessage ?? 'Unable to switch business.';
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(message), backgroundColor: AppColors.danger),
+      );
     }
   }
 
@@ -101,75 +177,122 @@ class _HomeShellState extends State<HomeShell> {
     final theme = context.watch<ThemeProvider>();
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final user = auth.user;
+    final availableBusinesses =
+        user?.availableBusinesses ?? const <AvailableBusiness>[];
 
     return Scaffold(
       key: _scaffoldKey,
       drawer: Drawer(
+        backgroundColor: isDark ? AppColors.brandNavy : AppColors.lightSurface,
         child: SafeArea(
           child: Column(
             children: [
               // User & Store Drawer Header (Matching Web App Sidebar)
-              Container(
-                padding: const EdgeInsets.all(18),
-                decoration: BoxDecoration(
-                  color: isDark ? AppColors.darkSurface : AppColors.lightSurface,
-                  border: Border(
-                    bottom: BorderSide(
-                      color: isDark ? AppColors.darkBorder : AppColors.lightBorder,
+              InkWell(
+                onTap:
+                    availableBusinesses.length > 1 && !auth.isSwitchingBusiness
+                    ? () => _showBusinessSwitcher(availableBusinesses)
+                    : null,
+                borderRadius: BorderRadius.circular(16),
+                child: Container(
+                  margin: const EdgeInsets.all(12),
+                  padding: const EdgeInsets.all(14),
+                  decoration: BoxDecoration(
+                    color: isDark
+                        ? AppColors.brandNavyCard
+                        : AppColors.lightCard,
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(
+                      color: isDark
+                          ? AppColors.brandNavyBorder
+                          : AppColors.lightBorder,
                     ),
                   ),
-                ),
-                child: Row(
-                  children: [
-                    CircleAvatar(
-                      radius: 24,
-                      backgroundColor: AppColors.primary,
-                      child: Text(
-                        (user?.name.isNotEmpty ?? false) ? user!.name[0].toUpperCase() : 'B',
-                        style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.white, fontSize: 18),
+                  child: Row(
+                    children: [
+                      CircleAvatar(
+                        radius: 24,
+                        backgroundColor: AppColors.primary,
+                        child: Text(
+                          (user?.name.isNotEmpty ?? false)
+                              ? user!.name[0].toUpperCase()
+                              : 'B',
+                          style: const TextStyle(
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
+                            fontSize: 18,
+                          ),
+                        ),
                       ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            user?.business?.name ?? 'BizFlow Ethiopia',
-                            style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 15),
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                          const SizedBox(height: 2),
-                          Text(
-                            user?.name ?? 'Staff User',
-                            style: TextStyle(
-                              fontSize: 12,
-                              color: isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary,
-                            ),
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                          const SizedBox(height: 4),
-                          Row(
-                            children: [
-                              Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                                decoration: BoxDecoration(
-                                  color: AppColors.primary.withValues(alpha: 0.15),
-                                  borderRadius: BorderRadius.circular(6),
-                                ),
-                                child: Text(
-                                  user?.role ?? 'CASHIER',
-                                  style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: AppColors.primary),
-                                ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              user?.business?.name ?? 'BizFlow Ethiopia',
+                              style: const TextStyle(
+                                fontWeight: FontWeight.w800,
+                                fontSize: 15,
                               ),
-                              const SizedBox(width: 6),
-                              StatusBadge.shift(isOpen: shift.hasActiveShift),
-                            ],
-                          ),
-                        ],
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              user?.name ?? 'Staff User',
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: isDark
+                                    ? AppColors.darkTextSecondary
+                                    : AppColors.lightTextSecondary,
+                              ),
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                            const SizedBox(height: 4),
+                            Row(
+                              children: [
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 6,
+                                    vertical: 2,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: AppColors.primary.withValues(
+                                      alpha: 0.15,
+                                    ),
+                                    borderRadius: BorderRadius.circular(6),
+                                  ),
+                                  child: Text(
+                                    user?.role ?? 'CASHIER',
+                                    style: const TextStyle(
+                                      fontSize: 10,
+                                      fontWeight: FontWeight.w700,
+                                      color: AppColors.primary,
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(width: 6),
+                                StatusBadge.shift(isOpen: shift.hasActiveShift),
+                              ],
+                            ),
+                          ],
+                        ),
                       ),
-                    ),
-                  ],
+                      if (availableBusinesses.length > 1)
+                        Padding(
+                          padding: const EdgeInsets.only(left: 6),
+                          child: auth.isSwitchingBusiness
+                              ? const SizedBox(
+                                  height: 18,
+                                  width: 18,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                  ),
+                                )
+                              : const Icon(Icons.expand_more_rounded),
+                        ),
+                    ],
+                  ),
                 ),
               ),
 
@@ -298,11 +421,18 @@ class _HomeShellState extends State<HomeShell> {
 
               // Drawer Footer with Theme & Sign Out
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 12,
+                ),
                 decoration: BoxDecoration(
-                  color: isDark ? AppColors.darkSurface : AppColors.lightSurface,
+                  color: isDark ? AppColors.brandNavy : AppColors.lightSurface,
                   border: Border(
-                    top: BorderSide(color: isDark ? AppColors.darkBorder : AppColors.lightBorder),
+                    top: BorderSide(
+                      color: isDark
+                          ? AppColors.brandNavyBorder
+                          : AppColors.lightBorder,
+                    ),
                   ),
                 ),
                 child: Row(
@@ -311,13 +441,20 @@ class _HomeShellState extends State<HomeShell> {
                     Row(
                       children: [
                         IconButton(
-                          icon: Icon(theme.isDarkMode ? Icons.light_mode_outlined : Icons.dark_mode_outlined),
+                          icon: Icon(
+                            theme.isDarkMode
+                                ? Icons.light_mode_outlined
+                                : Icons.dark_mode_outlined,
+                          ),
                           tooltip: 'Toggle Theme',
                           onPressed: () => theme.toggleTheme(!theme.isDarkMode),
                         ),
                         Text(
                           theme.isDarkMode ? 'Dark' : 'Light',
-                          style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
+                          style: const TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                          ),
                         ),
                       ],
                     ),
@@ -327,11 +464,18 @@ class _HomeShellState extends State<HomeShell> {
                           context: context,
                           builder: (ctx) => AlertDialog(
                             title: const Text('Sign Out'),
-                            content: const Text('Are you sure you want to sign out?'),
+                            content: const Text(
+                              'Are you sure you want to sign out?',
+                            ),
                             actions: [
-                              TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
+                              TextButton(
+                                onPressed: () => Navigator.pop(ctx, false),
+                                child: const Text('Cancel'),
+                              ),
                               ElevatedButton(
-                                style: ElevatedButton.styleFrom(backgroundColor: AppColors.danger),
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: AppColors.danger,
+                                ),
                                 onPressed: () => Navigator.pop(ctx, true),
                                 child: const Text('Sign Out'),
                               ),
@@ -342,8 +486,18 @@ class _HomeShellState extends State<HomeShell> {
                           await auth.logout();
                         }
                       },
-                      icon: const Icon(Icons.logout_rounded, size: 16, color: AppColors.danger),
-                      label: const Text('Sign Out', style: TextStyle(color: AppColors.danger, fontWeight: FontWeight.bold)),
+                      icon: const Icon(
+                        Icons.logout_rounded,
+                        size: 16,
+                        color: AppColors.danger,
+                      ),
+                      label: const Text(
+                        'Sign Out',
+                        style: TextStyle(
+                          color: AppColors.danger,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
                     ),
                   ],
                 ),
@@ -446,43 +600,78 @@ class _DrawerItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-      child: ListTile(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        selected: isSelected,
-        selectedTileColor: AppColors.primary.withValues(alpha: 0.12),
-        leading: Icon(
-          icon,
-          color: isSelected ? AppColors.primary : null,
-          size: 22,
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 2),
+      child: Material(
+        color: isSelected
+            ? (isDark ? const Color(0xFF073228) : const Color(0xFFE6FBF2))
+            : Colors.transparent,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(12),
+          side: isSelected
+              ? const BorderSide(color: AppColors.primary, width: 1.2)
+              : BorderSide.none,
         ),
-        title: Text(
-          title,
-          style: TextStyle(
-            fontSize: 13,
-            fontWeight: isSelected ? FontWeight.w800 : FontWeight.w600,
-            color: isSelected ? AppColors.primary : null,
-          ),
-        ),
-        trailing: badge != null
-            ? Container(
-                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                decoration: BoxDecoration(
-                  color: (badgeColor ?? AppColors.primary).withValues(alpha: 0.15),
-                  borderRadius: BorderRadius.circular(6),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(12),
+          onTap: onTap,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+            child: Row(
+              children: [
+                Icon(
+                  icon,
+                  color: isSelected
+                      ? AppColors.primary
+                      : (isDark
+                            ? const Color(0xFF94A3B8)
+                            : const Color(0xFF64748B)),
+                  size: 20,
                 ),
-                child: Text(
-                  badge!,
-                  style: TextStyle(
-                    fontSize: 10,
-                    fontWeight: FontWeight.w800,
-                    color: badgeColor ?? AppColors.primary,
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    title,
+                    style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: isSelected
+                          ? FontWeight.w800
+                          : FontWeight.w600,
+                      color: isSelected
+                          ? (isDark ? Colors.white : AppColors.primaryDark)
+                          : (isDark
+                                ? const Color(0xFFE2E8F0)
+                                : const Color(0xFF1E293B)),
+                    ),
                   ),
                 ),
-              )
-            : null,
-        onTap: onTap,
+                if (badge != null)
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 6,
+                      vertical: 2,
+                    ),
+                    decoration: BoxDecoration(
+                      color: (badgeColor ?? AppColors.primary).withValues(
+                        alpha: 0.18,
+                      ),
+                      borderRadius: BorderRadius.circular(6),
+                    ),
+                    child: Text(
+                      badge!,
+                      style: TextStyle(
+                        fontSize: 10,
+                        fontWeight: FontWeight.w800,
+                        color: badgeColor ?? AppColors.primary,
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+          ),
+        ),
       ),
     );
   }

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+
 import '../core/api_client.dart';
 import '../models/expense.dart';
 
@@ -31,7 +32,9 @@ class ExpensesProvider with ChangeNotifier {
       if (res is List) {
         _expenses = res.map((j) => Expense.fromJson(j)).toList();
       } else if (res is Map && res['expenses'] is List) {
-        _expenses = (res['expenses'] as List).map((j) => Expense.fromJson(j)).toList();
+        _expenses = (res['expenses'] as List)
+            .map((j) => Expense.fromJson(j))
+            .toList();
       }
     } catch (e) {
       _errorMessage = e.toString();
@@ -49,16 +52,13 @@ class ExpensesProvider with ChangeNotifier {
   Future<bool> recordExpense({
     required String category,
     required double amount,
-    required String paymentMethod,
     String? note,
   }) async {
     try {
-      await _api.post('/api/expenses', body: {
-        'category': category,
-        'amount': amount,
-        'paymentMethod': paymentMethod,
-        'note': note,
-      });
+      await _api.post(
+        '/api/expenses',
+        body: {'category': category, 'amount': amount, 'description': note},
+      );
       await fetchExpenses();
       return true;
     } catch (e) {
@@ -80,4 +80,3 @@ class ExpensesProvider with ChangeNotifier {
     }
   }
 }
-

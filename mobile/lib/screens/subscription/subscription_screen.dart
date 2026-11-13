@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+
 import '../../providers/auth_provider.dart';
 import '../../theme/app_colors.dart';
 
@@ -13,9 +14,7 @@ class SubscriptionScreen extends StatelessWidget {
     final user = auth.user;
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Store Subscription & Plan'),
-      ),
+      appBar: AppBar(title: const Text('Store Subscription & Plan')),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
         child: Column(
@@ -55,14 +54,21 @@ class SubscriptionScreen extends StatelessWidget {
                         ),
                       ),
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 10,
+                          vertical: 4,
+                        ),
                         decoration: BoxDecoration(
                           color: Colors.white.withValues(alpha: 0.25),
                           borderRadius: BorderRadius.circular(12),
                         ),
                         child: const Text(
                           'ACTIVE',
-                          style: TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold),
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 11,
+                            fontWeight: FontWeight.bold,
+                          ),
                         ),
                       ),
                     ],
@@ -70,7 +76,11 @@ class SubscriptionScreen extends StatelessWidget {
                   const SizedBox(height: 10),
                   Text(
                     user?.business?.name ?? 'BizFlow Merchant',
-                    style: const TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.w900),
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 20,
+                      fontWeight: FontWeight.w900,
+                    ),
                   ),
                   const SizedBox(height: 4),
                   const Text(
@@ -97,7 +107,8 @@ class SubscriptionScreen extends StatelessWidget {
                       icon: Icons.check_circle_rounded,
                       color: AppColors.success,
                       title: 'Unlimited POS Sales & Receipts',
-                      subtitle: 'Fast touch keypad and custom tender calculations',
+                      subtitle:
+                          'Fast touch keypad and custom tender calculations',
                     ),
                     const Divider(height: 16),
                     _FeatureTile(
@@ -111,7 +122,8 @@ class SubscriptionScreen extends StatelessWidget {
                       icon: Icons.check_circle_rounded,
                       color: AppColors.success,
                       title: 'Idda / Customer Credit Ledger',
-                      subtitle: 'Record customer tab balances and partial repayments',
+                      subtitle:
+                          'Record customer tab balances and partial repayments',
                     ),
                     const Divider(height: 16),
                     _FeatureTile(
@@ -139,11 +151,18 @@ class SubscriptionScreen extends StatelessWidget {
                 padding: const EdgeInsets.all(16),
                 child: Column(
                   children: [
-                    const Icon(Icons.support_agent_rounded, size: 36, color: AppColors.primary),
+                    const Icon(
+                      Icons.support_agent_rounded,
+                      size: 36,
+                      color: AppColors.primary,
+                    ),
                     const SizedBox(height: 8),
                     const Text(
                       'Multi-Branch & Enterprise Support',
-                      style: TextStyle(fontWeight: FontWeight.w800, fontSize: 15),
+                      style: TextStyle(
+                        fontWeight: FontWeight.w800,
+                        fontSize: 15,
+                      ),
                     ),
                     const SizedBox(height: 4),
                     Text(
@@ -151,7 +170,9 @@ class SubscriptionScreen extends StatelessWidget {
                       textAlign: TextAlign.center,
                       style: TextStyle(
                         fontSize: 12,
-                        color: isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary,
+                        color: isDark
+                            ? AppColors.darkTextSecondary
+                            : AppColors.lightTextSecondary,
                       ),
                     ),
                   ],
@@ -191,11 +212,22 @@ class _FeatureTile extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(title, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13)),
+              Text(
+                title,
+                style: const TextStyle(
+                  fontWeight: FontWeight.w700,
+                  fontSize: 13,
+                ),
+              ),
               const SizedBox(height: 2),
               Text(
                 subtitle,
-                style: TextStyle(fontSize: 11, color: isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary),
+                style: TextStyle(
+                  fontSize: 11,
+                  color: isDark
+                      ? AppColors.darkTextSecondary
+                      : AppColors.lightTextSecondary,
+                ),
               ),
             ],
           ),

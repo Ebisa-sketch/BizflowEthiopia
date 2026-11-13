@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+
 import '../../core/formatters.dart';
 import '../../providers/reports_provider.dart';
 import '../../theme/app_colors.dart';
@@ -17,7 +18,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
     'today': 'Today',
     'week': 'This Week',
     'month': 'This Month',
-    'year': 'This Year',
+    'quarter': 'Last 90 Days',
   };
 
   @override
@@ -65,7 +66,9 @@ class _ReportsScreenState extends State<ReportsScreen> {
                           entry.value,
                           style: TextStyle(
                             fontSize: 12,
-                            fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+                            fontWeight: isSelected
+                                ? FontWeight.w700
+                                : FontWeight.w500,
                             color: isSelected ? Colors.white : null,
                           ),
                         ),
@@ -121,7 +124,9 @@ class _ReportsScreenState extends State<ReportsScreen> {
                       title: 'Net Profit',
                       value: Formatters.formatMoney(data.netProfit),
                       icon: Icons.stars_rounded,
-                      iconColor: data.netProfit >= 0 ? AppColors.success : AppColors.danger,
+                      iconColor: data.netProfit >= 0
+                          ? AppColors.success
+                          : AppColors.danger,
                       subtitle: 'After all expenses',
                     ),
                   ],
@@ -137,11 +142,18 @@ class _ReportsScreenState extends State<ReportsScreen> {
                       children: [
                         const Row(
                           children: [
-                            Icon(Icons.bar_chart_rounded, color: AppColors.primary, size: 20),
+                            Icon(
+                              Icons.bar_chart_rounded,
+                              color: AppColors.primary,
+                              size: 20,
+                            ),
                             SizedBox(width: 8),
                             Text(
                               'Profit & Loss Statement',
-                              style: TextStyle(fontSize: 15, fontWeight: FontWeight.w800),
+                              style: TextStyle(
+                                fontSize: 15,
+                                fontWeight: FontWeight.w800,
+                              ),
                             ),
                           ],
                         ),
@@ -177,7 +189,9 @@ class _ReportsScreenState extends State<ReportsScreen> {
                           amount: data.netProfit,
                           isBold: true,
                           isLarge: true,
-                          color: data.netProfit >= 0 ? AppColors.success : AppColors.danger,
+                          color: data.netProfit >= 0
+                              ? AppColors.success
+                              : AppColors.danger,
                         ),
                       ],
                     ),
@@ -195,33 +209,52 @@ class _ReportsScreenState extends State<ReportsScreen> {
                         children: [
                           const Row(
                             children: [
-                              Icon(Icons.account_balance_rounded, color: AppColors.secondary, size: 20),
+                              Icon(
+                                Icons.account_balance_rounded,
+                                color: AppColors.secondary,
+                                size: 20,
+                              ),
                               SizedBox(width: 8),
                               Text(
                                 'Payment Channels',
-                                style: TextStyle(fontSize: 15, fontWeight: FontWeight.w800),
+                                style: TextStyle(
+                                  fontSize: 15,
+                                  fontWeight: FontWeight.w800,
+                                ),
                               ),
                             ],
                           ),
                           const SizedBox(height: 14),
                           ...data.paymentBreakdown.entries.map((entry) {
-                            final total = data.totalRevenue > 0 ? data.totalRevenue : 1.0;
-                            final percent = (entry.value / total).clamp(0.0, 1.0);
+                            final total = data.totalRevenue > 0
+                                ? data.totalRevenue
+                                : 1.0;
+                            final percent = (entry.value / total).clamp(
+                              0.0,
+                              1.0,
+                            );
                             return Padding(
                               padding: const EdgeInsets.only(bottom: 12),
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   Row(
-                                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                    mainAxisAlignment:
+                                        MainAxisAlignment.spaceBetween,
                                     children: [
                                       Text(
                                         entry.key.replaceAll('_', ' '),
-                                        style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+                                        style: const TextStyle(
+                                          fontSize: 13,
+                                          fontWeight: FontWeight.w600,
+                                        ),
                                       ),
                                       Text(
                                         '${Formatters.formatMoney(entry.value)} (${(percent * 100).toStringAsFixed(1)}%)',
-                                        style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700),
+                                        style: const TextStyle(
+                                          fontSize: 13,
+                                          fontWeight: FontWeight.w700,
+                                        ),
                                       ),
                                     ],
                                   ),
@@ -231,8 +264,12 @@ class _ReportsScreenState extends State<ReportsScreen> {
                                     child: LinearProgressIndicator(
                                       value: percent,
                                       minHeight: 6,
-                                      backgroundColor: isDark ? AppColors.darkBorder : AppColors.lightBorder,
-                                      valueColor: const AlwaysStoppedAnimation(AppColors.primary),
+                                      backgroundColor: isDark
+                                          ? AppColors.darkBorder
+                                          : AppColors.lightBorder,
+                                      valueColor: const AlwaysStoppedAnimation(
+                                        AppColors.primary,
+                                      ),
                                     ),
                                   ),
                                 ],
@@ -256,11 +293,18 @@ class _ReportsScreenState extends State<ReportsScreen> {
                         children: [
                           const Row(
                             children: [
-                              Icon(Icons.leaderboard_rounded, color: AppColors.warning, size: 20),
+                              Icon(
+                                Icons.leaderboard_rounded,
+                                color: AppColors.warning,
+                                size: 20,
+                              ),
                               SizedBox(width: 8),
                               Text(
                                 'Top Selling Products',
-                                style: TextStyle(fontSize: 15, fontWeight: FontWeight.w800),
+                                style: TextStyle(
+                                  fontSize: 15,
+                                  fontWeight: FontWeight.w800,
+                                ),
                               ),
                             ],
                           ),
@@ -274,30 +318,44 @@ class _ReportsScreenState extends State<ReportsScreen> {
                                 children: [
                                   CircleAvatar(
                                     radius: 14,
-                                    backgroundColor: rank <= 3 ? AppColors.warning.withValues(alpha: 0.2) : AppColors.primary.withValues(alpha: 0.1),
+                                    backgroundColor: rank <= 3
+                                        ? AppColors.warning.withValues(
+                                            alpha: 0.2,
+                                          )
+                                        : AppColors.primary.withValues(
+                                            alpha: 0.1,
+                                          ),
                                     child: Text(
                                       '$rank',
                                       style: TextStyle(
                                         fontSize: 11,
                                         fontWeight: FontWeight.bold,
-                                        color: rank <= 3 ? AppColors.warning : AppColors.primary,
+                                        color: rank <= 3
+                                            ? AppColors.warning
+                                            : AppColors.primary,
                                       ),
                                     ),
                                   ),
                                   const SizedBox(width: 12),
                                   Expanded(
                                     child: Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
                                       children: [
                                         Text(
                                           product.name,
-                                          style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700),
+                                          style: const TextStyle(
+                                            fontSize: 13,
+                                            fontWeight: FontWeight.w700,
+                                          ),
                                         ),
                                         Text(
                                           '${product.unitsSold} units sold',
                                           style: TextStyle(
                                             fontSize: 11,
-                                            color: isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary,
+                                            color: isDark
+                                                ? AppColors.darkTextSecondary
+                                                : AppColors.lightTextSecondary,
                                           ),
                                         ),
                                       ],
@@ -305,7 +363,10 @@ class _ReportsScreenState extends State<ReportsScreen> {
                                   ),
                                   Text(
                                     Formatters.formatMoney(product.revenue),
-                                    style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w800),
+                                    style: const TextStyle(
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.w800,
+                                    ),
                                   ),
                                 ],
                               ),

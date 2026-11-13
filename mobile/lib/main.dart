@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
+
 import 'core/api_client.dart';
 import 'providers/auth_provider.dart';
 import 'providers/categories_provider.dart';
@@ -43,7 +44,24 @@ class BizFlowRoot extends StatelessWidget {
     return MultiProvider(
       providers: [
         ChangeNotifierProvider(create: (_) => ThemeProvider()),
-        ChangeNotifierProvider(create: (_) => AuthProvider()..checkAuthStatus()),
+        ChangeNotifierProvider(
+          create: (_) => AuthProvider()..checkAuthStatus(),
+        ),
+      ],
+      child: const _TenantProviders(),
+    );
+  }
+}
+
+class _TenantProviders extends StatelessWidget {
+  const _TenantProviders();
+
+  @override
+  Widget build(BuildContext context) {
+    final businessId = context.watch<AuthProvider>().user?.businessId;
+    return MultiProvider(
+      key: ValueKey(businessId),
+      providers: [
         ChangeNotifierProvider(create: (_) => ProductsProvider()),
         ChangeNotifierProvider(create: (_) => PosProvider()),
         ChangeNotifierProvider(create: (_) => DashboardProvider()),
@@ -76,12 +94,10 @@ class BizFlowApp extends StatelessWidget {
       darkTheme: AppTheme.darkTheme,
       themeMode: themeProvider.themeMode,
       home: authProvider.isLoading
-          ? const Scaffold(
-              body: Center(child: CircularProgressIndicator()),
-            )
+          ? const Scaffold(body: Center(child: CircularProgressIndicator()))
           : (authProvider.isAuthenticated
-              ? const HomeShell()
-              : const LoginScreen()),
+                ? HomeShell(key: ValueKey(authProvider.user?.businessId))
+                : const LoginScreen()),
     );
   }
 }

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+
 import '../core/api_client.dart';
 import '../models/shift.dart';
 
@@ -39,9 +40,10 @@ class ShiftProvider with ChangeNotifier {
     notifyListeners();
 
     try {
-      final res = await _api.post('/api/shifts', body: {
-        'openingFloat': openingFloat,
-      });
+      final res = await _api.post(
+        '/api/shifts',
+        body: {'openingFloat': openingFloat},
+      );
       if (res != null && res['shift'] != null) {
         _currentShift = Shift.fromJson(res['shift']);
       }
@@ -62,10 +64,10 @@ class ShiftProvider with ChangeNotifier {
     notifyListeners();
 
     try {
-      await _api.post('/api/shifts/close', body: {
-        'closingCash': actualCash,
-        'notes': notes,
-      });
+      await _api.post(
+        '/api/shifts/close',
+        body: {'actualCash': actualCash, 'notes': notes},
+      );
       _currentShift = null;
       _isLoading = false;
       notifyListeners();
@@ -78,4 +80,3 @@ class ShiftProvider with ChangeNotifier {
     }
   }
 }
-

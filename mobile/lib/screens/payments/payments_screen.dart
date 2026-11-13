@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+
 import '../../core/formatters.dart';
 import '../../providers/reports_provider.dart';
 import '../../providers/shift_provider.dart';
@@ -105,8 +106,12 @@ class _PaymentsScreenState extends State<PaymentsScreen> {
                 child: Row(
                   children: [
                     Icon(
-                      shiftProvider.hasActiveShift ? Icons.check_circle_rounded : Icons.info_outline_rounded,
-                      color: shiftProvider.hasActiveShift ? AppColors.primary : AppColors.warning,
+                      shiftProvider.hasActiveShift
+                          ? Icons.check_circle_rounded
+                          : Icons.info_outline_rounded,
+                      color: shiftProvider.hasActiveShift
+                          ? AppColors.primary
+                          : AppColors.warning,
                       size: 28,
                     ),
                     const SizedBox(width: 14),
@@ -115,8 +120,13 @@ class _PaymentsScreenState extends State<PaymentsScreen> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            shiftProvider.hasActiveShift ? 'Active Cash Register Shift' : 'Register Shift Closed',
-                            style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 14),
+                            shiftProvider.hasActiveShift
+                                ? 'Active Cash Register Shift'
+                                : 'Register Shift Closed',
+                            style: const TextStyle(
+                              fontWeight: FontWeight.w800,
+                              fontSize: 14,
+                            ),
                           ),
                           const SizedBox(height: 2),
                           Text(
@@ -125,7 +135,9 @@ class _PaymentsScreenState extends State<PaymentsScreen> {
                                 : 'Start a shift in the Shift tab to track cash drawer balance',
                             style: TextStyle(
                               fontSize: 12,
-                              color: isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary,
+                              color: isDark
+                                  ? AppColors.darkTextSecondary
+                                  : AppColors.lightTextSecondary,
                             ),
                           ),
                         ],
@@ -159,17 +171,28 @@ class _PaymentsScreenState extends State<PaymentsScreen> {
                   children: [
                     const Text(
                       'Total Digital & Cash Collections',
-                      style: TextStyle(color: Colors.white70, fontSize: 13, fontWeight: FontWeight.w600),
+                      style: TextStyle(
+                        color: Colors.white70,
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                      ),
                     ),
                     const SizedBox(height: 6),
                     Text(
                       Formatters.formatMoney(total),
-                      style: const TextStyle(color: Colors.white, fontSize: 26, fontWeight: FontWeight.w900),
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 26,
+                        fontWeight: FontWeight.w900,
+                      ),
                     ),
                     const SizedBox(height: 10),
                     Text(
                       'Aggregated over ${breakdown.length} active payment channels',
-                      style: const TextStyle(color: Colors.white70, fontSize: 11),
+                      style: const TextStyle(
+                        color: Colors.white70,
+                        fontSize: 11,
+                      ),
                     ),
                   ],
                 ),
@@ -190,9 +213,18 @@ class _PaymentsScreenState extends State<PaymentsScreen> {
                     child: Center(
                       child: Column(
                         children: [
-                          Icon(Icons.payment_rounded, size: 48, color: isDark ? AppColors.darkTextMuted : AppColors.lightTextMuted),
+                          Icon(
+                            Icons.payment_rounded,
+                            size: 48,
+                            color: isDark
+                                ? AppColors.darkTextMuted
+                                : AppColors.lightTextMuted,
+                          ),
                           const SizedBox(height: 12),
-                          const Text('No payments recorded for this period', style: TextStyle(fontWeight: FontWeight.w600)),
+                          const Text(
+                            'No payments recorded for this period',
+                            style: TextStyle(fontWeight: FontWeight.w600),
+                          ),
                         ],
                       ),
                     ),
@@ -204,7 +236,9 @@ class _PaymentsScreenState extends State<PaymentsScreen> {
                   final amount = entry.value;
                   final color = _getMethodColor(method);
                   final icon = _getMethodIcon(method);
-                  final ratio = total > 0 ? (amount / total).clamp(0.0, 1.0) : 0.0;
+                  final ratio = total > 0
+                      ? (amount / total).clamp(0.0, 1.0)
+                      : 0.0;
                   final percentStr = (ratio * 100).toStringAsFixed(1);
 
                   return Card(
@@ -231,13 +265,18 @@ class _PaymentsScreenState extends State<PaymentsScreen> {
                                   children: [
                                     Text(
                                       method.replaceAll('_', ' '),
-                                      style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 14),
+                                      style: const TextStyle(
+                                        fontWeight: FontWeight.w800,
+                                        fontSize: 14,
+                                      ),
                                     ),
                                     Text(
                                       '$percentStr% of total payments',
                                       style: TextStyle(
                                         fontSize: 11,
-                                        color: isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary,
+                                        color: isDark
+                                            ? AppColors.darkTextSecondary
+                                            : AppColors.lightTextSecondary,
                                       ),
                                     ),
                                   ],
@@ -259,7 +298,9 @@ class _PaymentsScreenState extends State<PaymentsScreen> {
                             child: LinearProgressIndicator(
                               value: ratio,
                               minHeight: 8,
-                              backgroundColor: isDark ? AppColors.darkBorder : AppColors.lightBorder,
+                              backgroundColor: isDark
+                                  ? AppColors.darkBorder
+                                  : AppColors.lightBorder,
                               valueColor: AlwaysStoppedAnimation(color),
                             ),
                           ),

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+
 import '../core/api_client.dart';
 import '../models/sale_record.dart';
 
@@ -18,13 +19,15 @@ class SalesProvider with ChangeNotifier {
 
   List<SaleRecord> get filteredSales {
     return _sales.where((s) {
-      if (_selectedPaymentMethod != 'ALL' && s.paymentMethod != _selectedPaymentMethod) {
+      if (_selectedPaymentMethod != 'ALL' &&
+          s.paymentMethod != _selectedPaymentMethod) {
         return false;
       }
       if (_searchQuery.isNotEmpty) {
         final q = _searchQuery.toLowerCase();
         final matchReceipt = s.receiptNumber.toLowerCase().contains(q);
-        final matchCustomer = s.customerName?.toLowerCase().contains(q) ?? false;
+        final matchCustomer =
+            s.customerName?.toLowerCase().contains(q) ?? false;
         return matchReceipt || matchCustomer;
       }
       return true;
@@ -41,7 +44,9 @@ class SalesProvider with ChangeNotifier {
       if (res is List) {
         _sales = res.map((j) => SaleRecord.fromJson(j)).toList();
       } else if (res is Map && res['sales'] is List) {
-        _sales = (res['sales'] as List).map((j) => SaleRecord.fromJson(j)).toList();
+        _sales = (res['sales'] as List)
+            .map((j) => SaleRecord.fromJson(j))
+            .toList();
       }
     } catch (e) {
       _errorMessage = e.toString();
@@ -61,4 +66,3 @@ class SalesProvider with ChangeNotifier {
     notifyListeners();
   }
 }
-

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+
 import '../core/api_client.dart';
 import '../models/stock_movement.dart';
 
@@ -22,7 +23,9 @@ class InventoryProvider with ChangeNotifier {
       if (res is List) {
         _movements = res.map((j) => StockMovement.fromJson(j)).toList();
       } else if (res is Map && res['movements'] is List) {
-        _movements = (res['movements'] as List).map((j) => StockMovement.fromJson(j)).toList();
+        _movements = (res['movements'] as List)
+            .map((j) => StockMovement.fromJson(j))
+            .toList();
       }
     } catch (e) {
       _errorMessage = e.toString();
@@ -39,12 +42,17 @@ class InventoryProvider with ChangeNotifier {
     String? note,
   }) async {
     try {
-      await _api.post('/api/inventory', body: {
-        'productId': productId,
-        'type': type,
-        'quantity': quantity,
-        'note': note,
-      });
+      await _api.post(
+        '/api/inventory',
+        body: {
+          'productId': productId,
+          'movementType': type == 'INTAKE' ? 'RECEIPT' : type,
+          'quantity': quantity,
+          'reason': note?.trim().isNotEmpty == true
+              ? note!.trim()
+              : 'Stock movement recorded from mobile app',
+        },
+      );
       await fetchMovements();
       return true;
     } catch (e) {
@@ -54,4 +62,3 @@ class InventoryProvider with ChangeNotifier {
     }
   }
 }
-

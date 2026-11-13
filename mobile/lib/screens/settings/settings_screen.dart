@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+
 import '../../core/api_client.dart';
 import '../../core/constants.dart';
 import '../../providers/auth_provider.dart';
@@ -8,6 +9,7 @@ import '../../theme/app_colors.dart';
 import '../profile/profile_screen.dart';
 import '../staff/staff_screen.dart';
 import '../subscription/subscription_screen.dart';
+import 'business_settings_screen.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -53,9 +55,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     final user = auth.user;
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Store & App Settings'),
-      ),
+      appBar: AppBar(title: const Text('Store & App Settings')),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
         child: Column(
@@ -71,7 +71,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       radius: 26,
                       backgroundColor: AppColors.primary,
                       child: Text(
-                        (user?.name.isNotEmpty ?? false) ? user!.name[0].toUpperCase() : 'U',
+                        (user?.name.isNotEmpty ?? false)
+                            ? user!.name[0].toUpperCase()
+                            : 'U',
                         style: const TextStyle(
                           color: Colors.white,
                           fontSize: 20,
@@ -95,7 +97,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
                             user?.email ?? '',
                             style: TextStyle(
                               fontSize: 12,
-                              color: isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary,
+                              color: isDark
+                                  ? AppColors.darkTextSecondary
+                                  : AppColors.lightTextSecondary,
                             ),
                           ),
                           const SizedBox(height: 4),
@@ -126,32 +130,100 @@ class _SettingsScreenState extends State<SettingsScreen> {
               child: Column(
                 children: [
                   ListTile(
-                    leading: const Icon(Icons.account_circle_rounded, color: AppColors.primary),
-                    title: const Text('My Profile & Security', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14)),
-                    subtitle: const Text('Manage full name, phone number, and change password', style: TextStyle(fontSize: 11)),
+                    leading: const Icon(Icons.storefront_rounded, color: AppColors.primary),
+                    title: const Text('Business Profile & Operations', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14)),
+                    subtitle: const Text('Store details, receipt and stock settings', style: TextStyle(fontSize: 11)),
                     trailing: const Icon(Icons.arrow_forward_ios_rounded, size: 14),
                     onTap: () {
-                      Navigator.push(context, MaterialPageRoute(builder: (_) => const ProfileScreen()));
+                      Navigator.push(context, MaterialPageRoute(builder: (_) => const BusinessSettingsScreen()));
                     },
                   ),
                   const Divider(height: 1),
                   ListTile(
-                    leading: const Icon(Icons.people_alt_rounded, color: AppColors.secondary),
-                    title: const Text('Staff & Role Management', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14)),
-                    subtitle: const Text('Invite cashiers, managers, and manage permissions', style: TextStyle(fontSize: 11)),
-                    trailing: const Icon(Icons.arrow_forward_ios_rounded, size: 14),
+                    leading: const Icon(
+                      Icons.account_circle_rounded,
+                      color: AppColors.primary,
+                    ),
+                    title: const Text(
+                      'My Profile & Security',
+                      style: TextStyle(
+                        fontWeight: FontWeight.w600,
+                        fontSize: 14,
+                      ),
+                    ),
+                    subtitle: const Text(
+                      'Manage full name, phone number, and change password',
+                      style: TextStyle(fontSize: 11),
+                    ),
+                    trailing: const Icon(
+                      Icons.arrow_forward_ios_rounded,
+                      size: 14,
+                    ),
                     onTap: () {
-                      Navigator.push(context, MaterialPageRoute(builder: (_) => const StaffScreen()));
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => const ProfileScreen(),
+                        ),
+                      );
                     },
                   ),
                   const Divider(height: 1),
                   ListTile(
-                    leading: const Icon(Icons.workspace_premium_rounded, color: AppColors.warning),
-                    title: const Text('Store Subscription & Plan', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14)),
-                    subtitle: const Text('Active plan features, quotas, and licensing', style: TextStyle(fontSize: 11)),
-                    trailing: const Icon(Icons.arrow_forward_ios_rounded, size: 14),
+                    leading: const Icon(
+                      Icons.people_alt_rounded,
+                      color: AppColors.secondary,
+                    ),
+                    title: const Text(
+                      'Staff & Role Management',
+                      style: TextStyle(
+                        fontWeight: FontWeight.w600,
+                        fontSize: 14,
+                      ),
+                    ),
+                    subtitle: const Text(
+                      'Invite cashiers, managers, and manage permissions',
+                      style: TextStyle(fontSize: 11),
+                    ),
+                    trailing: const Icon(
+                      Icons.arrow_forward_ios_rounded,
+                      size: 14,
+                    ),
                     onTap: () {
-                      Navigator.push(context, MaterialPageRoute(builder: (_) => const SubscriptionScreen()));
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (_) => const StaffScreen()),
+                      );
+                    },
+                  ),
+                  const Divider(height: 1),
+                  ListTile(
+                    leading: const Icon(
+                      Icons.workspace_premium_rounded,
+                      color: AppColors.warning,
+                    ),
+                    title: const Text(
+                      'Store Subscription & Plan',
+                      style: TextStyle(
+                        fontWeight: FontWeight.w600,
+                        fontSize: 14,
+                      ),
+                    ),
+                    subtitle: const Text(
+                      'Active plan features, quotas, and licensing',
+                      style: TextStyle(fontSize: 11),
+                    ),
+                    trailing: const Icon(
+                      Icons.arrow_forward_ios_rounded,
+                      size: 14,
+                    ),
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => const SubscriptionScreen(),
+                        ),
+                      );
                     },
                   ),
                 ],
@@ -169,12 +241,20 @@ class _SettingsScreenState extends State<SettingsScreen> {
               child: Column(
                 children: [
                   SwitchListTile(
-                    title: const Text('Dark Mode', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
+                    title: const Text(
+                      'Dark Mode',
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
                     subtitle: Text(
                       'Optimized high-contrast dark theme for POS registers',
                       style: TextStyle(
                         fontSize: 11,
-                        color: isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary,
+                        color: isDark
+                            ? AppColors.darkTextSecondary
+                            : AppColors.lightTextSecondary,
                       ),
                     ),
                     value: theme.isDarkMode,
@@ -200,12 +280,18 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   children: [
                     const Text(
                       'API Host URL',
-                      style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                      ),
                     ),
                     const SizedBox(height: 6),
                     TextField(
                       controller: _serverUrlController,
-                      style: const TextStyle(fontFamily: 'monospace', fontSize: 13),
+                      style: const TextStyle(
+                        fontFamily: 'monospace',
+                        fontSize: 13,
+                      ),
                       decoration: InputDecoration(
                         hintText: AppConstants.defaultApiUrl,
                         prefixIcon: const Icon(Icons.dns_rounded, size: 20),
@@ -217,7 +303,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       icon: const Icon(Icons.save_rounded, size: 16),
                       label: const Text('Save Server URL'),
                       style: ElevatedButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 10,
+                        ),
                       ),
                     ),
                   ],
@@ -233,14 +322,18 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   context: context,
                   builder: (ctx) => AlertDialog(
                     title: const Text('Confirm Sign Out'),
-                    content: const Text('Are you sure you want to sign out of this register?'),
+                    content: const Text(
+                      'Are you sure you want to sign out of this register?',
+                    ),
                     actions: [
                       TextButton(
                         onPressed: () => Navigator.pop(ctx, false),
                         child: const Text('Cancel'),
                       ),
                       ElevatedButton(
-                        style: ElevatedButton.styleFrom(backgroundColor: AppColors.danger),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppColors.danger,
+                        ),
                         onPressed: () => Navigator.pop(ctx, true),
                         child: const Text('Sign Out'),
                       ),
@@ -251,15 +344,24 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   await auth.logout();
                 }
               },
-              icon: const Icon(Icons.logout_rounded, color: AppColors.danger, size: 18),
+              icon: const Icon(
+                Icons.logout_rounded,
+                color: AppColors.danger,
+                size: 18,
+              ),
               label: const Text(
                 'Sign Out of Store',
-                style: TextStyle(color: AppColors.danger, fontWeight: FontWeight.bold),
+                style: TextStyle(
+                  color: AppColors.danger,
+                  fontWeight: FontWeight.bold,
+                ),
               ),
               style: OutlinedButton.styleFrom(
                 side: const BorderSide(color: AppColors.danger),
                 padding: const EdgeInsets.symmetric(vertical: 14),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
               ),
             ),
           ],

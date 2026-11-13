@@ -27,6 +27,8 @@ class Product {
 
   bool get isOutOfStock => stock <= 0;
   bool get isLowStock => stock > 0 && stock <= reorderLevel;
+  double get cost => costPrice;
+  int get minStock => reorderLevel;
 
   factory Product.fromJson(Map<String, dynamic> json) {
     return Product(
@@ -34,12 +36,8 @@ class Product {
       name: json['name']?.toString() ?? 'Unnamed Product',
       sku: json['sku']?.toString(),
       barcode: json['barcode']?.toString(),
-      price: (json['price'] is num)
-          ? (json['price'] as num).toDouble()
-          : double.tryParse(json['price']?.toString() ?? '0') ?? 0.0,
-      costPrice: (json['costPrice'] is num)
-          ? (json['costPrice'] as num).toDouble()
-          : double.tryParse(json['costPrice']?.toString() ?? '0') ?? 0.0,
+      price: _number(json['price'] ?? json['sellingPrice']),
+      costPrice: _number(json['costPrice'] ?? json['cost']),
       stock: (json['stock'] is num)
           ? (json['stock'] as num).toInt()
           : int.tryParse(json['stock']?.toString() ?? '0') ?? 0,
@@ -47,8 +45,17 @@ class Product {
           ? (json['reorderLevel'] as num).toInt()
           : int.tryParse(json['reorderLevel']?.toString() ?? '5') ?? 5,
       categoryId: json['categoryId']?.toString(),
-      category: json['category'] != null ? Category.fromJson(json['category']) : null,
+      category: json['category'] is Map
+          ? Category.fromJson(
+              Map<String, dynamic>.from(json['category'] as Map),
+            )
+          : null,
     );
+  }
+
+  static double _number(dynamic value) {
+    if (value is num) return value.toDouble();
+    return double.tryParse(value?.toString() ?? '') ?? 0.0;
   }
 
   Map<String, dynamic> toJson() => {

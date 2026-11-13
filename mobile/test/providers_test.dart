@@ -1,8 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:bizflow_mobile/models/category.dart';
-import 'package:bizflow_mobile/models/expense.dart';
 import 'package:bizflow_mobile/models/report_data.dart';
-import 'package:bizflow_mobile/models/sale_record.dart';
 import 'package:bizflow_mobile/models/staff_member.dart';
 import 'package:bizflow_mobile/models/stock_movement.dart';
 import 'package:bizflow_mobile/providers/expenses_provider.dart';
@@ -84,7 +82,7 @@ void main() {
             'unitsSold': 200,
             'revenue': 5000.0,
             'profitMargin': 0.35,
-          }
+          },
         ],
       };
 

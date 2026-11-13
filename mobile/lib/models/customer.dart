@@ -22,9 +22,14 @@ class Customer {
       phone: json['phone']?.toString(),
       email: json['email']?.toString(),
       address: json['address']?.toString(),
-      creditBalance: (json['creditBalance'] is num)
-          ? (json['creditBalance'] as num).toDouble()
-          : double.tryParse(json['creditBalance']?.toString() ?? '0') ?? 0.0,
+      creditBalance:
+          (json['creditBalance'] is num || json['currentDebt'] is num)
+          ? ((json['creditBalance'] ?? json['currentDebt']) as num).toDouble()
+          : double.tryParse(
+                  (json['creditBalance'] ?? json['currentDebt'])?.toString() ??
+                      '0',
+                ) ??
+                0.0,
     );
   }
 
@@ -70,18 +75,23 @@ class Shift {
           : double.tryParse(json['openingFloat']?.toString() ?? '0') ?? 0.0,
       closingCash: json['closingCash'] != null
           ? ((json['closingCash'] is num)
-              ? (json['closingCash'] as num).toDouble()
-              : double.tryParse(json['closingCash'].toString()))
+                ? (json['closingCash'] as num).toDouble()
+                : double.tryParse(json['closingCash'].toString()))
           : null,
       expectedCash: json['expectedCash'] != null
           ? ((json['expectedCash'] is num)
-              ? (json['expectedCash'] as num).toDouble()
-              : double.tryParse(json['expectedCash'].toString()))
+                ? (json['expectedCash'] as num).toDouble()
+                : double.tryParse(json['expectedCash'].toString()))
           : null,
-      startTime: DateTime.tryParse(json['startTime']?.toString() ?? '') ?? DateTime.now(),
-      endTime: json['endTime'] != null ? DateTime.tryParse(json['endTime'].toString()) : null,
-      cashierName: json['cashier'] != null ? json['cashier']['name']?.toString() : null,
+      startTime:
+          DateTime.tryParse(json['startTime']?.toString() ?? '') ??
+          DateTime.now(),
+      endTime: json['endTime'] != null
+          ? DateTime.tryParse(json['endTime'].toString())
+          : null,
+      cashierName: json['cashier'] != null
+          ? json['cashier']['name']?.toString()
+          : null,
     );
   }
 }
-

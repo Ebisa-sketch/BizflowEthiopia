@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+
 import '../core/api_client.dart';
 import '../models/category.dart';
 import '../models/product.dart';
@@ -63,13 +64,17 @@ class ProductsProvider with ChangeNotifier {
       if (productData is List) {
         _products = productData.map((j) => Product.fromJson(j)).toList();
       } else if (productData is Map && productData['products'] is List) {
-        _products = (productData['products'] as List).map((j) => Product.fromJson(j)).toList();
+        _products = (productData['products'] as List)
+            .map((j) => Product.fromJson(j))
+            .toList();
       }
 
       if (categoryData is List) {
         _categories = categoryData.map((j) => Category.fromJson(j)).toList();
       } else if (categoryData is Map && categoryData['categories'] is List) {
-        _categories = (categoryData['categories'] as List).map((j) => Category.fromJson(j)).toList();
+        _categories = (categoryData['categories'] as List)
+            .map((j) => Category.fromJson(j))
+            .toList();
       }
     } catch (e) {
       _errorMessage = e.toString();
@@ -96,12 +101,107 @@ class ProductsProvider with ChangeNotifier {
 
   Future<bool> quickRestock(String productId, int quantity) async {
     try {
-      await _api.post('/api/inventory', body: {
-        'productId': productId,
-        'quantity': quantity,
-        'type': 'PURCHASE',
-        'note': 'Quick restocked from mobile POS',
-      });
+      await _api.post(
+        '/api/inventory',
+        body: {
+          'productId': productId,
+          'movementType': 'RECEIPT',
+          'quantity': quantity,
+          'reason': 'Quick restocked from mobile POS',
+        },
+      );
+      await fetchProductsAndCategories();
+      return true;
+    } catch (e) {
+      _errorMessage = e.toString();
+      notifyListeners();
+      return false;
+    }
+  }
+
+  Future<bool> createProduct({
+    required String name,
+    required double price,
+    double? cost,
+    int? stock,
+    int? minStock,
+    String? categoryId,
+    String? sku,
+    String? barcode,
+  }) async {
+    try {
+      await _api.post(
+        '/api/products',
+        body: {
+          'name': name.trim(),
+          'sellingPrice': price,
+          'costPrice': cost ?? 0.0,
+          'quantityOnHand': stock ?? 0,
+          'reorderLevel': minStock ?? 5,
+          'categoryId': categoryId,
+          'sku': sku?.trim(),
+          'barcode': barcode?.trim(),
+        },
+      );
+      await fetchProductsAndCategories();
+      return true;
+    } catch (e) {
+      _errorMessage = e.toString();
+      notifyListeners();
+      return false;
+    }
+  }
+
+  Future<bool> updateProduct({
+    required String id,
+    required String name,
+    required double price,
+    double? cost,
+    int? stock,
+    int? minStock,
+    String? categoryId,
+    String? sku,
+    String? barcode,
+  }) async {
+    try {
+      final body = <String, dynamic>{
+        'name': name.trim(),
+        'sellingPrice': price,
+      };
+      if (cost != null) body['costPrice'] = cost;
+      if (minStock != null) body['reorderLevel'] = minStock;
+      if (categoryId != null) body['categoryId'] = categoryId;
+      if (sku != null) body['sku'] = sku.trim();
+      if (barcode != null) body['barcode'] = barcode.trim();
+
+      await _api.patch('/api/products/$id', body: body);
+      final matchingProducts = _products.where((product) => product.id == id);
+      final oldStock = matchingProducts.isEmpty
+          ? null
+          : matchingProducts.first.stock;
+      if (stock != null && oldStock != null && stock != oldStock) {
+        await _api.post(
+          '/api/inventory',
+          body: {
+            'productId': id,
+            'movementType': 'ADJUSTMENT',
+            'quantity': stock - oldStock,
+            'reason': 'Stock corrected from product editor',
+          },
+        );
+      }
+      await fetchProductsAndCategories();
+      return true;
+    } catch (e) {
+      _errorMessage = e.toString();
+      notifyListeners();
+      return false;
+    }
+  }
+
+  Future<bool> deleteProduct(String id) async {
+    try {
+      await _api.delete('/api/products/$id');
       await fetchProductsAndCategories();
       return true;
     } catch (e) {
@@ -111,4 +211,3 @@ class ProductsProvider with ChangeNotifier {
     }
   }
 }
-

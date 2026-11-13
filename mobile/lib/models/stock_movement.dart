@@ -23,17 +23,26 @@ class StockMovement {
     return StockMovement(
       id: json['id']?.toString() ?? '',
       productId: json['productId']?.toString() ?? '',
-      productName: json['product'] != null
+      productName: json['product'] is String
+          ? json['product'].toString()
+          : json['product'] is Map
           ? json['product']['name']?.toString() ?? 'Unknown Item'
           : 'Unknown Item',
-      type: json['type']?.toString() ?? 'ADJUSTMENT',
+      type: json['type']?.toString() == 'RECEIPT'
+          ? 'INTAKE'
+          : json['type']?.toString() ?? 'ADJUSTMENT',
       quantity: (json['quantity'] is num)
           ? (json['quantity'] as num).toInt()
           : int.tryParse(json['quantity']?.toString() ?? '0') ?? 0,
       reason: json['reason']?.toString() ?? json['note']?.toString(),
-      createdAt: DateTime.tryParse(json['createdAt']?.toString() ?? '') ?? DateTime.now(),
-      userName: json['user'] != null ? json['user']['name']?.toString() : null,
+      createdAt:
+          DateTime.tryParse(
+            json['createdAt']?.toString() ?? json['date']?.toString() ?? '',
+          ) ??
+          DateTime.now(),
+      userName: json['user'] != null
+          ? json['user']['name']?.toString()
+          : json['actor']?.toString(),
     );
   }
 }
-

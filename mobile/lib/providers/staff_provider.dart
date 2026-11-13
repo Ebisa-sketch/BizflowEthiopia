@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+
 import '../core/api_client.dart';
 import '../models/staff_member.dart';
 
@@ -22,7 +23,9 @@ class StaffProvider with ChangeNotifier {
       if (res is List) {
         _staff = res.map((j) => StaffMember.fromJson(j)).toList();
       } else if (res is Map && res['staff'] is List) {
-        _staff = (res['staff'] as List).map((j) => StaffMember.fromJson(j)).toList();
+        _staff = (res['staff'] as List)
+            .map((j) => StaffMember.fromJson(j))
+            .toList();
       }
     } catch (e) {
       _errorMessage = e.toString();
@@ -40,13 +43,17 @@ class StaffProvider with ChangeNotifier {
     String? password,
   }) async {
     try {
-      await _api.post('/api/staff', body: {
-        'name': name.trim(),
-        'email': email.trim(),
-        'role': role,
-        if (phone != null && phone.isNotEmpty) 'phone': phone.trim(),
-        if (password != null && password.isNotEmpty) 'password': password.trim(),
-      });
+      await _api.post(
+        '/api/staff',
+        body: {
+          'name': name.trim(),
+          'email': email.trim(),
+          'role': role,
+          if (phone != null && phone.isNotEmpty) 'phone': phone.trim(),
+          if (password != null && password.isNotEmpty)
+            'password': password.trim(),
+        },
+      );
       await fetchStaff();
       return true;
     } catch (e) {

@@ -1,7 +1,12 @@
 import 'dart:convert';
+
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
+
+import 'api_http_client_stub.dart'
+    if (dart.library.js_interop) 'api_http_client_web.dart'
+    as platform;
 import 'constants.dart';
 
 class AppException implements Exception {
@@ -16,9 +21,15 @@ class AppException implements Exception {
 class ApiClient {
   static final ApiClient _instance = ApiClient._internal();
   factory ApiClient() => _instance;
-  ApiClient._internal();
+  ApiClient._internal()
+    : _client = platform.createApiHttpClient(),
+      _baseUrl = AppConstants.defaultApiUrl;
 
-  String _baseUrl = AppConstants.defaultApiUrl;
+  @visibleForTesting
+  ApiClient.forTesting(this._client, this._baseUrl);
+
+  final http.Client _client;
+  String _baseUrl;
   String? _sessionCookie;
   String? _businessId;
 
@@ -29,7 +40,8 @@ class ApiClient {
     final prefs = await SharedPreferences.getInstance();
     final savedUrl = prefs.getString(AppConstants.keyApiUrl);
     if (savedUrl != null) {
-      if ((kIsWeb || defaultTargetPlatform != TargetPlatform.android) && savedUrl.contains('10.0.2.2')) {
+      if ((kIsWeb || defaultTargetPlatform != TargetPlatform.android) &&
+          savedUrl.contains('10.0.2.2')) {
         _baseUrl = AppConstants.defaultApiUrl;
         await prefs.setString(AppConstants.keyApiUrl, _baseUrl);
       } else {
@@ -49,7 +61,9 @@ class ApiClient {
   }
 
   Future<void> updateBaseUrl(String newUrl) async {
-    _baseUrl = newUrl.endsWith('/') ? newUrl.substring(0, newUrl.length - 1) : newUrl;
+    _baseUrl = newUrl.endsWith('/')
+        ? newUrl.substring(0, newUrl.length - 1)
+        : newUrl;
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString(AppConstants.keyApiUrl, _baseUrl);
   }
@@ -73,23 +87,28 @@ class ApiClient {
       'Content-Type': 'application/json',
       'Accept': 'application/json',
     };
-    if (_sessionCookie != null) {
+    if (!kIsWeb && _sessionCookie != null) {
       headers['Cookie'] = _sessionCookie!;
       headers['Authorization'] = 'Bearer $_sessionCookie';
     }
+    headers.remove('Authorization');
     if (_businessId != null) {
       headers['x-business-id'] = _businessId!;
     }
     return headers;
   }
 
-  Future<dynamic> get(String endpoint, {Map<String, dynamic>? queryParams}) async {
+  Future<dynamic> get(
+    String endpoint, {
+    Map<String, dynamic>? queryParams,
+  }) async {
     final uri = Uri.parse('$_baseUrl$endpoint').replace(
       queryParameters: queryParams?.map((k, v) => MapEntry(k, v.toString())),
     );
 
     try {
-      final response = await http.get(uri, headers: _buildHeaders());
+      final response = await _client.get(uri, headers: _buildHeaders());
+      await _captureCookies(response);
       return _processResponse(response);
     } catch (e) {
       if (e is AppException) rethrow;
@@ -100,12 +119,12 @@ class ApiClient {
   Future<dynamic> post(String endpoint, {Map<String, dynamic>? body}) async {
     final uri = Uri.parse('$_baseUrl$endpoint');
     try {
-      final response = await http.post(
+      final response = await _client.post(
         uri,
         headers: _buildHeaders(),
         body: body != null ? jsonEncode(body) : null,
       );
-      _captureCookies(response);
+      await _captureCookies(response);
       return _processResponse(response);
     } catch (e) {
       if (e is AppException) rethrow;
@@ -116,7 +135,7 @@ class ApiClient {
   Future<dynamic> put(String endpoint, {Map<String, dynamic>? body}) async {
     final uri = Uri.parse('$_baseUrl$endpoint');
     try {
-      final response = await http.put(
+      final response = await _client.put(
         uri,
         headers: _buildHeaders(),
         body: body != null ? jsonEncode(body) : null,
@@ -131,7 +150,7 @@ class ApiClient {
   Future<dynamic> patch(String endpoint, {Map<String, dynamic>? body}) async {
     final uri = Uri.parse('$_baseUrl$endpoint');
     try {
-      final response = await http.patch(
+      final response = await _client.patch(
         uri,
         headers: _buildHeaders(),
         body: body != null ? jsonEncode(body) : null,
@@ -146,7 +165,7 @@ class ApiClient {
   Future<dynamic> delete(String endpoint) async {
     final uri = Uri.parse('$_baseUrl$endpoint');
     try {
-      final response = await http.delete(uri, headers: _buildHeaders());
+      final response = await _client.delete(uri, headers: _buildHeaders());
       return _processResponse(response);
     } catch (e) {
       if (e is AppException) rethrow;
@@ -154,11 +173,11 @@ class ApiClient {
     }
   }
 
-  void _captureCookies(http.Response response) {
+  Future<void> _captureCookies(http.Response response) async {
     final rawCookie = response.headers['set-cookie'];
     if (rawCookie != null) {
       // Extract session cookie (e.g. auth-token=...)
-      setSessionCookie(rawCookie.split(';').first);
+      await setSessionCookie(rawCookie.split(';').first);
     }
   }
 
@@ -184,4 +203,3 @@ class ApiClient {
     throw AppException(errorMsg, response.statusCode);
   }
 }
-

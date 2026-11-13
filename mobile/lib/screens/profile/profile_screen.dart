@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+
 import '../../core/api_client.dart';
 import '../../providers/auth_provider.dart';
 import '../../theme/app_colors.dart';
@@ -50,10 +51,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
     setState(() => _isSavingProfile = true);
     try {
-      await ApiClient().patch('/api/user/profile', body: {
-        'name': name,
-        'phone': _phoneController.text.trim(),
-      });
+      await ApiClient().patch(
+        '/api/user/profile',
+        body: {'name': name, 'phone': _phoneController.text.trim()},
+      );
       await authProvider.checkAuthStatus();
       if (mounted) {
         messenger.showSnackBar(
@@ -89,9 +90,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
       return;
     }
 
-    if (newPass.length < 6) {
+    if (newPass.length < 8) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('New password must be at least 6 characters')),
+        const SnackBar(
+          content: Text('New password must be at least 8 characters'),
+        ),
       );
       return;
     }
@@ -105,10 +108,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
     setState(() => _isChangingPassword = true);
     try {
-      await ApiClient().post('/api/user/change-password', body: {
-        'currentPassword': current,
-        'newPassword': newPass,
-      });
+      await ApiClient().post(
+        '/api/auth/change-password',
+        body: {
+          'currentPassword': current,
+          'newPassword': newPass,
+          'confirmPassword': confirm,
+        },
+      );
       if (mounted) {
         _currentPasswordController.clear();
         _newPasswordController.clear();
@@ -141,9 +148,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     final user = auth.user;
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('My Profile'),
-      ),
+      appBar: AppBar(title: const Text('My Profile')),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
         child: Column(
@@ -159,8 +164,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       radius: 32,
                       backgroundColor: AppColors.primary,
                       child: Text(
-                        (user?.name.isNotEmpty ?? false) ? user!.name[0].toUpperCase() : 'U',
-                        style: const TextStyle(fontSize: 26, fontWeight: FontWeight.bold, color: Colors.white),
+                        (user?.name.isNotEmpty ?? false)
+                            ? user!.name[0].toUpperCase()
+                            : 'U',
+                        style: const TextStyle(
+                          fontSize: 26,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
+                        ),
                       ),
                     ),
                     const SizedBox(width: 16),
@@ -170,27 +181,41 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         children: [
                           Text(
                             user?.name ?? 'Signed In User',
-                            style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w800),
+                            style: const TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.w800,
+                            ),
                           ),
                           Text(
                             user?.email ?? '',
                             style: TextStyle(
                               fontSize: 13,
-                              color: isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary,
+                              color: isDark
+                                  ? AppColors.darkTextSecondary
+                                  : AppColors.lightTextSecondary,
                             ),
                           ),
                           const SizedBox(height: 6),
                           Row(
                             children: [
                               Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 8,
+                                  vertical: 2,
+                                ),
                                 decoration: BoxDecoration(
-                                  color: AppColors.primary.withValues(alpha: 0.15),
+                                  color: AppColors.primary.withValues(
+                                    alpha: 0.15,
+                                  ),
                                   borderRadius: BorderRadius.circular(8),
                                 ),
                                 child: Text(
                                   user?.role ?? 'CASHIER',
-                                  style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w800, color: AppColors.primary),
+                                  style: const TextStyle(
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.w800,
+                                    color: AppColors.primary,
+                                  ),
                                 ),
                               ),
                               const SizedBox(width: 8),
@@ -201,7 +226,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                   style: TextStyle(
                                     fontSize: 12,
                                     fontWeight: FontWeight.w600,
-                                    color: isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary,
+                                    color: isDark
+                                        ? AppColors.darkTextSecondary
+                                        : AppColors.lightTextSecondary,
                                   ),
                                 ),
                               ),
@@ -250,7 +277,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       child: ElevatedButton.icon(
                         onPressed: _isSavingProfile ? null : _updateProfile,
                         icon: _isSavingProfile
-                            ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2))
+                            ? const SizedBox(
+                                width: 16,
+                                height: 16,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                ),
+                              )
                             : const Icon(Icons.save_rounded, size: 18),
                         label: const Text('Save Profile Details'),
                       ),
@@ -304,7 +337,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       child: OutlinedButton.icon(
                         onPressed: _isChangingPassword ? null : _changePassword,
                         icon: _isChangingPassword
-                            ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2))
+                            ? const SizedBox(
+                                width: 16,
+                                height: 16,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                ),
+                              )
                             : const Icon(Icons.key_rounded, size: 18),
                         label: const Text('Change Password'),
                       ),

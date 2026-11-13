@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
+
 import '../../providers/inventory_provider.dart';
 import '../../providers/products_provider.dart';
 import '../../theme/app_colors.dart';
@@ -59,7 +60,9 @@ class _InventoryScreenState extends State<InventoryScreen> {
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 DropdownButtonFormField<String>(
-                  decoration: const InputDecoration(labelText: 'Select Product *'),
+                  decoration: const InputDecoration(
+                    labelText: 'Select Product *',
+                  ),
                   initialValue: selectedProductId,
                   isExpanded: true,
                   items: products.map((p) {
@@ -72,18 +75,34 @@ class _InventoryScreenState extends State<InventoryScreen> {
                     );
                   }).toList(),
                   onChanged: (val) {
-                    if (val != null) setDialogState(() => selectedProductId = val);
+                    if (val != null) {
+                      setDialogState(() => selectedProductId = val);
+                    }
                   },
                 ),
                 const SizedBox(height: 12),
                 DropdownButtonFormField<String>(
-                  decoration: const InputDecoration(labelText: 'Movement Type *'),
+                  decoration: const InputDecoration(
+                    labelText: 'Movement Type *',
+                  ),
                   initialValue: selectedType,
                   items: const [
-                    DropdownMenuItem(value: 'INTAKE', child: Text('INTAKE (Add Stock)')),
-                    DropdownMenuItem(value: 'DAMAGE', child: Text('DAMAGE (Broken / Expired)')),
-                    DropdownMenuItem(value: 'RETURN', child: Text('RETURN (Customer Return)')),
-                    DropdownMenuItem(value: 'ADJUSTMENT', child: Text('ADJUSTMENT (Audit Correction)')),
+                    DropdownMenuItem(
+                      value: 'INTAKE',
+                      child: Text('INTAKE (Add Stock)'),
+                    ),
+                    DropdownMenuItem(
+                      value: 'DAMAGE',
+                      child: Text('DAMAGE (Broken / Expired)'),
+                    ),
+                    DropdownMenuItem(
+                      value: 'RETURN',
+                      child: Text('RETURN (Customer Return)'),
+                    ),
+                    DropdownMenuItem(
+                      value: 'ADJUSTMENT',
+                      child: Text('ADJUSTMENT (Audit Correction)'),
+                    ),
                   ],
                   onChanged: (val) {
                     if (val != null) setDialogState(() => selectedType = val);
@@ -117,17 +136,31 @@ class _InventoryScreenState extends State<InventoryScreen> {
             ElevatedButton(
               onPressed: () async {
                 final qty = int.tryParse(qtyCtrl.text.trim()) ?? 0;
-                if (qty <= 0) {
+                if (qty == 0 || (selectedType != 'ADJUSTMENT' && qty < 0)) {
                   ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Please enter a valid quantity greater than 0')),
+                    const SnackBar(
+                      content: Text(
+                        'Enter a non-zero quantity; adjustments may be negative',
+                      ),
+                    ),
+                  );
+                  return;
+                }
+                if (noteCtrl.text.trim().isEmpty) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('A reason is required for the stock audit'),
+                    ),
                   );
                   return;
                 }
                 Navigator.pop(ctx);
-                final success = await context.read<InventoryProvider>().recordMovement(
+                final success = await context
+                    .read<InventoryProvider>()
+                    .recordMovement(
                       productId: selectedProductId,
                       type: selectedType,
-                      quantity: qty,
+                      quantity: selectedType == 'ADJUSTMENT' ? qty : qty.abs(),
                       note: noteCtrl.text.trim(),
                     );
                 if (mounted) {
@@ -135,8 +168,14 @@ class _InventoryScreenState extends State<InventoryScreen> {
                   context.read<ProductsProvider>().fetchProducts();
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(
-                      content: Text(success ? 'Stock adjustment recorded!' : 'Failed to record movement'),
-                      backgroundColor: success ? AppColors.primary : AppColors.danger,
+                      content: Text(
+                        success
+                            ? 'Stock adjustment recorded!'
+                            : 'Failed to record movement',
+                      ),
+                      backgroundColor: success
+                          ? AppColors.primary
+                          : AppColors.danger,
                     ),
                   );
                 }
@@ -189,7 +228,10 @@ class _InventoryScreenState extends State<InventoryScreen> {
         onPressed: _showRecordAdjustmentDialog,
         backgroundColor: AppColors.primary,
         icon: const Icon(Icons.tune_rounded, color: Colors.white),
-        label: const Text('Adjust Stock', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+        label: const Text(
+          'Adjust Stock',
+          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+        ),
       ),
       body: Column(
         children: [
@@ -207,7 +249,9 @@ class _InventoryScreenState extends State<InventoryScreen> {
                       type,
                       style: TextStyle(
                         fontSize: 12,
-                        fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+                        fontWeight: isSelected
+                            ? FontWeight.w700
+                            : FontWeight.w500,
                         color: isSelected ? Colors.white : null,
                       ),
                     ),
@@ -232,7 +276,9 @@ class _InventoryScreenState extends State<InventoryScreen> {
                   style: TextStyle(
                     fontSize: 12,
                     fontWeight: FontWeight.w600,
-                    color: isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary,
+                    color: isDark
+                        ? AppColors.darkTextSecondary
+                        : AppColors.lightTextSecondary,
                   ),
                 ),
                 Text(
@@ -240,7 +286,9 @@ class _InventoryScreenState extends State<InventoryScreen> {
                   style: TextStyle(
                     fontSize: 12,
                     fontWeight: FontWeight.w600,
-                    color: isDark ? AppColors.darkTextMuted : AppColors.lightTextMuted,
+                    color: isDark
+                        ? AppColors.darkTextMuted
+                        : AppColors.lightTextMuted,
                   ),
                 ),
               ],
@@ -255,145 +303,174 @@ class _InventoryScreenState extends State<InventoryScreen> {
               child: invProvider.isLoading && invProvider.movements.isEmpty
                   ? const Center(child: CircularProgressIndicator())
                   : filtered.isEmpty
-                      ? Center(
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Icon(
-                                Icons.history_rounded,
-                                size: 56,
-                                color: isDark ? AppColors.darkTextMuted : AppColors.lightTextMuted,
-                              ),
-                              const SizedBox(height: 12),
-                              Text(
-                                'No stock movements recorded',
-                                style: TextStyle(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.w600,
-                                  color: isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary,
-                                ),
-                              ),
-                              const SizedBox(height: 4),
-                              Text(
-                                'Tap "Adjust Stock" to record intakes or damages',
-                                style: TextStyle(
-                                  fontSize: 12,
-                                  color: isDark ? AppColors.darkTextMuted : AppColors.lightTextMuted,
-                                ),
-                              ),
-                            ],
+                  ? Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(
+                            Icons.history_rounded,
+                            size: 56,
+                            color: isDark
+                                ? AppColors.darkTextMuted
+                                : AppColors.lightTextMuted,
                           ),
-                        )
-                      : ListView.separated(
-                          padding: const EdgeInsets.all(16),
-                          itemCount: filtered.length,
-                          separatorBuilder: (_, _) => const SizedBox(height: 8),
-                          itemBuilder: (context, index) {
-                            final m = filtered[index];
-                            final color = _getTypeColor(m.type);
-                            final isPositive = m.type == 'INTAKE' || m.type == 'RETURN';
-                            final dateStr = DateFormat('MMM dd, yyyy • hh:mm a').format(m.createdAt);
+                          const SizedBox(height: 12),
+                          Text(
+                            'No stock movements recorded',
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w600,
+                              color: isDark
+                                  ? AppColors.darkTextSecondary
+                                  : AppColors.lightTextSecondary,
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            'Tap "Adjust Stock" to record intakes or damages',
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: isDark
+                                  ? AppColors.darkTextMuted
+                                  : AppColors.lightTextMuted,
+                            ),
+                          ),
+                        ],
+                      ),
+                    )
+                  : ListView.separated(
+                      padding: const EdgeInsets.all(16),
+                      itemCount: filtered.length,
+                      separatorBuilder: (_, _) => const SizedBox(height: 8),
+                      itemBuilder: (context, index) {
+                        final m = filtered[index];
+                        final color = _getTypeColor(m.type);
+                        final isPositive =
+                            m.type == 'INTAKE' || m.type == 'RETURN';
+                        final dateStr = DateFormat('MMM dd, yyyy • hh:mm a')
+                            .format(m.createdAt);
 
-                            return Card(
-                              child: Padding(
-                                padding: const EdgeInsets.all(14),
-                                child: Row(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Container(
-                                      padding: const EdgeInsets.all(10),
-                                      decoration: BoxDecoration(
-                                        color: color.withValues(alpha: 0.15),
-                                        borderRadius: BorderRadius.circular(12),
-                                      ),
-                                      child: Icon(
-                                        isPositive ? Icons.arrow_downward_rounded : Icons.arrow_upward_rounded,
-                                        color: color,
-                                        size: 20,
-                                      ),
-                                    ),
-                                    const SizedBox(width: 12),
-                                    Expanded(
-                                      child: Column(
-                                        crossAxisAlignment: CrossAxisAlignment.start,
+                        return Card(
+                          child: Padding(
+                            padding: const EdgeInsets.all(14),
+                            child: Row(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Container(
+                                  padding: const EdgeInsets.all(10),
+                                  decoration: BoxDecoration(
+                                    color: color.withValues(alpha: 0.15),
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  child: Icon(
+                                    isPositive
+                                        ? Icons.arrow_downward_rounded
+                                        : Icons.arrow_upward_rounded,
+                                    color: color,
+                                    size: 20,
+                                  ),
+                                ),
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Row(
+                                        mainAxisAlignment:
+                                            MainAxisAlignment.spaceBetween,
                                         children: [
-                                          Row(
-                                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                            children: [
-                                              Expanded(
-                                                child: Text(
-                                                  m.productName,
-                                                  style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 14),
-                                                ),
-                                              ),
-                                              Text(
-                                                '${isPositive ? '+' : '-'}${m.quantity}',
-                                                style: TextStyle(
-                                                  fontWeight: FontWeight.w800,
-                                                  fontSize: 16,
-                                                  color: color,
-                                                ),
-                                              ),
-                                            ],
-                                          ),
-                                          const SizedBox(height: 4),
-                                          Row(
-                                            children: [
-                                              Container(
-                                                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                                                decoration: BoxDecoration(
-                                                  color: color.withValues(alpha: 0.15),
-                                                  borderRadius: BorderRadius.circular(6),
-                                                ),
-                                                child: Text(
-                                                  m.type,
-                                                  style: TextStyle(
-                                                    fontSize: 10,
-                                                    fontWeight: FontWeight.w700,
-                                                    color: color,
-                                                  ),
-                                                ),
-                                              ),
-                                              const SizedBox(width: 8),
-                                              Text(
-                                                dateStr,
-                                                style: TextStyle(
-                                                  fontSize: 11,
-                                                  color: isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary,
-                                                ),
-                                              ),
-                                            ],
-                                          ),
-                                          if (m.reason != null && m.reason!.isNotEmpty) ...[
-                                            const SizedBox(height: 6),
-                                            Text(
-                                              'Note: ${m.reason}',
-                                              style: TextStyle(
-                                                fontSize: 11,
-                                                fontStyle: FontStyle.italic,
-                                                color: isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary,
+                                          Expanded(
+                                            child: Text(
+                                              m.productName,
+                                              style: const TextStyle(
+                                                fontWeight: FontWeight.w700,
+                                                fontSize: 14,
                                               ),
                                             ),
-                                          ],
-                                          if (m.userName != null) ...[
-                                            const SizedBox(height: 2),
-                                            Text(
-                                              'Recorded by: ${m.userName}',
-                                              style: TextStyle(
-                                                fontSize: 11,
-                                                color: isDark ? AppColors.darkTextMuted : AppColors.lightTextMuted,
-                                              ),
+                                          ),
+                                          Text(
+                                            '${isPositive ? '+' : '-'}${m.quantity}',
+                                            style: TextStyle(
+                                              fontWeight: FontWeight.w800,
+                                              fontSize: 16,
+                                              color: color,
                                             ),
-                                          ],
+                                          ),
                                         ],
                                       ),
-                                    ),
-                                  ],
+                                      const SizedBox(height: 4),
+                                      Row(
+                                        children: [
+                                          Container(
+                                            padding: const EdgeInsets.symmetric(
+                                              horizontal: 6,
+                                              vertical: 2,
+                                            ),
+                                            decoration: BoxDecoration(
+                                              color: color.withValues(
+                                                alpha: 0.15,
+                                              ),
+                                              borderRadius:
+                                                  BorderRadius.circular(6),
+                                            ),
+                                            child: Text(
+                                              m.type,
+                                              style: TextStyle(
+                                                fontSize: 10,
+                                                fontWeight: FontWeight.w700,
+                                                color: color,
+                                              ),
+                                            ),
+                                          ),
+                                          const SizedBox(width: 8),
+                                          Text(
+                                            dateStr,
+                                            style: TextStyle(
+                                              fontSize: 11,
+                                              color: isDark
+                                                  ? AppColors.darkTextSecondary
+                                                  : AppColors
+                                                        .lightTextSecondary,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                      if (m.reason != null &&
+                                          m.reason!.isNotEmpty) ...[
+                                        const SizedBox(height: 6),
+                                        Text(
+                                          'Note: ${m.reason}',
+                                          style: TextStyle(
+                                            fontSize: 11,
+                                            fontStyle: FontStyle.italic,
+                                            color: isDark
+                                                ? AppColors.darkTextSecondary
+                                                : AppColors.lightTextSecondary,
+                                          ),
+                                        ),
+                                      ],
+                                      if (m.userName != null) ...[
+                                        const SizedBox(height: 2),
+                                        Text(
+                                          'Recorded by: ${m.userName}',
+                                          style: TextStyle(
+                                            fontSize: 11,
+                                            color: isDark
+                                                ? AppColors.darkTextMuted
+                                                : AppColors.lightTextMuted,
+                                          ),
+                                        ),
+                                      ],
+                                    ],
+                                  ),
                                 ),
-                              ),
-                            );
-                          },
-                        ),
+                              ],
+                            ),
+                          ),
+                        );
+                      },
+                    ),
             ),
           ),
         ],

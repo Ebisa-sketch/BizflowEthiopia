@@ -27,7 +27,7 @@ class AppConstants {
   static const String paymentTelebirr = 'TELEBIRR';
   static const String paymentCbeBirr = 'CBE_BIRR';
   static const String paymentBankTransfer = 'BANK_TRANSFER';
-  static const String paymentCredit = 'CREDIT';
+  static const String paymentCredit = 'OTHER';
 
   // Shift Status
   static const String shiftOpen = 'OPEN';

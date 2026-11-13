@@ -17,15 +17,24 @@ class TopProductReport {
     return TopProductReport(
       id: json['id']?.toString() ?? '',
       name: json['name']?.toString() ?? 'Product',
-      unitsSold: (json['unitsSold'] is num)
-          ? (json['unitsSold'] as num).toInt()
-          : int.tryParse(json['unitsSold']?.toString() ?? '0') ?? 0,
+      unitsSold: (json['unitsSold'] ?? json['units']) is num
+          ? ((json['unitsSold'] ?? json['units']) as num).toInt()
+          : int.tryParse(
+                  (json['unitsSold'] ?? json['units'])?.toString() ?? '0',
+                ) ??
+                0,
       revenue: (json['revenue'] is num)
           ? (json['revenue'] as num).toDouble()
           : double.tryParse(json['revenue']?.toString() ?? '0') ?? 0.0,
-      profitMargin: (json['profitMargin'] is num)
-          ? (json['profitMargin'] as num).toDouble()
-          : double.tryParse(json['profitMargin']?.toString() ?? '0') ?? 0.0,
+      profitMargin: (json['profitMargin'] ?? json['margin']) is num
+          ? ((json['profitMargin'] ?? json['margin']) as num).toDouble()
+          : double.tryParse(
+                  (json['profitMargin'] ?? json['margin'])
+                          ?.toString()
+                          .replaceAll('%', '') ??
+                      '0',
+                ) ??
+                0.0,
     );
   }
 }
@@ -50,12 +59,22 @@ class ReportData {
   });
 
   factory ReportData.fromJson(Map<String, dynamic> json) {
-    final rawPayments = json['paymentBreakdown'] ?? {};
+    final rawPayments = json['paymentBreakdown'] ?? json['paymentSplit'] ?? {};
     final Map<String, double> paymentsMap = {};
     if (rawPayments is Map) {
       rawPayments.forEach((key, val) {
-        paymentsMap[key.toString()] = (val is num) ? val.toDouble() : double.tryParse(val.toString()) ?? 0.0;
+        paymentsMap[key.toString()] = (val is num)
+            ? val.toDouble()
+            : double.tryParse(val.toString()) ?? 0.0;
       });
+    } else if (rawPayments is List) {
+      for (final item in rawPayments.whereType<Map>()) {
+        final method = item['method']?.toString() ?? 'OTHER';
+        final amount = item['amount'];
+        paymentsMap[method] = amount is num
+            ? amount.toDouble()
+            : double.tryParse(amount?.toString() ?? '0') ?? 0.0;
+      }
     }
 
     final rawTop = json['topProducts'] ?? [];
@@ -66,19 +85,46 @@ class ReportData {
 
     final rev = (json['revenue'] ?? json['totalRevenue'] ?? 0.0);
     final cogs = (json['cogs'] ?? json['totalCogs'] ?? 0.0);
-    final gross = (json['grossProfit'] ?? 0.0);
+    final gross = json['grossProfit'];
     final exp = (json['expenses'] ?? json['totalExpenses'] ?? 0.0);
-    final net = (json['netProfit'] ?? 0.0);
+    final net = json['netProfit'];
+
+    final revenue = rev is num
+        ? rev.toDouble()
+        : double.tryParse(rev.toString()) ?? 0.0;
+    final cost = cogs is num
+        ? cogs.toDouble()
+        : double.tryParse(cogs.toString()) ?? 0.0;
+    final expenses = exp is num
+        ? exp.toDouble()
+        : double.tryParse(exp.toString()) ?? 0.0;
+    final grossProfit = gross is num
+        ? gross.toDouble()
+        : double.tryParse(gross?.toString() ?? '') ?? revenue - cost;
+    final netProfit = net is num
+        ? net.toDouble()
+        : double.tryParse(net?.toString() ?? '') ?? grossProfit - expenses;
+
+    final normalizedPayments = <String, double>{};
+    for (final entry in paymentsMap.entries) {
+      final method = switch (entry.key.toLowerCase()) {
+        'cash' => 'CASH',
+        'telebirr' => 'TELEBIRR',
+        'cbe birr' => 'CBE_BIRR',
+        'bank transfer' => 'BANK_TRANSFER',
+        _ => entry.key,
+      };
+      normalizedPayments[method] = entry.value;
+    }
 
     return ReportData(
-      totalRevenue: (rev is num) ? rev.toDouble() : double.tryParse(rev.toString()) ?? 0.0,
-      totalCogs: (cogs is num) ? cogs.toDouble() : double.tryParse(cogs.toString()) ?? 0.0,
-      grossProfit: (gross is num) ? gross.toDouble() : double.tryParse(gross.toString()) ?? 0.0,
-      totalExpenses: (exp is num) ? exp.toDouble() : double.tryParse(exp.toString()) ?? 0.0,
-      netProfit: (net is num) ? net.toDouble() : double.tryParse(net.toString()) ?? 0.0,
-      paymentBreakdown: paymentsMap,
+      totalRevenue: revenue,
+      totalCogs: cost,
+      grossProfit: grossProfit,
+      totalExpenses: expenses,
+      netProfit: netProfit,
+      paymentBreakdown: normalizedPayments,
       topProducts: topList,
     );
   }
 }
-

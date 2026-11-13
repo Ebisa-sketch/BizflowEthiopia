@@ -2,7 +2,6 @@ class Expense {
   final String id;
   final String category;
   final double amount;
-  final String paymentMethod;
   final DateTime date;
   final String? note;
   final String? recordedByName;
@@ -11,7 +10,6 @@ class Expense {
     required this.id,
     required this.category,
     required this.amount,
-    required this.paymentMethod,
     required this.date,
     this.note,
     this.recordedByName,
@@ -24,10 +22,15 @@ class Expense {
       amount: (json['amount'] is num)
           ? (json['amount'] as num).toDouble()
           : double.tryParse(json['amount']?.toString() ?? '0') ?? 0.0,
-      paymentMethod: json['paymentMethod']?.toString() ?? 'CASH',
-      date: DateTime.tryParse(json['date']?.toString() ?? json['createdAt']?.toString() ?? '') ?? DateTime.now(),
-      note: json['note']?.toString(),
-      recordedByName: json['user'] != null ? json['user']['name']?.toString() : null,
+      date:
+          DateTime.tryParse(
+            json['date']?.toString() ?? json['createdAt']?.toString() ?? '',
+          ) ??
+          DateTime.now(),
+      note: json['description']?.toString() ?? json['note']?.toString(),
+      recordedByName:
+          json['recordedBy']?.toString() ??
+          (json['user'] != null ? json['user']['name']?.toString() : null),
     );
   }
 
@@ -35,9 +38,7 @@ class Expense {
     'id': id,
     'category': category,
     'amount': amount,
-    'paymentMethod': paymentMethod,
     'date': date.toIso8601String(),
     'note': note,
   };
 }
-

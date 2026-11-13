@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { isValidEdgeSessionToken } from "@/lib/auth/edge-session";
+import { getAllowedApiOrigin } from "@/lib/api-cors";
 
 export const SESSION_COOKIE_NAME = "bizflow_session";
 
@@ -27,6 +28,32 @@ const AUTH_ROUTES = ["/login", "/register"];
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
+
+  if (pathname.startsWith("/api/")) {
+    const response =
+      request.method === "OPTIONS"
+        ? new NextResponse(null, { status: 204 })
+        : NextResponse.next();
+    const allowedOrigin = getAllowedApiOrigin(
+      request.headers.get("origin")
+    );
+
+    if (allowedOrigin) {
+      response.headers.set("Access-Control-Allow-Origin", allowedOrigin);
+      response.headers.set("Access-Control-Allow-Credentials", "true");
+      response.headers.set(
+        "Access-Control-Allow-Methods",
+        "GET,HEAD,OPTIONS,POST,PUT,PATCH,DELETE"
+      );
+      response.headers.set(
+        "Access-Control-Allow-Headers",
+        "Accept, Authorization, Content-Type, X-CSRF-Token, X-Requested-With, X-Business-Id"
+      );
+      response.headers.set("Vary", "Origin");
+    }
+
+    return response;
+  }
 
   // Immediately bypass service worker, offline fallback, and manifest
   if (
@@ -78,8 +105,7 @@ export const config = {
      * - favicon.ico (favicon file)
      * - PWA files (sw.js, offline.html, manifest)
      * - public files (images, icons)
-     * - api routes
      */
-    "/((?!_next/static|_next/image|favicon.ico|sw\\.js|offline\\.html|manifest\\.webmanifest|api/|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
+    "/((?!_next/static|_next/image|favicon.ico|sw\\.js|offline\\.html|manifest\\.webmanifest|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
   ],
 };

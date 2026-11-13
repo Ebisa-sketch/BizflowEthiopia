@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+
 import '../core/api_client.dart';
 import '../models/report_data.dart';
 
@@ -21,8 +22,15 @@ class ReportsProvider with ChangeNotifier {
     notifyListeners();
 
     try {
-      final res = await _api.get('/api/reports', queryParams: {'period': _period});
-      if (res is Map<String, dynamic>) {
+      final res = await _api.get(
+        '/api/reports',
+        queryParams: {'period': _period},
+      );
+      if (res is Map && res['report'] is Map) {
+        _report = ReportData.fromJson(
+          Map<String, dynamic>.from(res['report'] as Map),
+        );
+      } else if (res is Map<String, dynamic>) {
         _report = ReportData.fromJson(res);
       }
     } catch (e) {
@@ -37,4 +45,3 @@ class ReportsProvider with ChangeNotifier {
     fetchReport(p);
   }
 }
-

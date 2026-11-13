@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
+
 import '../../core/formatters.dart';
 import '../../models/expense.dart';
 import '../../providers/expenses_provider.dart';
@@ -35,7 +36,6 @@ class _ExpensesScreenState extends State<ExpensesScreen> {
 
   void _showAddExpenseDialog() {
     String selectedCategory = 'UTILITIES';
-    String selectedPaymentMethod = 'CASH';
     final amountCtrl = TextEditingController();
     final noteCtrl = TextEditingController();
 
@@ -50,44 +50,54 @@ class _ExpensesScreenState extends State<ExpensesScreen> {
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 DropdownButtonFormField<String>(
-                  decoration: const InputDecoration(labelText: 'Expense Category *'),
+                  decoration: const InputDecoration(
+                    labelText: 'Expense Category *',
+                  ),
                   initialValue: selectedCategory,
                   items: const [
                     DropdownMenuItem(value: 'RENT', child: Text('Rent')),
-                    DropdownMenuItem(value: 'SALARY', child: Text('Staff Salary / Wage')),
-                    DropdownMenuItem(value: 'UTILITIES', child: Text('Utilities (Electricity / Water / WiFi)')),
-                    DropdownMenuItem(value: 'SUPPLIES', child: Text('Supplies & Packaging')),
-                    DropdownMenuItem(value: 'TRANSPORT', child: Text('Transport / Logistics')),
-                    DropdownMenuItem(value: 'MARKETING', child: Text('Marketing / Signage')),
-                    DropdownMenuItem(value: 'OTHER', child: Text('Other Overhead')),
+                    DropdownMenuItem(
+                      value: 'SALARY',
+                      child: Text('Staff Salary / Wage'),
+                    ),
+                    DropdownMenuItem(
+                      value: 'UTILITIES',
+                      child: Text('Utilities (Electricity / Water / WiFi)'),
+                    ),
+                    DropdownMenuItem(
+                      value: 'SUPPLIES',
+                      child: Text('Supplies & Packaging'),
+                    ),
+                    DropdownMenuItem(
+                      value: 'TRANSPORT',
+                      child: Text('Transport / Logistics'),
+                    ),
+                    DropdownMenuItem(
+                      value: 'MARKETING',
+                      child: Text('Marketing / Signage'),
+                    ),
+                    DropdownMenuItem(
+                      value: 'OTHER',
+                      child: Text('Other Overhead'),
+                    ),
                   ],
                   onChanged: (val) {
-                    if (val != null) setDialogState(() => selectedCategory = val);
+                    if (val != null) {
+                      setDialogState(() => selectedCategory = val);
+                    }
                   },
                 ),
                 const SizedBox(height: 12),
                 TextField(
                   controller: amountCtrl,
-                  keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                  keyboardType: const TextInputType.numberWithOptions(
+                    decimal: true,
+                  ),
                   decoration: const InputDecoration(
                     labelText: 'Amount (ETB) *',
                     hintText: 'e.g. 1500.00',
                     prefixText: 'ETB ',
                   ),
-                ),
-                const SizedBox(height: 12),
-                DropdownButtonFormField<String>(
-                  decoration: const InputDecoration(labelText: 'Payment Method *'),
-                  initialValue: selectedPaymentMethod,
-                  items: const [
-                    DropdownMenuItem(value: 'CASH', child: Text('Cash from Register / Till')),
-                    DropdownMenuItem(value: 'TELEBIRR', child: Text('Telebirr')),
-                    DropdownMenuItem(value: 'CBE_BIRR', child: Text('CBE Birr')),
-                    DropdownMenuItem(value: 'BANK_TRANSFER', child: Text('Bank Transfer (Awash, Dashen, etc.)')),
-                  ],
-                  onChanged: (val) {
-                    if (val != null) setDialogState(() => selectedPaymentMethod = val);
-                  },
                 ),
                 const SizedBox(height: 12),
                 TextField(
@@ -110,22 +120,31 @@ class _ExpensesScreenState extends State<ExpensesScreen> {
                 final amount = double.tryParse(amountCtrl.text.trim()) ?? 0.0;
                 if (amount <= 0) {
                   ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Please enter a valid expense amount')),
+                    const SnackBar(
+                      content: Text('Please enter a valid expense amount'),
+                    ),
                   );
                   return;
                 }
                 Navigator.pop(ctx);
-                final success = await context.read<ExpensesProvider>().recordExpense(
+                final success = await context
+                    .read<ExpensesProvider>()
+                    .recordExpense(
                       category: selectedCategory,
                       amount: amount,
-                      paymentMethod: selectedPaymentMethod,
                       note: noteCtrl.text.trim(),
                     );
                 if (mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(
-                      content: Text(success ? 'Expense recorded successfully!' : 'Failed to record expense'),
-                      backgroundColor: success ? AppColors.primary : AppColors.danger,
+                      content: Text(
+                        success
+                            ? 'Expense recorded successfully!'
+                            : 'Failed to record expense',
+                      ),
+                      backgroundColor: success
+                          ? AppColors.primary
+                          : AppColors.danger,
                     ),
                   );
                 }
@@ -143,7 +162,9 @@ class _ExpensesScreenState extends State<ExpensesScreen> {
       context: context,
       builder: (ctx) => AlertDialog(
         title: const Text('Delete Expense Record'),
-        content: Text('Are you sure you want to delete this expense of ${Formatters.formatMoney(exp.amount)}?'),
+        content: Text(
+          'Are you sure you want to delete this expense of ${Formatters.formatMoney(exp.amount)}?',
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
@@ -153,12 +174,18 @@ class _ExpensesScreenState extends State<ExpensesScreen> {
             style: ElevatedButton.styleFrom(backgroundColor: AppColors.danger),
             onPressed: () async {
               Navigator.pop(ctx);
-              final success = await context.read<ExpensesProvider>().deleteExpense(exp.id);
+              final success = await context
+                  .read<ExpensesProvider>()
+                  .deleteExpense(exp.id);
               if (mounted) {
                 ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(
-                    content: Text(success ? 'Expense removed!' : 'Failed to delete expense'),
-                    backgroundColor: success ? AppColors.primary : AppColors.danger,
+                    content: Text(
+                      success ? 'Expense removed!' : 'Failed to delete expense',
+                    ),
+                    backgroundColor: success
+                        ? AppColors.primary
+                        : AppColors.danger,
                   ),
                 );
               }
@@ -210,7 +237,10 @@ class _ExpensesScreenState extends State<ExpensesScreen> {
         onPressed: _showAddExpenseDialog,
         backgroundColor: const Color(0xFFEF4444),
         icon: const Icon(Icons.add_card_rounded, color: Colors.white),
-        label: const Text('Add Expense', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+        label: const Text(
+          'Add Expense',
+          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+        ),
       ),
       body: Column(
         children: [
@@ -265,7 +295,11 @@ class _ExpensesScreenState extends State<ExpensesScreen> {
                       color: Colors.white.withValues(alpha: 0.2),
                       shape: BoxShape.circle,
                     ),
-                    child: const Icon(Icons.credit_card_off_rounded, color: Colors.white, size: 24),
+                    child: const Icon(
+                      Icons.credit_card_off_rounded,
+                      color: Colors.white,
+                      size: 24,
+                    ),
                   ),
                 ],
               ),
@@ -286,7 +320,9 @@ class _ExpensesScreenState extends State<ExpensesScreen> {
                       cat,
                       style: TextStyle(
                         fontSize: 12,
-                        fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+                        fontWeight: isSelected
+                            ? FontWeight.w700
+                            : FontWeight.w500,
                         color: isSelected ? Colors.white : null,
                       ),
                     ),
@@ -308,132 +344,151 @@ class _ExpensesScreenState extends State<ExpensesScreen> {
               child: expProvider.isLoading && expProvider.expenses.isEmpty
                   ? const Center(child: CircularProgressIndicator())
                   : filtered.isEmpty
-                      ? Center(
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Icon(
-                                Icons.receipt_long_rounded,
-                                size: 56,
-                                color: isDark ? AppColors.darkTextMuted : AppColors.lightTextMuted,
-                              ),
-                              const SizedBox(height: 12),
-                              Text(
-                                'No expense records found',
-                                style: TextStyle(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.w600,
-                                  color: isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary,
-                                ),
-                              ),
-                              const SizedBox(height: 4),
-                              Text(
-                                'Record rent, utilities, and daily costs',
-                                style: TextStyle(
-                                  fontSize: 12,
-                                  color: isDark ? AppColors.darkTextMuted : AppColors.lightTextMuted,
-                                ),
-                              ),
-                            ],
+                  ? Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(
+                            Icons.receipt_long_rounded,
+                            size: 56,
+                            color: isDark
+                                ? AppColors.darkTextMuted
+                                : AppColors.lightTextMuted,
                           ),
-                        )
-                      : ListView.separated(
-                          padding: const EdgeInsets.all(16),
-                          itemCount: filtered.length,
-                          separatorBuilder: (_, _) => const SizedBox(height: 8),
-                          itemBuilder: (context, index) {
-                            final exp = filtered[index];
-                            final catColor = _getCategoryColor(exp.category);
-                            final dateStr = DateFormat('MMM dd, yyyy').format(exp.date);
+                          const SizedBox(height: 12),
+                          Text(
+                            'No expense records found',
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w600,
+                              color: isDark
+                                  ? AppColors.darkTextSecondary
+                                  : AppColors.lightTextSecondary,
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            'Record rent, utilities, and daily costs',
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: isDark
+                                  ? AppColors.darkTextMuted
+                                  : AppColors.lightTextMuted,
+                            ),
+                          ),
+                        ],
+                      ),
+                    )
+                  : ListView.separated(
+                      padding: const EdgeInsets.all(16),
+                      itemCount: filtered.length,
+                      separatorBuilder: (_, _) => const SizedBox(height: 8),
+                      itemBuilder: (context, index) {
+                        final exp = filtered[index];
+                        final catColor = _getCategoryColor(exp.category);
+                        final dateStr = DateFormat('MMM dd, yyyy')
+                            .format(exp.date);
 
-                            return Card(
-                              child: ListTile(
-                                leading: Container(
-                                  padding: const EdgeInsets.all(10),
-                                  decoration: BoxDecoration(
-                                    color: catColor.withValues(alpha: 0.15),
-                                    borderRadius: BorderRadius.circular(12),
+                        return Card(
+                          child: ListTile(
+                            leading: Container(
+                              padding: const EdgeInsets.all(10),
+                              decoration: BoxDecoration(
+                                color: catColor.withValues(alpha: 0.15),
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: Icon(
+                                Icons.outbox_rounded,
+                                color: catColor,
+                                size: 20,
+                              ),
+                            ),
+                            title: Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Text(
+                                  exp.category,
+                                  style: TextStyle(
+                                    fontWeight: FontWeight.w700,
+                                    fontSize: 14,
+                                    color: catColor,
                                   ),
-                                  child: Icon(Icons.outbox_rounded, color: catColor, size: 20),
                                 ),
-                                title: Row(
-                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                Text(
+                                  Formatters.formatMoney(exp.amount),
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.w800,
+                                    fontSize: 15,
+                                    color: Color(0xFFEF4444),
+                                  ),
+                                ),
+                              ],
+                            ),
+                            subtitle: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                if (exp.note != null &&
+                                    exp.note!.isNotEmpty) ...[
+                                  const SizedBox(height: 2),
+                                  Text(
+                                    exp.note!,
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      color: isDark
+                                          ? AppColors.darkTextPrimary
+                                          : AppColors.lightTextPrimary,
+                                    ),
+                                  ),
+                                ],
+                                const SizedBox(height: 4),
+                                Row(
                                   children: [
                                     Text(
-                                      exp.category,
+                                      dateStr,
                                       style: TextStyle(
-                                        fontWeight: FontWeight.w700,
-                                        fontSize: 14,
-                                        color: catColor,
+                                        fontSize: 11,
+                                        color: isDark
+                                            ? AppColors.darkTextSecondary
+                                            : AppColors.lightTextSecondary,
                                       ),
                                     ),
-                                    Text(
-                                      Formatters.formatMoney(exp.amount),
-                                      style: const TextStyle(
-                                        fontWeight: FontWeight.w800,
-                                        fontSize: 15,
-                                        color: Color(0xFFEF4444),
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                                subtitle: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    if (exp.note != null && exp.note!.isNotEmpty) ...[
-                                      const SizedBox(height: 2),
+                                    if (exp.recordedByName != null) ...[
+                                      const SizedBox(width: 8),
                                       Text(
-                                        exp.note!,
+                                        '•',
                                         style: TextStyle(
-                                          fontSize: 12,
-                                          color: isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary,
+                                          color: isDark
+                                              ? AppColors.darkTextMuted
+                                              : AppColors.lightTextMuted,
+                                        ),
+                                      ),
+                                      const SizedBox(width: 8),
+                                      Text(
+                                        exp.recordedByName!,
+                                        style: TextStyle(
+                                          fontSize: 11,
+                                          color: isDark
+                                              ? AppColors.darkTextMuted
+                                              : AppColors.lightTextMuted,
                                         ),
                                       ),
                                     ],
-                                    const SizedBox(height: 4),
-                                    Row(
-                                      children: [
-                                        Text(
-                                          dateStr,
-                                          style: TextStyle(
-                                            fontSize: 11,
-                                            color: isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary,
-                                          ),
-                                        ),
-                                        const SizedBox(width: 8),
-                                        Text('•', style: TextStyle(color: isDark ? AppColors.darkTextMuted : AppColors.lightTextMuted)),
-                                        const SizedBox(width: 8),
-                                        Text(
-                                          exp.paymentMethod.replaceAll('_', ' '),
-                                          style: TextStyle(
-                                            fontSize: 11,
-                                            color: isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary,
-                                          ),
-                                        ),
-                                        if (exp.recordedByName != null) ...[
-                                          const SizedBox(width: 8),
-                                          Text('•', style: TextStyle(color: isDark ? AppColors.darkTextMuted : AppColors.lightTextMuted)),
-                                          const SizedBox(width: 8),
-                                          Text(
-                                            exp.recordedByName!,
-                                            style: TextStyle(
-                                              fontSize: 11,
-                                              color: isDark ? AppColors.darkTextMuted : AppColors.lightTextMuted,
-                                            ),
-                                          ),
-                                        ],
-                                      ],
-                                    ),
                                   ],
                                 ),
-                                trailing: IconButton(
-                                  icon: const Icon(Icons.delete_outline_rounded, size: 20, color: AppColors.danger),
-                                  onPressed: () => _confirmDeleteExpense(exp),
-                                ),
+                              ],
+                            ),
+                            trailing: IconButton(
+                              icon: const Icon(
+                                Icons.delete_outline_rounded,
+                                size: 20,
+                                color: AppColors.danger,
                               ),
-                            );
-                          },
-                        ),
+                              onPressed: () => _confirmDeleteExpense(exp),
+                            ),
+                          ),
+                        );
+                      },
+                    ),
             ),
           ),
         ],

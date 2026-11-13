@@ -28,20 +28,34 @@ class Shift {
       openingFloat: (json['openingFloat'] is num)
           ? (json['openingFloat'] as num).toDouble()
           : double.tryParse(json['openingFloat']?.toString() ?? '0') ?? 0.0,
-      closingCash: json['closingCash'] != null
-          ? ((json['closingCash'] is num)
-              ? (json['closingCash'] as num).toDouble()
-              : double.tryParse(json['closingCash'].toString()))
+      closingCash: (json['closingCash'] ?? json['actualCash']) != null
+          ? (((json['closingCash'] ?? json['actualCash']) is num)
+                ? ((json['closingCash'] ?? json['actualCash']) as num)
+                      .toDouble()
+                : double.tryParse(
+                    (json['closingCash'] ?? json['actualCash']).toString(),
+                  ))
           : null,
       expectedCash: json['expectedCash'] != null
           ? ((json['expectedCash'] is num)
-              ? (json['expectedCash'] as num).toDouble()
-              : double.tryParse(json['expectedCash'].toString()))
+                ? (json['expectedCash'] as num).toDouble()
+                : double.tryParse(json['expectedCash'].toString()))
+          : (json['expectedCashInTill'] is num
+                ? (json['expectedCashInTill'] as num).toDouble()
+                : double.tryParse(
+                    json['expectedCashInTill']?.toString() ?? '',
+                  )),
+      startTime:
+          DateTime.tryParse(
+            json['startTime']?.toString() ?? json['openedAt']?.toString() ?? '',
+          ) ??
+          DateTime.now(),
+      endTime: json['endTime'] != null || json['closedAt'] != null
+          ? DateTime.tryParse((json['endTime'] ?? json['closedAt']).toString())
           : null,
-      startTime: DateTime.tryParse(json['startTime']?.toString() ?? '') ?? DateTime.now(),
-      endTime: json['endTime'] != null ? DateTime.tryParse(json['endTime'].toString()) : null,
-      cashierName: json['cashier'] != null ? json['cashier']['name']?.toString() : null,
+      cashierName: json['cashier'] != null
+          ? json['cashier']['name']?.toString()
+          : null,
     );
   }
 }
-

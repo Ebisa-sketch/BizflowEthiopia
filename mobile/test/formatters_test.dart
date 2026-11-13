@@ -11,6 +11,10 @@ void main() {
       expect(Formatters.formatMoney(null), 'ETB 0.00');
     });
 
+    test('formatMoney supports the active business currency', () {
+      expect(Formatters.formatMoney(1250.5, currency: 'USD'), 'USD 1,250.50');
+    });
+
     test('formatNumber formats numbers with commas', () {
       expect(Formatters.formatNumber(100), '100');
       expect(Formatters.formatNumber(1500), '1,500');
@@ -18,4 +22,3 @@ void main() {
     });
   });
 }
-

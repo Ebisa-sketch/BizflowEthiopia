@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+
 import '../../core/api_client.dart';
 import '../../providers/theme_provider.dart';
 import '../../theme/app_colors.dart';
+import 'reset_password_screen.dart';
 
 class ForgotPasswordScreen extends StatefulWidget {
   const ForgotPasswordScreen({super.key});
@@ -26,7 +28,9 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
     final email = _emailController.text.trim();
     if (email.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please enter your account email address')),
+        const SnackBar(
+          content: Text('Please enter your account email address'),
+        ),
       );
       return;
     }
@@ -34,7 +38,10 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
     setState(() => _isLoading = true);
 
     try {
-      await ApiClient().post('/api/auth/forgot-password', body: {'email': email});
+      await ApiClient().post(
+        '/api/auth/forgot-password',
+        body: {'email': email},
+      );
       if (mounted) {
         setState(() => _isSent = true);
       }
@@ -63,9 +70,12 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
         actions: [
           IconButton(
             icon: Icon(
-              themeProvider.isDarkMode ? Icons.light_mode_outlined : Icons.dark_mode_outlined,
+              themeProvider.isDarkMode
+                  ? Icons.light_mode_outlined
+                  : Icons.dark_mode_outlined,
             ),
-            onPressed: () => themeProvider.toggleTheme(!themeProvider.isDarkMode),
+            onPressed: () =>
+                themeProvider.toggleTheme(!themeProvider.isDarkMode),
           ),
         ],
       ),
@@ -85,15 +95,24 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                             Container(
                               padding: const EdgeInsets.all(16),
                               decoration: BoxDecoration(
-                                color: AppColors.primary.withValues(alpha: 0.15),
+                                color: AppColors.primary.withValues(
+                                  alpha: 0.15,
+                                ),
                                 shape: BoxShape.circle,
                               ),
-                              child: const Icon(Icons.mark_email_read_rounded, size: 48, color: AppColors.primary),
+                              child: const Icon(
+                                Icons.mark_email_read_rounded,
+                                size: 48,
+                                color: AppColors.primary,
+                              ),
                             ),
                             const SizedBox(height: 16),
                             const Text(
                               'Password Reset Link Sent',
-                              style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800),
+                              style: TextStyle(
+                                fontSize: 18,
+                                fontWeight: FontWeight.w800,
+                              ),
                             ),
                             const SizedBox(height: 8),
                             Text(
@@ -101,7 +120,9 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                               textAlign: TextAlign.center,
                               style: TextStyle(
                                 fontSize: 13,
-                                color: isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary,
+                                color: isDark
+                                    ? AppColors.darkTextSecondary
+                                    : AppColors.lightTextSecondary,
                               ),
                             ),
                             const SizedBox(height: 24),
@@ -117,14 +138,19 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                           children: [
                             const Text(
                               'Forgot Password',
-                              style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w700,
+                              ),
                             ),
                             const SizedBox(height: 6),
                             Text(
                               'Enter your account email to receive reset instructions.',
                               style: TextStyle(
                                 fontSize: 12,
-                                color: isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary,
+                                color: isDark
+                                    ? AppColors.darkTextSecondary
+                                    : AppColors.lightTextSecondary,
                               ),
                             ),
                             const SizedBox(height: 20),
@@ -134,7 +160,10 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                               decoration: const InputDecoration(
                                 labelText: 'Account Email *',
                                 hintText: 'cashier@addismart.et',
-                                prefixIcon: Icon(Icons.email_outlined, size: 20),
+                                prefixIcon: Icon(
+                                  Icons.email_outlined,
+                                  size: 20,
+                                ),
                               ),
                             ),
                             const SizedBox(height: 20),
@@ -144,9 +173,22 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                                   ? const SizedBox(
                                       height: 20,
                                       width: 20,
-                                      child: CircularProgressIndicator(strokeWidth: 2.5, color: Colors.white),
+                                      child: CircularProgressIndicator(
+                                        strokeWidth: 2.5,
+                                        color: Colors.white,
+                                      ),
                                     )
                                   : const Text('Send Reset Instructions'),
+                            ),
+                            const SizedBox(height: 8),
+                            TextButton(
+                              onPressed: () => Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (_) => const ResetPasswordScreen(),
+                                ),
+                              ),
+                              child: const Text('I already have a reset token'),
                             ),
                             const SizedBox(height: 12),
                             TextButton(

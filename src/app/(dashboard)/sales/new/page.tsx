@@ -208,6 +208,52 @@ export default function PosCheckoutPage() {
     }
   }, []);
 
+  const playErrorSound = useCallback(() => {
+    try {
+      const AudioCtx =
+        window.AudioContext ||
+        (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
+      if (!AudioCtx) return;
+      const ctx = new AudioCtx();
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = "sawtooth";
+      osc.frequency.setValueAtTime(220, ctx.currentTime); // 220Hz low buzz
+      gain.gain.setValueAtTime(0.12, ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.25);
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start();
+      osc.stop(ctx.currentTime + 0.25);
+    } catch {
+      // Audio autoplay restrictions
+    }
+  }, []);
+
+  const playSuccessSound = useCallback(() => {
+    try {
+      const AudioCtx =
+        window.AudioContext ||
+        (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
+      if (!AudioCtx) return;
+      const ctx = new AudioCtx();
+      const now = ctx.currentTime;
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = "sine";
+      osc.frequency.setValueAtTime(880, now);
+      osc.frequency.setValueAtTime(1320, now + 0.08); // Two-tone chime
+      gain.gain.setValueAtTime(0.1, now);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.25);
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start(now);
+      osc.stop(now + 0.25);
+    } catch {
+      // Audio autoplay restrictions
+    }
+  }, []);
+
   const showToast = useCallback((message: string) => {
     setScanFeedback(message);
     if (scanFeedbackTimeoutRef.current) {
@@ -303,6 +349,7 @@ export default function PosCheckoutPage() {
   // Cart operations
   const addToCart = useCallback((product: ProductItem) => {
     if (product.stock <= 0) {
+      playErrorSound();
       showToast(`'${product.name}' is out of stock.`);
       return;
     }
@@ -311,6 +358,7 @@ export default function PosCheckoutPage() {
       const existing = prev.find((item) => item.id === product.id);
       if (existing) {
         if (existing.quantity >= product.stock) {
+          playErrorSound();
           showToast(`Only ${product.stock} units of '${product.name}' available in stock.`);
           return prev;
         }
@@ -320,7 +368,7 @@ export default function PosCheckoutPage() {
       }
       return [...prev, { ...product, quantity: 1 }];
     });
-  }, [showToast]);
+  }, [showToast, playErrorSound]);
 
   const updateQuantity = (id: string, delta: number) => {
     setCart((prev) =>
@@ -402,8 +450,13 @@ export default function PosCheckoutPage() {
             addToCart(matchedProduct);
             playBeepSound();
             showToast(`Scanned: ${matchedProduct.name} · ${formatMoney(matchedProduct.price)}`);
+            if (target instanceof HTMLInputElement) {
+              target.value = "";
+              setSearchTerm("");
+            }
             return;
           } else if (!isInput) {
+            playErrorSound();
             showToast(`No product found for scanned barcode: "${scannedCode}"`);
           }
         }
@@ -552,6 +605,46 @@ export default function PosCheckoutPage() {
             }
             return;
           }
+
+          // Banknote Tender Quick Hotkeys for Cash
+          if (paymentMethod === "CASH") {
+            if (e.key === "x" || e.key === "X") {
+              e.preventDefault();
+              setCashTendered(grandTotal);
+              playBeepSound();
+              return;
+            }
+            if (e.key === "q" || e.key === "Q") {
+              e.preventDefault();
+              setCashTendered((prev) => roundMoney((prev || grandTotal) + 50));
+              playBeepSound();
+              return;
+            }
+            if (e.key === "w" || e.key === "W") {
+              e.preventDefault();
+              setCashTendered((prev) => roundMoney((prev || grandTotal) + 100));
+              playBeepSound();
+              return;
+            }
+            if (e.key === "e" || e.key === "E") {
+              e.preventDefault();
+              setCashTendered((prev) => roundMoney((prev || grandTotal) + 200));
+              playBeepSound();
+              return;
+            }
+            if (e.key === "r" || e.key === "R") {
+              e.preventDefault();
+              setCashTendered((prev) => roundMoney((prev || grandTotal) + 500));
+              playBeepSound();
+              return;
+            }
+            if (e.key === "t" || e.key === "T") {
+              e.preventDefault();
+              setCashTendered((prev) => roundMoney((prev || grandTotal) + 1000));
+              playBeepSound();
+              return;
+            }
+          }
         }
 
         // Enter submits sale (if not in a multiline textarea)
@@ -582,10 +675,28 @@ export default function PosCheckoutPage() {
         searchInputRef.current?.focus();
         searchInputRef.current?.select();
       }
+      // F3: Cycle to Next Category
+      else if (e.key === "F3") {
+        e.preventDefault();
+        const currentIndex = categories.indexOf(selectedCategory);
+        const nextIndex = (currentIndex + 1) % categories.length;
+        setSelectedCategory(categories[nextIndex]);
+        playBeepSound();
+      }
       // F4: Clear Cart Confirmation
       else if (e.key === "F4") {
         e.preventDefault();
         if (cart.length > 0) setClearConfirmOpen(true);
+      }
+      // F7: Toggle 15% Ethiopian VAT
+      else if (e.key === "F7") {
+        e.preventDefault();
+        setApplyVat((prev) => {
+          const next = !prev;
+          playBeepSound();
+          showToast(next ? "15% Ethiopian VAT Applied" : "15% VAT Removed");
+          return next;
+        });
       }
       // F8: Hold Current Sale
       else if (e.key === "F8") {
@@ -596,6 +707,15 @@ export default function PosCheckoutPage() {
       else if (e.key === "F9") {
         e.preventDefault();
         if (cart.length > 0) openCheckoutModal();
+      }
+      // F10: Instant Quick Exact Cash Checkout
+      else if (e.key === "F10") {
+        e.preventDefault();
+        if (cart.length > 0) {
+          setPaymentMethod("CASH");
+          setCashTendered(grandTotal);
+          openCheckoutModal();
+        }
       }
     };
 
@@ -620,6 +740,10 @@ export default function PosCheckoutPage() {
     safeDiscount,
     applyVat,
     managerApprovalToken,
+    categories,
+    selectedCategory,
+    playBeepSound,
+    showToast,
   ]);
 
 
@@ -1077,10 +1201,14 @@ export default function PosCheckoutPage() {
               <span className="text-[11px] bg-[#DCEFE7] text-[#0D9668] font-black px-2 py-0.5 rounded-full border border-[#0D9668]/30">
                 Live ETB
               </span>
+              <span className="hidden md:inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 text-[11px] font-bold">
+                <Barcode className="h-3.5 w-3.5 text-emerald-600 animate-pulse" />
+                <span>Scanner Ready</span>
+              </span>
             </h1>
           </div>
           <p className="text-xs text-slate-500 mt-0.5">
-            Quick barcode scanning & cash register checkout
+            USB/Bluetooth barcode scanner & fast hotkey checkout
           </p>
         </div>
 
@@ -1089,10 +1217,11 @@ export default function PosCheckoutPage() {
           <button
             onClick={() => setShortcutsModalOpen(true)}
             className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-xl border border-slate-300 bg-white text-slate-700 hover:bg-slate-50 transition shadow-2xs"
-            title="Keyboard Shortcuts"
+            title="Keyboard Shortcuts (F1 or ?)"
           >
             <Keyboard className="h-3.5 w-3.5 text-slate-500" />
             <span className="hidden sm:inline">Shortcuts</span>
+            <kbd className="text-[10px] px-1 py-0.2 rounded bg-slate-100 border border-slate-200 font-mono text-slate-500">F1</kbd>
           </button>
 
           {heldDrafts.length > 0 && (
@@ -1101,7 +1230,7 @@ export default function PosCheckoutPage() {
               className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-xl border border-amber-300 bg-amber-50 text-amber-800 hover:bg-amber-100 transition shadow-2xs"
             >
               <PlayCircle className="h-3.5 w-3.5 text-amber-600" />
-              <span>Resume Drafts ({heldDrafts.length})</span>
+              <span>Resume ({heldDrafts.length})</span>
             </button>
           )}
 
@@ -1112,8 +1241,8 @@ export default function PosCheckoutPage() {
             title="Save draft for later (F8)"
           >
             <PauseCircle className="h-3.5 w-3.5 text-slate-500" />
-            <span className="hidden sm:inline">Hold Sale</span>
-            <span className="text-[10px] text-slate-400 font-mono sm:hidden">Hold</span>
+            <span className="hidden sm:inline">Hold</span>
+            <kbd className="text-[10px] px-1 py-0.2 rounded bg-slate-100 border border-slate-200 font-mono text-slate-500">F8</kbd>
           </button>
 
           <button
@@ -1123,7 +1252,9 @@ export default function PosCheckoutPage() {
             title="Clear current cart (F4)"
           >
             <RotateCcw className="h-3.5 w-3.5 text-slate-500" />
-            <span>Clear Cart</span>
+            <span>Clear</span>
+            <kbd className="text-[10px] px-1 py-0.2 rounded bg-slate-100 border border-slate-200 font-mono text-slate-500">F4</kbd>
+          </button>
           </button>
         </div>
       </div>
@@ -1177,7 +1308,7 @@ export default function PosCheckoutPage() {
                 aria-label="Search products or enter a scanned SKU or barcode"
                 className="w-full rounded-xl border border-slate-300 bg-slate-50/80 pl-10 pr-20 py-2.5 text-sm text-slate-900 placeholder-slate-400 focus:bg-white focus:border-[#0D9668] focus:ring-2 focus:ring-[#0D9668]/20 transition"
               />
-              <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-1">
+              <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-1.5">
                 {searchTerm && (
                   <button
                     type="button"
@@ -1188,7 +1319,10 @@ export default function PosCheckoutPage() {
                     <X className="h-3.5 w-3.5" />
                   </button>
                 )}
-                <Barcode className="h-4 w-4 text-slate-400" />
+                <kbd className="hidden sm:inline-block text-[10px] px-1.5 py-0.5 rounded bg-slate-200/70 border border-slate-300 font-mono font-bold text-slate-500">
+                  F2
+                </kbd>
+                <Barcode className="h-4 w-4 text-emerald-600" />
               </div>
             </div>
 
@@ -1547,6 +1681,7 @@ export default function PosCheckoutPage() {
                       className="rounded text-[#0D9668] focus:ring-[#0D9668] h-4 w-4"
                     />
                     <span>Apply 15% VAT (Exclusive: added to total)</span>
+                    <kbd className="text-[10px] px-1 py-0.5 rounded bg-slate-100 border border-slate-200 text-slate-500 font-mono font-bold">F7</kbd>
                   </label>
                   {applyVat && (
                     <span className="font-mono font-bold text-slate-700">+{formatMoney(taxTotal)}</span>
@@ -1585,14 +1720,31 @@ export default function PosCheckoutPage() {
               <span className="text-[#0D9668] font-mono text-xl">{formatMoney(grandTotal)}</span>
             </div>
 
-            <button
-              onClick={openCheckoutModal}
-              disabled={cart.length === 0}
-              className="w-full mt-2 py-3 px-4 rounded-xl bg-[#0D9668] hover:bg-[#097852] active:scale-[0.99] text-white font-extrabold text-sm shadow-md shadow-[#0D9668]/30 disabled:opacity-50 disabled:pointer-events-none transition flex items-center justify-center gap-2"
-            >
-              <CheckCircle2 className="h-4 w-4" />
-              <span>Complete Sale (F9)</span>
-            </button>
+            <div className="grid grid-cols-2 gap-2 mt-2">
+              <button
+                type="button"
+                onClick={() => {
+                  if (cart.length === 0) return;
+                  setPaymentMethod("CASH");
+                  setCashTendered(grandTotal);
+                  openCheckoutModal();
+                }}
+                disabled={cart.length === 0}
+                className="py-2.5 px-3 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs transition flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-40"
+              >
+                <Banknote className="h-3.5 w-3.5 text-[#00D287]" />
+                <span>Exact Cash (F10)</span>
+              </button>
+              <button
+                type="button"
+                onClick={openCheckoutModal}
+                disabled={cart.length === 0}
+                className="py-2.5 px-3 rounded-xl bg-[#0D9668] hover:bg-[#097852] text-white font-bold text-xs shadow-md shadow-[#0D9668]/30 transition flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-40"
+              >
+                <CheckCircle2 className="h-3.5 w-3.5" />
+                <span>Checkout (F9)</span>
+              </button>
+            </div>
           </div>
         </div>
       </div>
@@ -2391,8 +2543,16 @@ export default function PosCheckoutPage() {
                     <kbd className="px-1.5 py-0.5 rounded bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 font-mono font-bold">F2</kbd>
                   </div>
                   <div className="flex items-center justify-between">
+                    <span className="text-slate-600 dark:text-slate-400">Next Category</span>
+                    <kbd className="px-1.5 py-0.5 rounded bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 font-mono font-bold">F3</kbd>
+                  </div>
+                  <div className="flex items-center justify-between">
                     <span className="text-slate-600 dark:text-slate-400">Clear Cart</span>
                     <kbd className="px-1.5 py-0.5 rounded bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 font-mono font-bold">F4</kbd>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-slate-600 dark:text-slate-400">Toggle 15% VAT</span>
+                    <kbd className="px-1.5 py-0.5 rounded bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 font-mono font-bold">F7</kbd>
                   </div>
                   <div className="flex items-center justify-between">
                     <span className="text-slate-600 dark:text-slate-400">Hold Sale (Draft)</span>
@@ -2401,6 +2561,10 @@ export default function PosCheckoutPage() {
                   <div className="flex items-center justify-between">
                     <span className="text-slate-600 dark:text-slate-400">Open Payment</span>
                     <kbd className="px-1.5 py-0.5 rounded bg-[#0D9668] text-white border border-[#0D9668] font-mono font-bold">F9</kbd>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-slate-600 dark:text-slate-400">Quick Exact Cash</span>
+                    <kbd className="px-1.5 py-0.5 rounded bg-slate-900 text-white font-mono font-bold">F10</kbd>
                   </div>
                 </div>
               </div>
@@ -2412,24 +2576,28 @@ export default function PosCheckoutPage() {
                 </h4>
                 <div className="space-y-1.5">
                   <div className="flex items-center justify-between">
-                    <span className="text-slate-600 dark:text-slate-400">Cash</span>
+                    <span className="text-slate-600 dark:text-slate-400">Payment: Cash</span>
                     <kbd className="px-1.5 py-0.5 rounded bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 font-mono font-bold">1</kbd>
                   </div>
                   <div className="flex items-center justify-between">
-                    <span className="text-slate-600 dark:text-slate-400">Telebirr</span>
+                    <span className="text-slate-600 dark:text-slate-400">Payment: Telebirr</span>
                     <kbd className="px-1.5 py-0.5 rounded bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 font-mono font-bold">2</kbd>
                   </div>
                   <div className="flex items-center justify-between">
-                    <span className="text-slate-600 dark:text-slate-400">CBE Birr</span>
+                    <span className="text-slate-600 dark:text-slate-400">Payment: CBE Birr</span>
                     <kbd className="px-1.5 py-0.5 rounded bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 font-mono font-bold">3</kbd>
                   </div>
                   <div className="flex items-center justify-between">
-                    <span className="text-slate-600 dark:text-slate-400">Bank Transfer</span>
-                    <kbd className="px-1.5 py-0.5 rounded bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 font-mono font-bold">4</kbd>
+                    <span className="text-slate-600 dark:text-slate-400">Exact Tendered</span>
+                    <kbd className="px-1.5 py-0.5 rounded bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 font-mono font-bold">X</kbd>
                   </div>
                   <div className="flex items-center justify-between">
-                    <span className="text-slate-600 dark:text-slate-400">Store Credit (Idda)</span>
-                    <kbd className="px-1.5 py-0.5 rounded bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 font-mono font-bold">5</kbd>
+                    <span className="text-slate-600 dark:text-slate-400">+50 / +100 / +200 ETB</span>
+                    <span className="font-mono text-slate-500 text-[10px] font-bold">Q / W / E</span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-slate-600 dark:text-slate-400">+500 / +1000 ETB</span>
+                    <span className="font-mono text-slate-500 text-[10px] font-bold">R / T</span>
                   </div>
                   <div className="flex items-center justify-between">
                     <span className="text-slate-600 dark:text-slate-400">Submit Sale</span>

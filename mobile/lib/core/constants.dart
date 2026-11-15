@@ -6,6 +6,10 @@ class AppConstants {
   // - Chrome (web), iOS, and desktop need localhost:3000.
   // - Physical devices can configure host IP in app settings.
   static String get defaultApiUrl {
+    const customUrl = String.fromEnvironment('API_URL');
+    if (customUrl.isNotEmpty) {
+      return customUrl;
+    }
     if (kIsWeb) {
       return 'http://localhost:3000';
     }

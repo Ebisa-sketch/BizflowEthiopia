@@ -1,27 +1,23 @@
 import { NextResponse } from "next/server";
-import { prisma } from "@/lib/db/prisma";
+import { checkDatabaseHealth } from "@/lib/db/health";
 
 export const dynamic = "force-dynamic";
 
 export async function GET() {
   const startTime = Date.now();
-  let dbStatus = "connected";
-  let dbLatencyMs = 0;
+  const dbHealth = await checkDatabaseHealth();
 
-  try {
-    const dbStart = Date.now();
-    await prisma.$queryRaw`SELECT 1`;
-    dbLatencyMs = Date.now() - dbStart;
-  } catch (error) {
-    dbStatus = "disconnected";
+  if (dbHealth.status !== "healthy") {
     return NextResponse.json(
       {
         status: "unhealthy",
         timestamp: new Date().toISOString(),
         service: "bizflow-ethiopia-api",
         database: {
-          status: dbStatus,
-          error: error instanceof Error ? error.message : "Database connection failed",
+          status: "disconnected",
+          error: dbHealth.error || "Database connection failed",
+          latencyMs: dbHealth.latencyMs,
+          pool: dbHealth.pool,
         },
         uptimeSeconds: Math.floor(process.uptime()),
         responseTimeMs: Date.now() - startTime,
@@ -38,8 +34,9 @@ export async function GET() {
       version: "1.0.0",
       environment: process.env.NODE_ENV || "development",
       database: {
-        status: dbStatus,
-        latencyMs: dbLatencyMs,
+        status: "connected",
+        latencyMs: dbHealth.latencyMs,
+        pool: dbHealth.pool,
       },
       uptimeSeconds: Math.floor(process.uptime()),
       responseTimeMs: Date.now() - startTime,
@@ -54,11 +51,7 @@ export async function GET() {
 }
 
 export async function HEAD() {
-  try {
-    await prisma.$queryRaw`SELECT 1`;
-    return new Response(null, { status: 200 });
-  } catch {
-    return new Response(null, { status: 503 });
-  }
+  const dbHealth = await checkDatabaseHealth();
+  return new Response(null, { status: dbHealth.status === "healthy" ? 200 : 503 });
 }
 

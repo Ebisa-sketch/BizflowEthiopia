@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 export interface RateLimitConfig {
   windowMs: number;
   maxAttempts: number;
+  prefix?: string;
 }
 
 export interface RateLimitResult {
@@ -19,10 +20,12 @@ export class RateLimiter {
   private lastCleanup = Date.now();
   private readonly windowMs: number;
   private readonly maxAttempts: number;
+  private readonly prefix: string;
 
   constructor(config: RateLimitConfig) {
     this.windowMs = config.windowMs;
     this.maxAttempts = config.maxAttempts;
+    this.prefix = config.prefix || "rl";
   }
 
   /**
@@ -123,6 +126,75 @@ export class RateLimiter {
         "X-RateLimit-Reset": String(Math.ceil(resetMs / 1000)),
       },
     };
+  }
+
+  /**
+   * Distributed rate limit consumption. Uses Upstash/Redis REST API if configured,
+   * otherwise seamlessly falls back to the in-memory sliding window limiter.
+   */
+  public async consumeAsync(key: string): Promise<RateLimitResult> {
+    const redisUrl = process.env.UPSTASH_REDIS_REST_URL;
+    const redisToken = process.env.UPSTASH_REDIS_REST_TOKEN;
+
+    if (!redisUrl || !redisToken) {
+      return this.consume(key);
+    }
+
+    try {
+      const redisKey = `${this.prefix}:${key}`;
+      const windowSec = Math.ceil(this.windowMs / 1000);
+
+      // Execute atomic pipeline: INCR and EXPIRE if new
+      const pipelineRes = await fetch(`${redisUrl}/pipeline`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${redisToken}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify([
+          ["INCR", redisKey],
+          ["TTL", redisKey],
+        ]),
+      });
+
+      if (!pipelineRes.ok) {
+        return this.consume(key);
+      }
+
+      const results = (await pipelineRes.json()) as Array<{ result?: number }>;
+      const currentCount = Number(results[0]?.result ?? 1);
+      let ttl = Number(results[1]?.result ?? -1);
+
+      // If key had no TTL or is fresh, set TTL
+      if (ttl <= 0) {
+        await fetch(`${redisUrl}/expire/${redisKey}/${windowSec}`, {
+          headers: { Authorization: `Bearer ${redisToken}` },
+        }).catch(() => {});
+        ttl = windowSec;
+      }
+
+      const allowed = currentCount <= this.maxAttempts;
+      const remaining = Math.max(0, this.maxAttempts - currentCount);
+      const retryAfterSeconds = allowed ? 0 : Math.max(1, ttl);
+      const resetMs = Date.now() + ttl * 1000;
+
+      return {
+        allowed,
+        limit: this.maxAttempts,
+        remaining,
+        resetMs,
+        retryAfterSeconds,
+        headers: {
+          ...(allowed ? {} : { "Retry-After": String(retryAfterSeconds) }),
+          "X-RateLimit-Limit": String(this.maxAttempts),
+          "X-RateLimit-Remaining": String(remaining),
+          "X-RateLimit-Reset": String(Math.ceil(resetMs / 1000)),
+        },
+      };
+    } catch {
+      // Graceful fallback to memory on external service failure
+      return this.consume(key);
+    }
   }
 
   /**

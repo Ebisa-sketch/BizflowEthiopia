@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db/prisma";
 import { handleApiError, AppError } from "@/lib/errors";
 import { createResetToken } from "@/lib/auth/password-reset";
+import { sendPasswordResetEmail } from "@/lib/email";
 import {
   getClientIp,
   forgotPasswordRateLimiter,
@@ -45,6 +46,9 @@ export async function POST(request: NextRequest) {
       resetUrl = `${proto}://${host}/reset-password?token=${rawToken}`;
 
       console.log(`[PASSWORD_RECOVERY] Generated reset link for ${trimmedEmail}: ${resetUrl}`);
+
+      // Dispatch branded password reset email via transactional provider (Resend/SMTP/Console)
+      await sendPasswordResetEmail(trimmedEmail, resetUrl, user.name);
 
       // Record security audit log
       await prisma.auditLog.create({

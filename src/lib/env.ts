@@ -10,6 +10,13 @@ const envSchema = z.object({
   ),
   NEXT_PUBLIC_DEFAULT_CURRENCY: z.string().default("ETB"),
   NEXT_PUBLIC_DEFAULT_LOCALE: z.string().default("en"),
+  SMTP_HOST: z.string().optional(),
+  SMTP_PORT: z.string().optional(),
+  SMTP_USER: z.string().optional(),
+  SMTP_PASS: z.string().optional(),
+  SMTP_FROM: z.string().optional(),
+  RESEND_API_KEY: z.string().optional(),
+  SENTRY_DSN: z.string().optional(),
 });
 
 const parsedEnv = envSchema.parse({
@@ -19,6 +26,13 @@ const parsedEnv = envSchema.parse({
   JWT_EXPIRES_IN: process.env.JWT_EXPIRES_IN || "7d",
   NEXT_PUBLIC_DEFAULT_CURRENCY: process.env.NEXT_PUBLIC_DEFAULT_CURRENCY || "ETB",
   NEXT_PUBLIC_DEFAULT_LOCALE: process.env.NEXT_PUBLIC_DEFAULT_LOCALE || "en",
+  SMTP_HOST: process.env.SMTP_HOST,
+  SMTP_PORT: process.env.SMTP_PORT,
+  SMTP_USER: process.env.SMTP_USER,
+  SMTP_PASS: process.env.SMTP_PASS,
+  SMTP_FROM: process.env.SMTP_FROM,
+  RESEND_API_KEY: process.env.RESEND_API_KEY,
+  SENTRY_DSN: process.env.SENTRY_DSN,
 });
 
 export function isBuildPhase(source: NodeJS.ProcessEnv): boolean {

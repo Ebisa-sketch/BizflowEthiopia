@@ -152,4 +152,53 @@ describe("Security & Rate Limiting Module", () => {
       expect(data.retryAfter).toBe(blockedResult.retryAfterSeconds);
     });
   });
+
+  describe("consumeAsync distributed rate limiting", () => {
+    it("falls back to in-memory consume when Upstash env vars are missing", async () => {
+      delete process.env.UPSTASH_REDIS_REST_URL;
+      delete process.env.UPSTASH_REDIS_REST_TOKEN;
+
+      const res = await testLimiter.consumeAsync("user:async:1");
+      expect(res.allowed).toBe(true);
+      expect(res.remaining).toBe(2);
+    });
+
+    it("uses Upstash Redis REST pipeline when configured", async () => {
+      process.env.UPSTASH_REDIS_REST_URL = "https://mock-redis.upstash.io";
+      process.env.UPSTASH_REDIS_REST_TOKEN = "mock-token";
+
+      const originalFetch = global.fetch;
+      global.fetch = vi.fn().mockResolvedValue({
+        ok: true,
+        json: async () => [{ result: 1 }, { result: 60 }],
+      } as any);
+
+      try {
+        const res = await testLimiter.consumeAsync("user:async:redis");
+        expect(res.allowed).toBe(true);
+        expect(res.remaining).toBe(2);
+      } finally {
+        global.fetch = originalFetch;
+        delete process.env.UPSTASH_REDIS_REST_URL;
+        delete process.env.UPSTASH_REDIS_REST_TOKEN;
+      }
+    });
+
+    it("gracefully falls back to in-memory if Redis fetch fails", async () => {
+      process.env.UPSTASH_REDIS_REST_URL = "https://mock-redis.upstash.io";
+      process.env.UPSTASH_REDIS_REST_TOKEN = "mock-token";
+
+      const originalFetch = global.fetch;
+      global.fetch = vi.fn().mockRejectedValue(new Error("Network timeout"));
+
+      try {
+        const res = await testLimiter.consumeAsync("user:async:error");
+        expect(res.allowed).toBe(true);
+      } finally {
+        global.fetch = originalFetch;
+        delete process.env.UPSTASH_REDIS_REST_URL;
+        delete process.env.UPSTASH_REDIS_REST_TOKEN;
+      }
+    });
+  });
 });

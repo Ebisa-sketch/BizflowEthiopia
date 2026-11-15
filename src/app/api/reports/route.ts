@@ -3,6 +3,7 @@ import { requireTenant } from "@/lib/auth/session";
 import { prisma } from "@/lib/db/prisma";
 import { handleApiError } from "@/lib/errors";
 import { roundMoney } from "@/lib/money";
+import { computeVatLedger } from "@/lib/reports/vat-ledger";
 
 export async function GET(request: NextRequest) {
   try {
@@ -42,11 +43,24 @@ export async function GET(request: NextRequest) {
           status: "COMPLETED",
         },
         select: {
+          id: true,
+          saleNumber: true,
           createdAt: true,
+          subtotal: true,
+          taxTotal: true,
+          discountTotal: true,
           grandTotal: true,
+          customerName: true,
+          customer: {
+            select: {
+              name: true,
+              tinNumber: true,
+            },
+          },
           items: {
             select: {
               quantity: true,
+              unitPrice: true,
               unitCostSnapshot: true,
               lineTotal: true,
               productNameSnapshot: true,
@@ -56,6 +70,7 @@ export async function GET(request: NextRequest) {
             select: {
               amount: true,
               paymentMethod: true,
+              reference: true,
             },
           },
         },
@@ -219,6 +234,19 @@ export async function GET(request: NextRequest) {
       });
     }
 
+    // MoR 15% VAT Summary Metrics
+    const vatReport = computeVatLedger(currentSales as any);
+    const vatSummary = {
+      totalGrossSales: vatReport.totalGrossSales,
+      totalTaxableSales: vatReport.totalTaxableSales,
+      totalOutputVat: vatReport.totalOutputVat,
+      totalExemptSales: vatReport.totalExemptSales,
+      vatInvoicesCount: vatReport.vatInvoicesCount,
+      exemptInvoicesCount: vatReport.exemptInvoicesCount,
+      totalInvoicesCount: vatReport.totalInvoicesCount,
+      effectiveVatRate: vatReport.effectiveVatRate,
+    };
+
     return NextResponse.json({
       success: true,
       period,
@@ -232,6 +260,7 @@ export async function GET(request: NextRequest) {
         dailyRevenue,
         expenseBreakdown,
         paymentSplit,
+        vatSummary,
       },
     });
   } catch (error) {

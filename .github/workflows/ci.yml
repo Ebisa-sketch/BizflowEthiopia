@@ -7,7 +7,8 @@ on:
     branches: [main]
 
 jobs:
-  test:
+  web-test:
+    name: Next.js Web App Tests & Build
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -27,3 +28,24 @@ jobs:
         env:
           DATABASE_URL: "postgresql://postgres:postgres@localhost:5432/bizflow_test"
           JWT_SECRET: "ci_test_secret_key_at_least_32_characters_long"
+
+  flutter-test:
+    name: Flutter Mobile App Analyze & Tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.x'
+          channel: 'stable'
+          cache: true
+      - name: Install Flutter Dependencies
+        working-directory: mobile
+        run: flutter pub get
+      - name: Analyze Flutter Code
+        working-directory: mobile
+        run: flutter analyze
+      - name: Run Flutter Tests
+        working-directory: mobile
+        run: flutter test

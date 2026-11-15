@@ -1255,7 +1255,6 @@ export default function PosCheckoutPage() {
             <span>Clear</span>
             <kbd className="text-[10px] px-1 py-0.2 rounded bg-slate-100 border border-slate-200 font-mono text-slate-500">F4</kbd>
           </button>
-          </button>
         </div>
       </div>
 
